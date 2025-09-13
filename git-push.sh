@@ -115,5 +115,5 @@ echo ""
 print_separator
 echo -e "${GREEN}${BOLD}🎉 PROSES SELESAI! 🎉${NC}"
 echo -e "${CYAN}${BOLD}📊 Repository telah berhasil diupdate di GitHub${NC}"
-echo -e "${PURPLE}${BOLD}🔗 Silakan cek perubahan di: https://github.com/your-repo${NC}"
+echo -e "${PURPLE}${BOLD}🔗 Silakan cek perubahan di: https://github.com/arisdnt/project_kas${NC}"
 print_separator
