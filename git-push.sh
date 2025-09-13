@@ -81,9 +81,19 @@ echo ""
 
 # Step 2: Git commit
 print_step "2" "Melakukan commit dengan message"
-git commit -m "$COMMIT_MESSAGE"
-if [ $? -eq 0 ]; then
-    print_success "Git commit berhasil - perubahan disimpan ke repository lokal"
+
+# Check if there are changes to commit
+if git diff --cached --quiet; then
+    print_warning "Tidak ada perubahan untuk di-commit (working tree clean)"
+    print_info "💡 Tip: Buat perubahan pada file terlebih dahulu sebelum menjalankan script"
+    print_separator
+    echo -e "${CYAN}📋 Status repository:${NC}"
+    git status --short
+    exit 0
+fi
+
+if git commit -m "$COMMIT_MESSAGE"; then
+    print_success "Git commit berhasil dengan message: $COMMIT_MESSAGE"
 else
     print_error "Git commit gagal"
     exit 1
