@@ -46,7 +46,7 @@ export class DokumenService {
         ]
       )
 
-      return await this.getDokumenById(result.insertId, tenantId)
+      return await this.getDokumenById(result.insertId.toString(), tenantId)
     } catch (error) {
       logger.error({ error, data }, 'Gagal membuat dokumen')
       throw new Error('Gagal menyimpan metadata dokumen')
@@ -59,15 +59,20 @@ export class DokumenService {
    * Mengambil dokumen berdasarkan ID
    */
   static async getDokumenById(
-    id: number,
+    id: string,
     tenantId: string
   ): Promise<DokumenTransaksi> {
     const connection = await pool.getConnection()
     try {
       const [rows] = await connection.execute<RowDataPacket[]>(
-        `SELECT * FROM dokumen_transaksi 
-         WHERE id = ? AND id_toko = ? AND status != 'dihapus'`,
-        [id, tenantId]
+        `SELECT id, transaksi_id as id_transaksi, nama_file as nama_file_asli,
+                tipe_dokumen as kategori, mime_type as tipe_mime, ukuran_file,
+                path_minio as kunci_objek, url_akses, is_public,
+                dibuat_pada as tanggal_upload, dibuat_pada as tanggal_diperbarui,
+                'aktif' as status, '' as id_pengguna, '' as id_toko, '' as deskripsi
+         FROM dokumen_transaksi 
+         WHERE id = ?`,
+        [id]
       )
 
       if (rows.length === 0) {
@@ -110,29 +115,31 @@ export class DokumenService {
   ): Promise<DokumenListResponse> {
     const connection = await pool.getConnection()
     try {
-      // Build WHERE clause
-      const conditions: string[] = ['d.id_toko = ?', 'd.status != ?']
-      const params: any[] = [tenantId, 'dihapus']
+      // Build WHERE clause - using actual table structure
+      const conditions: string[] = ['1=1'] // Base condition since no tenant filtering in current table
+      const params: any[] = []
 
-      if (query.kategori) {
-        conditions.push('d.kategori = ?')
-        params.push(query.kategori)
-      }
-
-      if (query.status) {
-        conditions.push('d.status = ?')
-        params.push(query.status)
+      if (query.kategori && query.kategori !== 'umum') {
+        // Map kategori to tipe_dokumen
+        const tipeMap: Record<string, string> = {
+          'dokumen': 'nota',
+          'produk': 'foto'
+        }
+        if (tipeMap[query.kategori]) {
+          conditions.push('d.tipe_dokumen = ?')
+          params.push(tipeMap[query.kategori])
+        }
       }
 
       if (query.id_transaksi) {
-        conditions.push('d.id_transaksi = ?')
+        conditions.push('d.transaksi_id = ?')
         params.push(query.id_transaksi)
       }
 
       if (query.search) {
-        conditions.push('(d.nama_file_asli LIKE ? OR d.kunci_objek LIKE ? OR d.deskripsi LIKE ?)')
+        conditions.push('(d.nama_file LIKE ? OR d.path_minio LIKE ?)')
         const searchTerm = `%${query.search}%`
-        params.push(searchTerm, searchTerm, searchTerm)
+        params.push(searchTerm, searchTerm)
       }
 
       const whereClause = conditions.join(' AND ')
@@ -150,10 +157,14 @@ export class DokumenService {
       logger.info({ whereClause, params, queryParams }, 'Executing dokumen query')
       
       const [dataRows] = await connection.query<RowDataPacket[]>(
-        `SELECT d.*, u.nama_lengkap as nama_pengguna, t.kode_transaksi
+        `SELECT d.id, d.transaksi_id, d.nama_file as nama_file_asli, d.tipe_dokumen as kategori,
+                d.mime_type as tipe_mime, d.ukuran_file, d.path_minio as kunci_objek,
+                d.url_akses, d.is_public, d.dibuat_pada as tanggal_upload,
+                d.dibuat_pada as tanggal_diperbarui, 'aktif' as status,
+                p.nama as nama_pengguna, t.nomor_transaksi as kode_transaksi
          FROM dokumen_transaksi d
-         LEFT JOIN pengguna u ON d.id_pengguna = u.uuid
-         LEFT JOIN transaksi t ON d.id_transaksi = t.uuid
+         LEFT JOIN pengguna p ON d.transaksi_id = p.id
+         LEFT JOIN transaksi t ON d.transaksi_id = t.id
          WHERE ${whereClause}
          ORDER BY d.dibuat_pada DESC
          LIMIT ${query.limit} OFFSET ${offset}`,
@@ -165,12 +176,12 @@ export class DokumenService {
         `SELECT 
            COUNT(*) as totalFiles,
            COALESCE(SUM(ukuran_file), 0) as totalSize,
-           kategori,
+           tipe_dokumen,
            COUNT(*) as count
          FROM dokumen_transaksi 
-         WHERE id_toko = ? AND status != ?
-         GROUP BY kategori`,
-        [tenantId, 'dihapus']
+         WHERE 1=1
+         GROUP BY tipe_dokumen`,
+        []
       )
 
       const categoryCounts: Record<KategoriFile, number> = {
@@ -183,9 +194,18 @@ export class DokumenService {
       let totalSize = 0
 
       statsRows.forEach((row: any) => {
-        categoryCounts[row.kategori as KategoriFile] = row.count
+        // Map tipe_dokumen to kategori
+        const kategoriMap: Record<string, KategoriFile> = {
+          'foto': 'produk',
+          'nota': 'dokumen',
+          'struk': 'dokumen',
+          'invoice': 'dokumen',
+          'kwitansi': 'dokumen'
+        }
+        const kategori = kategoriMap[row.tipe_dokumen] || 'umum'
+        categoryCounts[kategori] += row.count
         totalFiles += row.count
-        totalSize += row.totalSize
+        totalSize += parseInt(row.totalSize) || 0
       })
 
       return {
@@ -211,7 +231,7 @@ export class DokumenService {
    * Update dokumen
    */
   static async updateDokumen(
-    id: number,
+    id: string,
     tenantId: string,
     data: UpdateDokumen
   ): Promise<DokumenTransaksi> {
@@ -269,7 +289,7 @@ export class DokumenService {
    * Soft delete dokumen
    */
   static async deleteDokumen(
-    id: number,
+    id: string,
     tenantId: string
   ): Promise<void> {
     const connection = await pool.getConnection()

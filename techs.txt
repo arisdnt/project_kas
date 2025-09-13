@@ -1,0 +1,91 @@
+Inventarisasi Tech Stack Proyek — Sistem POS
+
+Ringkasan Cepat
+- Monorepo Node.js (npm workspaces) dengan 2 paket: `backend` (Express + TS) dan `frontend` (React + Vite + Tailwind).
+- Backend: Express 4, TypeScript 5 (strict), MySQL (mysql2/promise), Socket.IO (server), Zod (validasi), Pino (logging), Multer (upload), MinIO SDK (object storage), JWT (jsonwebtoken), Helmet, CORS, express-rate-limit.
+- Frontend: React 18 + Vite 5 + TypeScript, React Router v6, Tailwind CSS 3 (+ tailwindcss-animate), Radix UI primitives (Dialog/Dropdown/Select/Tabs/Toast), Zustand (persist + devtools), Recharts, Socket.IO client, lucide-react, class-variance-authority + clsx + tailwind-merge, docx-preview, xlsx, date-fns.
+- Tooling: concurrently (jalankan BE/FE bersamaan), ESLint, PostCSS + Autoprefixer. Node >= 18, npm >= 9.
+
+Struktur & Build
+- Workspaces: didefinisikan di `package.json` root (`packages/*`).
+- Skrip root: `dev` (concurrently BE+FE), `build` (build keduanya), `install:all`, `clean`.
+- Backend build: `tsc` → output ke `packages/backend/dist`; run dev via `nodemon + ts-node` dengan `tsconfig-paths`.
+- Frontend build: `vite build` (outDir `dist`), dev server pada port 3002.
+- Alias path: BE (`@`, `@/core`, `@/features` via tsconfig-paths), FE (alias serupa via `vite.config.ts`).
+
+Backend (packages/backend)
+- Bahasa & Runtime: TypeScript 5 (strict), Node.js >= 18.
+- Framework HTTP: Express 4 (`express`). Router berbasis `express.Router()` per fitur (mis. `src/features/*/routes/*Routes.ts`).
+- Middleware inti: 
+  - Keamanan: `helmet`, `cors` (origin dari env), `express-rate-limit` (wrapper custom: default/auth/upload/public/admin + headers/logging).
+  - Body parser: `express.json`, `express.urlencoded` (limit 10MB).
+  - Upload file: `multer` (memoryStorage) + validasi tipe/ukuran.
+  - Logging: `pino` + `pino-pretty` (dev).
+- Validasi & Tipe: `zod` untuk skema konfigurasi (app, database, storage) dan model domain (auth, produk, pelanggan, penjualan, stok-opname). Middleware validasi request memakai `zod`.
+- Autentikasi & Autorisasi: 
+  - `bcryptjs` untuk hash password.
+  - `jsonwebtoken` untuk akses/refresh token; payload berisi `userId`, `tenantId`, `role`.
+  - Role & permission mapping (UserRole, PERMISSIONS) + guard `authenticate`/`authorize`.
+- Database: 
+  - Driver: `mysql2/promise` via pool (`src/core/database/connection.ts`).
+  - Konfigurasi diketik & divalidasi (`zod`), helper query, transaksi, health check `/health/status`.
+  - Skema SQL referensi: `database_structure_uuid.sql` (UUID PK, multi-tenant, relasi lengkap: tenants/users/toko/produk/transaksi/dll).
+- Object Storage: 
+  - SDK: `minio` (wrapper `src/core/storage/minioClient.ts`).
+  - Fitur: ensure bucket, putObject, presignedGet, removeObject, getObjectStream.
+  - Layanan domain: `StorageService`, `DokumenService`, `FileTypesController` (manajemen tipe file).
+- Realtime: `socket.io` (server) dengan service `MonitoringService` untuk broadcast status sistem; hook ke HTTP server (`createServer(app)`).
+- Konfigurasi: `.env` memuat DB_*, JWT_*, CORS_*, MINIO_*, PORT; `appConfig`, `databaseConfig`, `storageConfig` memakai `zod`.
+- Testing & Lint: Dev deps `jest` + `@types/jest` (belum ada test `.test.ts`), ESLint (`@typescript-eslint`).
+- Catatan dependensi: `axios` dan `@types/axios` terdaftar namun tidak terlihat dipakai pada kode backend saat ini; `@radix-ui/react-dropdown-menu` tercantum di dependencies backend (kemungkinan tidak diperlukan di sisi server).
+
+Frontend (packages/frontend)
+- Bahasa & Bundler: TypeScript + Vite 5 (`@vitejs/plugin-react`).
+- Framework UI: React 18 (`react`, `react-dom`).
+- Routing: `react-router-dom` v6 (BrowserRouter). Rute utama di `App.tsx` dan nested route di `core/layouts/DashboardLayout.tsx` dengan `<Routes>/<Route>`.
+- State Management: `zustand` dengan `persist` dan `devtools` untuk beberapa store (auth, produk, kategori, supplier, stok-opname, dst).
+- Styling: 
+  - `tailwindcss` + `postcss` + `autoprefixer`; dark mode berbasis kelas; desain melalui CSS variables.
+  - Util kelas: `clsx` + `tailwind-merge`; helper `cn()`.
+- Komponen UI: Pola shadcn-style di atas Radix primitives:
+  - `@radix-ui/react-*`: dialog, dropdown-menu, select, tabs, toast, separator, label, alert-dialog.
+  - `class-variance-authority` (CVA) untuk varian komponen (mis. `badge`, `toast`).
+  - Ikon: `lucide-react`.
+- Realtime: `socket.io-client` + hook `useSocketStatus()`; dipakai pada `StatusBar`.
+- Grafik/Chart: `recharts` (LineChart/BarChart/ResponsiveContainer) pada dashboard & laporan.
+- Pratinjau Dokumen: 
+  - `docx-preview` (render .docx ke DOM) dengan dynamic import.
+  - `xlsx` (SheetJS) untuk render HTML dari sheet pertama .xls/.xlsx (dynamic import).
+  - PDF/Media via `<iframe>/<video>/<audio>` dengan ObjectURL.
+- Tanggal & Format: `date-fns` untuk format tanggal (lokal `id`), `Intl.NumberFormat` untuk mata uang.
+- Jaringan: `fetch` native untuk API; tidak terlihat penggunaan `axios` di FE.
+- Lint: ESLint (plugin react-hooks, react-refresh).
+- Catatan dependensi: `immer` dan `react-window` tercantum namun belum ditemukan pemakaian di kode saat ini.
+
+DevOps & Utilitas Tambahan
+- `concurrently` untuk menjalankan backend dan frontend bersamaan dari root.
+- Skrip bantu: `dev-server.sh` (menjalankan keduanya, menangani port/pid/log ke terminal berwarna).
+- Integrasi MinIO & DB: skrip Node `minio_config.js`, `test_connections.js` untuk inisialisasi bucket, presign URL, dan verifikasi struktur DB.
+- Systemd service contoh: `mysql-mcp-server.service` (menjalankan `@benborla29/mcp-server-mysql` sebagai server MCP untuk MySQL; bukan bagian runtime aplikasi).
+
+Konfigurasi & Konvensi
+- Node engines: `node >= 18`, `npm >= 9` (root `package.json`).
+- Path alias: `@`, `@/core`, `@/features`, `@/components` konsisten di BE & FE.
+- Struktur fitur backend: `controllers/`, `services/`, `models/`, `routes/` per domain.
+- Backend menyajikan build SPA (`packages/frontend/dist`) sebagai static untuk rute non-API (`/dashboard/*`, `/`).
+
+Observasi & Catatan
+- Paket yang tampak tidak dipakai saat analisis:
+  - Backend: `axios`, `@types/axios`, `@radix-ui/react-dropdown-menu`.
+  - Frontend: `immer`, `react-window`.
+  Pertimbangkan pembersihan dependencies untuk mengecilkan jejak instalasi.
+- Backend memiliki setup Jest namun belum ada test `.test.ts` yang terdeteksi.
+- Skema database menggunakan UUID (CHAR(36)) lintas tabel, disediakan via file SQL; migrasi otomatis belum diset di repo (manual apply via klien MySQL).
+
+Versi & File Kunci yang Mengindikasikan Stack
+- Root: `package.json` (workspaces, concurrently), `package-lock.json`.
+- Backend: `packages/backend/package.json`, `tsconfig.json`, `src/index.ts`, `src/core/config/*`, `src/core/database/connection.ts`, `src/core/storage/minioClient.ts`, `src/core/middleware/rateLimiter.ts`, `src/features/**`.
+- Frontend: `packages/frontend/package.json`, `vite.config.ts`, `tailwind.config.js`, `postcss.config.js`, `src/App.tsx`, `src/core/layouts/DashboardLayout.tsx`, `src/core/components/ui/*`, `src/core/store/*`, `src/features/**`.
+
+Kesimpulan
+- Proyek ini menggunakan stack modern TypeScript full‑stack: Express + MySQL + Socket.IO di backend, React + Vite + Tailwind + Zustand + Radix + Recharts di frontend, dengan integrasi object storage MinIO dan skema database berbasis UUID untuk multi‑tenant POS.

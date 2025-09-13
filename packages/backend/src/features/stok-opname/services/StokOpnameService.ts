@@ -10,6 +10,22 @@ import { logger } from '@/core/utils/logger';
 
 export class StokOpnameService {
   /**
+   * Helper function to get store ID from tenant ID
+   */
+  private static async getStoreIdFromTenant(tenantId: string): Promise<string | null> {
+    try {
+      const [rows] = await pool.execute<RowDataPacket[]>(
+        'SELECT id FROM toko WHERE tenant_id = ? AND status = "aktif" LIMIT 1',
+        [tenantId]
+      );
+      return rows.length > 0 ? rows[0].id : null;
+    } catch (error) {
+      logger.error({ error }, 'Error getting store ID from tenant');
+      return null;
+    }
+  }
+
+  /**
    * Get all stok opname with pagination and filters
    */
   static async getAll(
@@ -21,8 +37,14 @@ export class StokOpnameService {
     const connection = await pool.getConnection();
     const offset = (page - 1) * limit;
 
-    let whereClause = 'WHERE so.tenant_id = ?';
-    const params: any[] = [tenantId];
+    // Get store ID from tenant ID
+    const storeId = await StokOpnameService.getStoreIdFromTenant(tenantId);
+    if (!storeId) {
+      throw new Error('Toko tidak ditemukan untuk tenant ini');
+    }
+
+    let whereClause = 'WHERE i.toko_id = ?';
+    const params: any[] = [storeId];
 
     // Build WHERE clause based on filters
     if (filters.kategoriId) {
@@ -51,49 +73,49 @@ export class StokOpnameService {
     }
 
     if (filters.search) {
-      whereClause += ' AND (p.nama LIKE ? OR p.sku LIKE ?)';
+      whereClause += ' AND (p.nama LIKE ? OR p.kode LIKE ?)';
       params.push(`%${filters.search}%`, `%${filters.search}%`);
     }
 
     // Temporary: Use inventaris table as base for stok opname until stok_opname table is created
     const query = `
       SELECT 
-        i.id_produk as id,
-        i.id_produk,
+        i.produk_id as id,
+        i.produk_id,
         p.nama as nama_produk,
-        p.sku,
+        p.kode as sku,
         JSON_OBJECT('id', k.id, 'nama', k.nama) as kategori,
         JSON_OBJECT('id', b.id, 'nama', b.nama) as brand,
         JSON_OBJECT('id', s.id, 'nama', s.nama) as supplier,
-        i.jumlah as stok_sistem,
-        i.jumlah as stok_fisik,
+        i.stok_tersedia as stok_sistem,
+        i.stok_tersedia as stok_fisik,
         0 as selisih,
         'pending' as status,
         NOW() as tanggal_opname,
         'system' as dibuat_oleh,
         NOW() as dibuat_pada,
-        i.diperbarui_pada,
+        i.terakhir_update as diperbarui_pada,
         'Data dari inventaris' as catatan
       FROM inventaris i
-      LEFT JOIN produk p ON i.id_produk = p.uuid
-      LEFT JOIN toko t ON i.id_toko = t.uuid
-      LEFT JOIN kategori k ON p.id_kategori = k.uuid
-      LEFT JOIN brand b ON p.id_brand = b.uuid
-      LEFT JOIN supplier s ON p.id_supplier = s.uuid
-      WHERE i.id_toko = ?
-      ORDER BY i.diperbarui_pada DESC
+      LEFT JOIN produk p ON i.produk_id = p.id
+      LEFT JOIN toko t ON i.toko_id = t.id
+      LEFT JOIN kategori k ON p.kategori_id = k.id
+      LEFT JOIN brand b ON p.brand_id = b.id
+      LEFT JOIN supplier s ON p.supplier_id = s.id
+      ${whereClause}
+      ORDER BY i.terakhir_update DESC
       LIMIT ${limit} OFFSET ${offset}
     `;
 
     const countQuery = `
       SELECT COUNT(*) as total
       FROM inventaris i
-      LEFT JOIN produk p ON i.id_produk = p.uuid
-      LEFT JOIN toko t ON i.id_toko = t.uuid
-      LEFT JOIN kategori k ON p.id_kategori = k.uuid
-      LEFT JOIN brand b ON p.id_brand = b.uuid
-      LEFT JOIN supplier s ON p.id_supplier = s.uuid
-      WHERE i.id_toko = ?
+      LEFT JOIN produk p ON i.produk_id = p.id
+      LEFT JOIN toko t ON i.toko_id = t.id
+      LEFT JOIN kategori k ON p.kategori_id = k.id
+      LEFT JOIN brand b ON p.brand_id = b.id
+      LEFT JOIN supplier s ON p.supplier_id = s.id
+      ${whereClause}
     `;
 
     try {
@@ -102,8 +124,8 @@ export class StokOpnameService {
         query: query.substring(0, 200) + '...', 
         countQuery: countQuery.substring(0, 200) + '...' 
       });
-      const [rows] = await connection.execute(query, [tenantId]) as [RowDataPacket[], any];
-      const [countRows] = await connection.execute(countQuery, [tenantId]) as [RowDataPacket[], any];
+      const [rows] = await connection.execute(query, params) as [RowDataPacket[], any];
+      const [countRows] = await connection.execute(countQuery, params) as [RowDataPacket[], any];
 
       const data: StokOpname[] = rows.map(row => ({
         id: row.id,

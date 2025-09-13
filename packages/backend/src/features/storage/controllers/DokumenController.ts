@@ -70,8 +70,8 @@ export class DokumenController {
         return res.status(401).json({ success: false, message: 'Unauthorized' })
       }
 
-      const id = parseInt(req.params.id)
-      if (isNaN(id)) {
+      const id = req.params.id
+      if (!id || typeof id !== 'string') {
         return res.status(400).json({ success: false, message: 'ID tidak valid' })
       }
 
@@ -159,8 +159,8 @@ export class DokumenController {
         return res.status(401).json({ success: false, message: 'Unauthorized' })
       }
 
-      const id = parseInt(req.params.id)
-      if (isNaN(id) || id <= 0) {
+      const id = req.params.id
+      if (!id || typeof id !== 'string') {
         return res.status(400).json({ success: false, message: 'ID dokumen tidak valid' })
       }
 
@@ -205,8 +205,8 @@ export class DokumenController {
         return res.status(401).json({ success: false, message: 'Unauthorized' })
       }
 
-      const id = parseInt(req.params.id)
-      if (isNaN(id)) {
+      const id = req.params.id
+      if (!id || typeof id !== 'string') {
         return res.status(400).json({ success: false, message: 'ID tidak valid' })
       }
 
@@ -247,8 +247,8 @@ export class DokumenController {
         return res.status(401).json({ success: false, message: 'Unauthorized' })
       }
 
-      const id = parseInt(req.params.id)
-      if (isNaN(id)) {
+      const id = req.params.id
+      if (!id || typeof id !== 'string') {
         return res.status(400).json({ success: false, message: 'ID tidak valid' })
       }
 
@@ -278,8 +278,8 @@ export class DokumenController {
         return res.status(401).json({ success: false, message: 'Unauthorized' })
       }
 
-      const id = parseInt(req.params.id)
-      if (isNaN(id)) {
+      const id = req.params.id
+      if (!id || typeof id !== 'string') {
         return res.status(400).json({ success: false, message: 'ID tidak valid' })
       }
 

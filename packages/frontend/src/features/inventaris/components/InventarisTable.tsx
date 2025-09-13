@@ -35,7 +35,7 @@ export function InventarisTable({ onView, onEdit }: Props) {
   const SkeletonRows = useMemo(() => (
     <tbody>
       {Array.from({ length: 8 }).map((_, i) => (
-        <tr key={i} className="animate-pulse">
+        <tr key={`skeleton-${i}`} className="animate-pulse">
           <td className="px-4 py-3"><div className="h-3.5 bg-gray-200 rounded w-40" /></td>
           <td className="px-4 py-3"><div className="h-3.5 bg-gray-200 rounded w-24" /></td>
           <td className="px-4 py-3"><div className="h-3.5 bg-gray-200 rounded w-28" /></td>
@@ -43,6 +43,7 @@ export function InventarisTable({ onView, onEdit }: Props) {
           <td className="px-4 py-3"><div className="h-3.5 bg-gray-200 rounded w-28" /></td>
           <td className="px-4 py-3"><div className="h-3.5 bg-gray-200 rounded w-24" /></td>
           <td className="px-4 py-3"><div className="h-3.5 bg-gray-200 rounded w-24" /></td>
+          <td className="px-4 py-3"><div className="h-8 bg-gray-200 rounded w-28" /></td>
           <td className="px-4 py-3"><div className="h-8 bg-gray-200 rounded w-28" /></td>
         </tr>
       ))}
