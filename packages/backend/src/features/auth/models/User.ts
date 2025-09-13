@@ -101,24 +101,30 @@ export const PERMISSIONS = {
   USER_READ: 'user:read',
   USER_UPDATE: 'user:update',
   USER_DELETE: 'user:delete',
-  
+
   // Product management
   PRODUCT_CREATE: 'product:create',
   PRODUCT_READ: 'product:read',
   PRODUCT_UPDATE: 'product:update',
   PRODUCT_DELETE: 'product:delete',
-  
+
   // Transaction management
   TRANSACTION_CREATE: 'transaction:create',
   TRANSACTION_READ: 'transaction:read',
   TRANSACTION_UPDATE: 'transaction:update',
   TRANSACTION_DELETE: 'transaction:delete',
-  
-  // Report access
+
+  // Customer management
+  CUSTOMER_CREATE: 'customer:create',
+  CUSTOMER_READ: 'customer:read',
+  CUSTOMER_UPDATE: 'customer:update',
+  CUSTOMER_DELETE: 'customer:delete',
+
+  // Report management
   REPORT_READ: 'report:read',
   REPORT_EXPORT: 'report:export',
-  
-  // System settings
+
+  // Settings management
   SETTINGS_READ: 'settings:read',
   SETTINGS_UPDATE: 'settings:update'
 } as const;
@@ -134,6 +140,10 @@ export const ROLE_PERMISSIONS = {
     PERMISSIONS.PRODUCT_READ,
     PERMISSIONS.PRODUCT_UPDATE,
     PERMISSIONS.PRODUCT_DELETE,
+    PERMISSIONS.CUSTOMER_CREATE,
+    PERMISSIONS.CUSTOMER_READ,
+    PERMISSIONS.CUSTOMER_UPDATE,
+    PERMISSIONS.CUSTOMER_DELETE,
     PERMISSIONS.TRANSACTION_READ,
     PERMISSIONS.REPORT_READ,
     PERMISSIONS.REPORT_EXPORT,
@@ -144,12 +154,15 @@ export const ROLE_PERMISSIONS = {
     PERMISSIONS.USER_READ,
     PERMISSIONS.PRODUCT_READ,
     PERMISSIONS.PRODUCT_UPDATE,
+    PERMISSIONS.CUSTOMER_READ,
+    PERMISSIONS.CUSTOMER_UPDATE,
     PERMISSIONS.TRANSACTION_READ,
     PERMISSIONS.REPORT_READ,
     PERMISSIONS.REPORT_EXPORT
   ],
   [UserRole.CASHIER]: [
     PERMISSIONS.PRODUCT_READ,
+    PERMISSIONS.CUSTOMER_READ,
     PERMISSIONS.TRANSACTION_CREATE,
     PERMISSIONS.TRANSACTION_READ
   ]

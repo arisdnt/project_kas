@@ -8,6 +8,7 @@ import { KasirPage } from '@/features/kasir/pages/KasirPage'
 import { PromoPage } from '@/features/promo/pages/PromoPage'
 import { PengaturanPage } from '@/features/pengaturan/pages/PengaturanPage'
 import { PengaturanPenggunaPage } from '@/features/pengaturan/pengguna/PengaturanPenggunaPage'
+import { PengaturanTokoPage } from '@/features/pengaturan/toko/PengaturanTokoPage'
 import { useCalculator } from '../hooks/use-calculator'
 import { CalculatorModal } from '../components/ui/calculator-modal'
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
@@ -976,12 +977,7 @@ export function DashboardLayout() {
               />
             } />
             <Route path="/pengaturan" element={<PengaturanPage />} />
-            <Route path="/pengaturan/toko" element={
-              <PlaceholderPage 
-                title="Pengaturan Toko/Tenant" 
-                description="Profil toko, informasi kontak, dan pengaturan multi-tenant."
-              />
-            } />
+            <Route path="/pengaturan/toko" element={<PengaturanTokoPage />} />
             <Route path="/pengaturan/pengguna" element={<PengaturanPenggunaPage />} />
             <Route path="/pengaturan/peran" element={
               <PlaceholderPage 

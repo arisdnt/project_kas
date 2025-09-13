@@ -5,12 +5,13 @@
 import { Router } from 'express'
 import { authenticate, requirePermission } from '@/features/auth/middleware/authMiddleware'
 import { PelangganController } from '../controllers/PelangganController'
+import { PERMISSIONS } from '@/features/auth/models/User'
 
 const router = Router()
 
 router.use(authenticate)
 
-router.get('/', requirePermission('penjualan:lihat'), PelangganController.search)
+router.get('/', requirePermission(PERMISSIONS.CUSTOMER_READ), PelangganController.search)
 
 export default router
 

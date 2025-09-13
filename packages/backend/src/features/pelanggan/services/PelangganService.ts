@@ -23,8 +23,8 @@ export class PelangganService {
     const total = Number(countRows[0]?.total || 0)
 
     const [rows] = await pool.execute<RowDataPacket[]>(
-      `SELECT id, nama, email, telepon FROM pelanggan ${where} ORDER BY nama IS NULL, nama ASC LIMIT ? OFFSET ?`,
-      [...params, limit, offset],
+      `SELECT id, nama, email, telepon FROM pelanggan ${where} ORDER BY nama IS NULL, nama ASC LIMIT ${limit} OFFSET ${offset}`,
+      params,
     )
 
     return { data: rows as any[], total, page, totalPages: Math.ceil(total / limit) }

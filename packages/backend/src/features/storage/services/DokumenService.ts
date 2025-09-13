@@ -156,8 +156,8 @@ export class DokumenService {
          LEFT JOIN transaksi t ON d.id_transaksi = t.id
          WHERE ${whereClause}
          ORDER BY d.dibuat_pada DESC
-         LIMIT ? OFFSET ?`,
-        queryParams
+         LIMIT ${query.limit} OFFSET ${offset}`,
+        params
       )
 
       // Get stats

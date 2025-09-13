@@ -12,8 +12,12 @@ export class StokOpnameController {
   /**
    * Get all stok opname with pagination and filters
    */
-  static async getAll(req: Request, res: Response): Promise<void> {
+  static async getAll(req: Request, res: Response) {
     try {
+      if (!req.user) {
+        return res.status(401).json({ success: false, message: 'Unauthorized' });
+      }
+
       const page = parseInt(req.query.page as string) || 1;
       const limit = parseInt(req.query.limit as string) || 25;
       
@@ -26,12 +30,12 @@ export class StokOpnameController {
         search: req.query.search as string
       };
 
-      const result = await StokOpnameService.getAll(page, limit, filters);
+      const result = await StokOpnameService.getAll(req.user.tenantId, page, limit, filters);
       
       const totalPages = Math.ceil(result.total / limit);
       const hasNextPage = page < totalPages;
 
-      res.json({
+      return res.json({
         success: true,
         data: result.data,
         pagination: {
@@ -44,7 +48,7 @@ export class StokOpnameController {
       });
     } catch (error: any) {
       logger.error('Error in StokOpnameController.getAll:', error);
-      res.status(500).json({
+      return res.status(500).json({
         success: false,
         message: error.message || 'Gagal mengambil data stok opname'
       });

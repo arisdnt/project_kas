@@ -13,6 +13,7 @@ export class StokOpnameService {
    * Get all stok opname with pagination and filters
    */
   static async getAll(
+    tenantId: number,
     page: number = 1,
     limit: number = 25,
     filters: StokOpnameFilters = {}
@@ -20,8 +21,8 @@ export class StokOpnameService {
     const connection = await pool.getConnection();
     const offset = (page - 1) * limit;
 
-    let whereClause = 'WHERE 1=1';
-    const params: any[] = [];
+    let whereClause = 'WHERE so.tenant_id = ?';
+    const params: any[] = [tenantId];
 
     // Build WHERE clause based on filters
     if (filters.kategoriId) {
@@ -54,56 +55,64 @@ export class StokOpnameService {
       params.push(`%${filters.search}%`, `%${filters.search}%`);
     }
 
+    // Temporary: Use inventaris table as base for stok opname until stok_opname table is created
     const query = `
       SELECT 
-        so.id,
-        so.id_produk,
+        i.id_produk as id,
+        i.id_produk,
         p.nama as nama_produk,
         p.sku,
         JSON_OBJECT('id', k.id, 'nama', k.nama) as kategori,
         JSON_OBJECT('id', b.id, 'nama', b.nama) as brand,
         JSON_OBJECT('id', s.id, 'nama', s.nama) as supplier,
-        so.stok_sistem,
-        so.stok_fisik,
-        so.selisih,
-        so.status,
-        so.tanggal_opname,
-        so.dibuat_oleh,
-        so.dibuat_pada,
-        so.diperbarui_pada,
-        so.catatan
-      FROM stok_opname so
-      LEFT JOIN produk p ON so.id_produk = p.id
-      LEFT JOIN kategori k ON p.kategori_id = k.id
-      LEFT JOIN brand b ON p.brand_id = b.id
-      LEFT JOIN supplier s ON p.supplier_id = s.id
-      ${whereClause}
-      ORDER BY so.dibuat_pada DESC
-      LIMIT ? OFFSET ?
+        i.jumlah as stok_sistem,
+        i.jumlah as stok_fisik,
+        0 as selisih,
+        'pending' as status,
+        NOW() as tanggal_opname,
+        'system' as dibuat_oleh,
+        NOW() as dibuat_pada,
+        i.diperbarui_pada,
+        'Data dari inventaris' as catatan
+      FROM inventaris i
+      LEFT JOIN produk p ON i.id_produk = p.id
+      LEFT JOIN toko t ON i.id_toko = t.id
+      LEFT JOIN kategori k ON p.id_kategori = k.id
+      LEFT JOIN brand b ON p.id_brand = b.id
+      LEFT JOIN supplier s ON p.id_supplier = s.id
+      WHERE i.id_toko = ?
+      ORDER BY i.diperbarui_pada DESC
+      LIMIT ${limit} OFFSET ${offset}
     `;
 
     const countQuery = `
       SELECT COUNT(*) as total
-      FROM stok_opname so
-      LEFT JOIN produk p ON so.id_produk = p.id
-      LEFT JOIN kategori k ON p.kategori_id = k.id
-      LEFT JOIN brand b ON p.brand_id = b.id
-      LEFT JOIN supplier s ON p.supplier_id = s.id
-      ${whereClause}
+      FROM inventaris i
+      LEFT JOIN produk p ON i.id_produk = p.id
+      LEFT JOIN toko t ON i.id_toko = t.id
+      LEFT JOIN kategori k ON p.id_kategori = k.id
+      LEFT JOIN brand b ON p.id_brand = b.id
+      LEFT JOIN supplier s ON p.id_supplier = s.id
+      WHERE i.id_toko = ?
     `;
 
     try {
-      const [rows] = await connection.execute(query, [...params, limit, offset]) as [RowDataPacket[], any];
-      const [countRows] = await connection.execute(countQuery, params) as [RowDataPacket[], any];
+      logger.info('Executing stok opname query:', { 
+        tenantId, 
+        query: query.substring(0, 200) + '...', 
+        countQuery: countQuery.substring(0, 200) + '...' 
+      });
+      const [rows] = await connection.execute(query, [tenantId]) as [RowDataPacket[], any];
+      const [countRows] = await connection.execute(countQuery, [tenantId]) as [RowDataPacket[], any];
 
       const data: StokOpname[] = rows.map(row => ({
         id: row.id,
         id_produk: row.id_produk,
         nama_produk: row.nama_produk,
         sku: row.sku,
-        kategori: row.kategori ? JSON.parse(row.kategori) : null,
-        brand: row.brand ? JSON.parse(row.brand) : null,
-        supplier: row.supplier ? JSON.parse(row.supplier) : null,
+        kategori: row.kategori || null,
+        brand: row.brand || null,
+        supplier: row.supplier || null,
         stok_sistem: row.stok_sistem,
         stok_fisik: row.stok_fisik,
         selisih: row.selisih,
@@ -120,8 +129,15 @@ export class StokOpnameService {
         total: countRows[0]?.total || 0
       };
     } catch (error) {
-      logger.error('Error getting stok opname:', error);
-      throw new Error('Gagal mengambil data stok opname');
+      logger.error('Error getting stok opname:', {
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
+        tenantId,
+        query: query.substring(0, 500),
+        countQuery: countQuery.substring(0, 500)
+      });
+      console.error('Full error details:', error);
+      throw error;
     } finally {
       connection.release();
     }
