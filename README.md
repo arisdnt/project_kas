@@ -26,17 +26,72 @@ Dokumentasi lengkap untuk menjalankan proyek ini di Ubuntu 24.04. Monorepo beris
 ```
 
 ## ✅ Prasyarat (Ubuntu 24.04)
+- Ubuntu 24.04 dengan akses sudo dan koneksi internet
 - Node.js ≥ 18 dan npm ≥ 9
-- Git, build tools: `sudo apt update && sudo apt install -y build-essential git curl`
-- MySQL Server 8.x (atau MariaDB ≥ 10.6): `sudo apt install -y mysql-server`
-- Opsional: MinIO (untuk penyimpanan file) atau penyedia S3 kompatibel
+- MySQL Server 8.x (atau MariaDB ≥ 10.6)
+- Git dan build tools (C/C++ toolchain untuk native addons)
+- Opsional: Docker + Docker Compose plugin (untuk MinIO atau deployment), UFW untuk firewall
 
-Instal Node.js (via nvm):
+## 🧩 Instalasi Dependensi Sistem (Ubuntu 24.04)
+Jalankan perintah berikut berurutan (aman diulang):
+
+1) Alat dasar & toolchain
+```
+sudo apt update
+sudo apt install -y build-essential git curl ca-certificates gnupg pkg-config python3 make g++ unzip
+```
+
+2) Node.js LTS
+- Opsi A (disarankan): nvm
 ```
 curl -fsSL https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
 source ~/.bashrc
 nvm install --lts
 node -v && npm -v
+```
+- Opsi B (alternatif): NodeSource (sesuaikan versi, mis. 20.x)
+```
+curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+sudo apt install -y nodejs
+node -v && npm -v
+```
+
+3) MySQL Server 8
+```
+sudo apt install -y mysql-server
+sudo systemctl enable --now mysql
+sudo mysql_secure_installation
+```
+Jika perlu, set plugin auth kompatibel:
+```
+sudo mysql -e "ALTER USER 'root'@'localhost' IDENTIFIED WITH mysql_native_password BY 'your_root_password'; FLUSH PRIVILEGES;"
+```
+Verifikasi:
+```
+mysql --version
+sudo systemctl status mysql --no-pager
+```
+
+4) (Opsional) Docker & Docker Compose plugin
+```
+sudo apt install -y ca-certificates curl gnupg
+sudo install -m 0755 -d /etc/apt/keyrings
+curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu $(. /etc/os-release && echo $VERSION_CODENAME) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+sudo apt update
+sudo apt install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+sudo usermod -aG docker $USER && newgrp docker
+docker --version && docker compose version
+```
+
+5) (Opsional) Firewall UFW
+```
+sudo apt install -y ufw
+sudo ufw allow OpenSSH
+sudo ufw allow 3000/tcp  # backend
+sudo ufw allow 5173/tcp  # vite dev
+sudo ufw enable
+sudo ufw status
 ```
 
 ## 🛠️ Instalasi
