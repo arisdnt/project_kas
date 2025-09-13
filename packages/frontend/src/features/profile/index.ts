@@ -1,2 +1,11 @@
-export { ProfilePage } from './pages/ProfilePage'
-export type { UserProfile, ProfileFormData, PasswordChangeData } from './types/profile'
+// Components
+export * from './components'
+
+// Pages
+export * from './pages'
+
+// Hooks
+export { useProfile } from './hooks/useProfile'
+
+// Types
+export * from './types/profile.types'
