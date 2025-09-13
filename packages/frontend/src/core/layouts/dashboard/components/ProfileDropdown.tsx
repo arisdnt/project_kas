@@ -50,7 +50,7 @@ export function ProfileDropdown({ user, onLogout }: Props) {
           </DropdownMenu.Item>
           <DropdownMenu.Item asChild>
             <Link
-              to="/dashboard/pengaturan"
+              to="/dashboard/profile/pengaturan"
               className="flex items-center space-x-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded cursor-pointer outline-none focus:bg-gray-100 data-[highlighted]:bg-gray-100"
             >
               <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -73,4 +73,3 @@ export function ProfileDropdown({ user, onLogout }: Props) {
     </DropdownMenu.Root>
   );
 }
-

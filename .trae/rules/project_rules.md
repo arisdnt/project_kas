@@ -1,2 +1,2 @@
-untuk menjalankan ataupun dev server baick backend mupunt frontend, gunakan script dev-server.sh
+WAJIB MENGGUNAKAN MAKSIMAL 250 LOC DAN SETIAP FILE HARUS MENGGUNAKAN 250 LOC DAN SETIAP FUNGSI DI PECAH BERDASARKAN FUNGSI INDIVIDUAL DAN TERORGANISIR
 kode komentar dan lain lain harus sepenuhnya dalam bahasa indonesia

@@ -31,7 +31,7 @@ export function TenantInfo({ profile }: TenantInfoProps) {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center space-x-2">
-            <Building2 className="w-5 h-5" />
+            <Building2 className="w-5 h-5 text-indigo-600" />
             <span>Informasi Tenant</span>
           </CardTitle>
         </CardHeader>
@@ -57,7 +57,7 @@ export function TenantInfo({ profile }: TenantInfoProps) {
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="flex items-center space-x-3">
-              <Mail className="w-4 h-4 text-gray-500" />
+              <Mail className="w-4 h-4 text-blue-600" />
               <div>
                 <p className="text-sm text-gray-600">Email</p>
                 <p className="font-medium">{profile.email_tenant || 'Tidak tersedia'}</p>
@@ -65,7 +65,7 @@ export function TenantInfo({ profile }: TenantInfoProps) {
             </div>
             
             <div className="flex items-center space-x-3">
-              <Phone className="w-4 h-4 text-gray-500" />
+              <Phone className="w-4 h-4 text-green-600" />
               <div>
                 <p className="text-sm text-gray-600">Telepon</p>
                 <p className="font-medium">{profile.telepon_tenant || 'Tidak tersedia'}</p>
@@ -74,7 +74,7 @@ export function TenantInfo({ profile }: TenantInfoProps) {
           </div>
           
           <div className="flex items-start space-x-3">
-            <MapPin className="w-4 h-4 text-gray-500 mt-1" />
+            <MapPin className="w-4 h-4 text-orange-600 mt-1" />
             <div>
               <p className="text-sm text-gray-600">Alamat</p>
               <p className="font-medium">{profile.alamat_tenant || 'Tidak tersedia'}</p>
@@ -91,7 +91,7 @@ export function TenantInfo({ profile }: TenantInfoProps) {
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="flex items-center space-x-3">
-              <Store className="w-4 h-4 text-gray-500" />
+              <Store className="w-4 h-4 text-blue-600" />
               <div>
                 <p className="text-sm text-gray-600">Maksimal Toko</p>
                 <p className="text-2xl font-bold text-blue-600">{profile.max_toko || 0}</p>
@@ -99,7 +99,7 @@ export function TenantInfo({ profile }: TenantInfoProps) {
             </div>
             
             <div className="flex items-center space-x-3">
-              <Users className="w-4 h-4 text-gray-500" />
+              <Users className="w-4 h-4 text-green-600" />
               <div>
                 <p className="text-sm text-gray-600">Maksimal Pengguna</p>
                 <p className="text-2xl font-bold text-green-600">{profile.max_pengguna || 0}</p>
@@ -133,7 +133,7 @@ export function TenantInfo({ profile }: TenantInfoProps) {
             {profile.is_super_admin && (
               <div className="flex justify-between items-center">
                 <span className="text-sm text-gray-600">Hak Akses:</span>
-                <Badge variant="destructive">
+                <Badge variant="secondary">
                   Super Administrator
                 </Badge>
               </div>

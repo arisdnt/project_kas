@@ -77,12 +77,13 @@ export function PasswordChangeForm({ onChangePassword }: PasswordChangeFormProps
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center space-x-2">
-          <Key className="w-4 h-4" />
-          <span>Ubah Password</span>
+    <Card className="border border-gray-200 shadow-sm">
+      <CardHeader className="border-b border-gray-100 bg-gray-50">
+        <CardTitle className="text-xl font-semibold text-gray-900 flex items-center space-x-2">
+          <Key className="w-5 h-5 text-red-600" />
+          <span>Keamanan Akun</span>
         </CardTitle>
+        <p className="text-sm text-gray-600 mt-1">Kelola password dan pengaturan keamanan</p>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">

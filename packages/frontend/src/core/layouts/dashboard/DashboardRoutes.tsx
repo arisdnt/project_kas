@@ -24,6 +24,7 @@ import { TenanPage } from '@/features/tenan/pages/TenanPage';
 import { PengaturanPenggunaPage } from '@/features/pengaturan/pengguna/PengaturanPenggunaPage';
 import { StatusSistemPage } from '@/features/monitoring/pages/StatusSistemPage';
 import { ProfilePage } from '@/features/profile/pages/ProfilePage';
+import { PengaturanProfilPage } from '@/features/profile/pages/PengaturanProfilPage';
 
 export function DashboardRoutes() {
   return (
@@ -68,7 +69,7 @@ export function DashboardRoutes() {
       />
       <Route path="/monitoring/status-sistem" element={<StatusSistemPage />} />
       <Route path="/profile" element={<ProfilePage />} />
+      <Route path="/profile/pengaturan" element={<PengaturanProfilPage />} />
     </Routes>
   );
 }
-
