@@ -7,7 +7,7 @@ import { pool } from '@/core/database/connection'
 import { SearchPelangganQuery } from '../models/Pelanggan'
 
 export class PelangganService {
-  static async search(tenantId: number, q: SearchPelangganQuery): Promise<{ data: any[]; total: number; page: number; totalPages: number }> {
+  static async search(tenantId: string, q: SearchPelangganQuery): Promise<{ data: any[]; total: number; page: number; totalPages: number }> {
     const page = Number(q.page || 1)
     const limit = Number(q.limit || 10)
     const offset = (page - 1) * limit
@@ -23,11 +23,10 @@ export class PelangganService {
     const total = Number(countRows[0]?.total || 0)
 
     const [rows] = await pool.execute<RowDataPacket[]>(
-      `SELECT id, nama, email, telepon FROM pelanggan ${where} ORDER BY nama IS NULL, nama ASC LIMIT ${limit} OFFSET ${offset}`,
+      `SELECT uuid as id, nama, email, telepon FROM pelanggan ${where} ORDER BY nama IS NULL, nama ASC LIMIT ${limit} OFFSET ${offset}`,
       params,
     )
 
     return { data: rows as any[], total, page, totalPages: Math.ceil(total / limit) }
   }
 }
-

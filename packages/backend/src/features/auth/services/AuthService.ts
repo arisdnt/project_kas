@@ -69,14 +69,13 @@ export class AuthService {
     const connection = await pool.getConnection();
     
     try {
-      // Query user berdasarkan username
+      // Query user berdasarkan username dari tabel users dengan UUID
       const [rows] = await connection.execute<RowDataPacket[]>(
-        `SELECT p.id, p.id_toko as tenant_id, p.username, '' as email, p.password_hash as password, 
-                p.nama_lengkap as full_name, r.nama as role, p.aktif as status, NULL as last_login
-         FROM pengguna p
-         JOIN peran r ON p.id_peran = r.id
-         WHERE p.username = ? AND p.aktif = ?`,
-        [loginData.username, true]
+        `SELECT u.id, u.tenant_id, u.username, u.email, u.password_hash as password, 
+                u.nama_lengkap as full_name, u.status, u.last_login, u.is_super_admin
+         FROM users u
+         WHERE u.username = ? AND u.status = 'aktif'`,
+        [loginData.username]
       );
 
       if (rows.length === 0) {
@@ -96,26 +95,19 @@ export class AuthService {
         throw new Error('Invalid tenant access');
       }
 
-      // Update last login (skip for now as table doesn't have this column)
-      // await connection.execute(
-      //   'UPDATE pengguna SET last_login = NOW() WHERE id = ?',
-      //   [user.id]
-      // );
+      // Update last login
+      await connection.execute(
+        'UPDATE users SET last_login = NOW() WHERE id = ?',
+        [user.id]
+      );
 
       // Map role dari database ke enum
       let mappedRole: UserRole;
-      switch (user.role) {
-        case 'admin':
-          mappedRole = UserRole.ADMIN;
-          break;
-        case 'kasir':
-          mappedRole = UserRole.CASHIER;
-          break;
-        case 'manager':
-          mappedRole = UserRole.MANAGER;
-          break;
-        default:
-          mappedRole = UserRole.CASHIER;
+      if (user.is_super_admin === 1) {
+        mappedRole = UserRole.SUPER_ADMIN;
+      } else {
+        // Default role untuk user biasa adalah ADMIN
+        mappedRole = UserRole.ADMIN;
       }
 
       // Prepare user data
@@ -124,9 +116,9 @@ export class AuthService {
         tenantId: user.tenant_id,
         username: user.username,
         email: user.email || '',
-        fullName: user.full_name,
+        fullName: user.full_name || user.username,
         role: mappedRole,
-        status: user.status ? UserStatus.ACTIVE : UserStatus.INACTIVE
+        status: user.status === 'aktif' ? UserStatus.ACTIVE : UserStatus.INACTIVE
       };
 
       // Generate tokens
@@ -179,18 +171,21 @@ export class AuthService {
       // Hash password
       const hashedPassword = await this.hashPassword(userData.password);
 
+      // Generate UUID for new user
+      const userId = require('crypto').randomUUID();
+
       // Insert user
       const [result] = await connection.execute<ResultSetHeader>(
-        `INSERT INTO users (tenant_id, username, email, password, full_name, role, status, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`,
+        `INSERT INTO users (id, tenant_id, username, email, password_hash, full_name, role, status, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, 'aktif', NOW(), NOW())`,
         [
+          userId,
           userData.tenantId,
           userData.username,
           userData.email,
           hashedPassword,
           userData.fullName,
-          userData.role,
-          userData.status
+          userData.role
         ]
       );
 
@@ -198,7 +193,7 @@ export class AuthService {
       const [newUser] = await connection.execute<RowDataPacket[]>(
         `SELECT id, tenant_id, username, email, full_name, role, status, created_at, updated_at
          FROM users WHERE id = ?`,
-        [result.insertId]
+        [userId]
       );
 
       await connection.commit();
@@ -217,7 +212,7 @@ export class AuthService {
         password: '', // Don't return password
         fullName: newUser[0].full_name,
         role: newUser[0].role as UserRole,
-        status: newUser[0].status as UserStatus,
+        status: newUser[0].status === 'aktif' ? UserStatus.ACTIVE : UserStatus.INACTIVE,
         lastLogin: null,
         createdAt: newUser[0].created_at,
         updatedAt: newUser[0].updated_at
@@ -234,17 +229,16 @@ export class AuthService {
   /**
    * Get user by ID
    */
-  static async getUserById(userId: number, tenantId: number): Promise<AuthenticatedUser | null> {
+  static async getUserById(userId: string, tenantId: string): Promise<AuthenticatedUser | null> {
     const connection = await pool.getConnection();
     
     try {
       const [rows] = await connection.execute<RowDataPacket[]>(
-        `SELECT p.id, p.id_toko as tenant_id, p.username, '' as email, 
-                p.nama_lengkap as full_name, r.nama as role, p.aktif as status
-         FROM pengguna p
-         JOIN peran r ON p.id_peran = r.id
-         WHERE p.id = ? AND p.id_toko = ? AND p.aktif = ?`,
-        [userId, tenantId, true]
+        `SELECT u.id, u.tenant_id, u.username, u.email, 
+                u.nama_lengkap as full_name, u.status, u.is_super_admin
+         FROM users u
+         WHERE u.id = ? AND u.tenant_id = ? AND u.status = 'aktif'`,
+        [userId, tenantId]
       );
 
       if (rows.length === 0) {
@@ -255,18 +249,11 @@ export class AuthService {
 
       // Map role dari database ke enum
       let mappedRole: UserRole;
-      switch (user.role) {
-        case 'admin':
-          mappedRole = UserRole.ADMIN;
-          break;
-        case 'kasir':
-          mappedRole = UserRole.CASHIER;
-          break;
-        case 'manager':
-          mappedRole = UserRole.MANAGER;
-          break;
-        default:
-          mappedRole = UserRole.CASHIER;
+      if (user.is_super_admin === 1) {
+        mappedRole = UserRole.SUPER_ADMIN;
+      } else {
+        // Default role untuk user biasa adalah ADMIN
+        mappedRole = UserRole.ADMIN;
       }
 
       return {
@@ -274,9 +261,9 @@ export class AuthService {
         tenantId: user.tenant_id,
         username: user.username,
         email: user.email || '',
-        fullName: user.full_name,
+        fullName: user.full_name || user.username,
         role: mappedRole,
-        status: user.status ? UserStatus.ACTIVE : UserStatus.INACTIVE
+        status: user.status === 'aktif' ? UserStatus.ACTIVE : UserStatus.INACTIVE
       };
 
     } finally {

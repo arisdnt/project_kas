@@ -21,8 +21,8 @@ export class DokumenService {
    * Membuat record dokumen baru di database
    */
   static async createDokumen(
-    userId: number,
-    tenantId: number,
+    userId: string,
+    tenantId: string,
     data: CreateDokumen
   ): Promise<DokumenTransaksi> {
     const connection = await pool.getConnection()
@@ -60,7 +60,7 @@ export class DokumenService {
    */
   static async getDokumenById(
     id: number,
-    tenantId: number
+    tenantId: string
   ): Promise<DokumenTransaksi> {
     const connection = await pool.getConnection()
     try {
@@ -85,7 +85,7 @@ export class DokumenService {
    */
   static async getDokumenByKey(
     kunciObjek: string,
-    tenantId: number
+    tenantId: string
   ): Promise<DokumenTransaksi | null> {
     const connection = await pool.getConnection()
     try {
@@ -105,7 +105,7 @@ export class DokumenService {
    * Mengambil daftar dokumen dengan filter dan pagination
    */
   static async getDokumenList(
-    tenantId: number,
+    tenantId: string,
     query: DokumenQuery
   ): Promise<DokumenListResponse> {
     const connection = await pool.getConnection()
@@ -152,8 +152,8 @@ export class DokumenService {
       const [dataRows] = await connection.query<RowDataPacket[]>(
         `SELECT d.*, u.nama_lengkap as nama_pengguna, t.kode_transaksi
          FROM dokumen_transaksi d
-         LEFT JOIN pengguna u ON d.id_pengguna = u.id
-         LEFT JOIN transaksi t ON d.id_transaksi = t.id
+         LEFT JOIN pengguna u ON d.id_pengguna = u.uuid
+         LEFT JOIN transaksi t ON d.id_transaksi = t.uuid
          WHERE ${whereClause}
          ORDER BY d.dibuat_pada DESC
          LIMIT ${query.limit} OFFSET ${offset}`,
@@ -212,7 +212,7 @@ export class DokumenService {
    */
   static async updateDokumen(
     id: number,
-    tenantId: number,
+    tenantId: string,
     data: UpdateDokumen
   ): Promise<DokumenTransaksi> {
     const connection = await pool.getConnection()
@@ -270,7 +270,7 @@ export class DokumenService {
    */
   static async deleteDokumen(
     id: number,
-    tenantId: number
+    tenantId: string
   ): Promise<void> {
     const connection = await pool.getConnection()
     try {

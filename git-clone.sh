@@ -1,7 +1,8 @@
 #!/bin/bash
 
-# Git Rollback Automation Script
-# Fungsi: Rollback project dari GitHub ketika terjadi kesalahan koding
+# Git Packages Sync Script
+# Fungsi: Sinkronisasi folder packages dengan versi terbaru dari GitHub
+# Mengabaikan semua perubahan lokal dan memastikan struktur identik dengan remote
 # Author: Project Kas Team
 
 # Color definitions - Optimized for dark terminal background
@@ -34,7 +35,7 @@ print_info() {
 
 print_header() {
     echo -e "${PURPLE}${BOLD}╔══════════════════════════════════════════════════════════════╗${NC}"
-    echo -e "${PURPLE}${BOLD}║                  🔄 GIT ROLLBACK AUTOMATION                 ║${NC}"
+    echo -e "${PURPLE}${BOLD}║              📦 PACKAGES SYNC AUTOMATION                   ║${NC}"
     echo -e "${PURPLE}${BOLD}╚══════════════════════════════════════════════════════════════╝${NC}"
 }
 
@@ -46,106 +47,164 @@ print_step() {
     echo -e "${CYAN}${BOLD}🔄 Step $1: $2${NC}"
 }
 
-# Get repository URL from current directory or parameter
-get_repo_url() {
-    if [ -n "$1" ]; then
-        echo "$1"
-    elif [ -d ".git" ]; then
-        git remote get-url origin 2>/dev/null | sed 's/git@github.com:/https:\/\/github.com\//' | sed 's/\.git$//'
-    else
-        echo ""
+# Validate git repository
+validate_git_repo() {
+    if [ ! -d ".git" ]; then
+        print_error "Direktori ini bukan repository Git!"
+        print_info "💡 Jalankan script ini di dalam direktori project_kas"
+        exit 1
+    fi
+    
+    if ! git remote get-url origin >/dev/null 2>&1; then
+        print_error "Remote origin tidak ditemukan!"
+        exit 1
     fi
 }
 
-# Get directory name from URL
-get_dir_name() {
-    basename "$1" .git
+# Check if packages directory exists
+validate_packages_dir() {
+    if [ ! -d "packages" ]; then
+        print_error "Direktori packages tidak ditemukan!"
+        print_info "💡 Pastikan Anda berada di root directory project_kas"
+        exit 1
+    fi
 }
 
-# Confirm rollback action
-confirm_rollback() {
-    echo -e "${YELLOW}${BOLD}⚠️  PERINGATAN: Rollback akan menghapus semua perubahan lokal!${NC}"
-    echo -e "${WHITE}Semua file yang belum di-commit akan hilang.${NC}"
+
+
+# Fetch latest changes from remote
+fetch_remote_changes() {
+    print_step "1" "Mengambil perubahan terbaru dari remote repository"
+    
+    if git fetch origin; then
+        print_success "Berhasil mengambil perubahan dari remote"
+    else
+        print_error "Gagal mengambil perubahan dari remote"
+        exit 1
+    fi
+}
+
+# Reset packages directory to match remote
+reset_packages_directory() {
+    print_step "2" "Mereset direktori packages ke versi remote"
+    
+    # Get current branch name
+    local current_branch=$(git branch --show-current)
+    
+    # Reset packages directory to remote state
+    if git checkout "origin/$current_branch" -- packages/; then
+        print_success "Direktori packages berhasil direset ke versi remote"
+    else
+        print_error "Gagal mereset direktori packages"
+        exit 1
+    fi
+}
+
+# Clean untracked files in packages directory
+clean_untracked_files() {
+    print_step "3" "Membersihkan file yang tidak dilacak di direktori packages"
+    
+    # Remove untracked files and directories in packages
+    if git clean -fd packages/; then
+        print_success "File yang tidak dilacak berhasil dibersihkan"
+    else
+        print_warning "Tidak ada file yang tidak dilacak untuk dibersihkan"
+    fi
+}
+
+# Verify synchronization
+verify_sync() {
+    print_step "4" "Memverifikasi sinkronisasi"
+    
+    local current_branch=$(git branch --show-current)
+    local diff_output=$(git diff "origin/$current_branch" -- packages/)
+    
+    if [ -z "$diff_output" ]; then
+        print_success "Direktori packages telah tersinkronisasi dengan remote"
+        return 0
+    else
+        print_warning "Masih ada perbedaan dengan remote repository"
+        return 1
+    fi
+}
+
+# Show packages status
+show_packages_status() {
+    print_step "5" "Menampilkan status direktori packages"
+    
+    echo -e "${CYAN}📁 Struktur direktori packages:${NC}"
+    tree packages/ -L 2 2>/dev/null || ls -la packages/
     echo
-    read -p "$(echo -e "${CYAN}Apakah Anda yakin ingin melanjutkan rollback? (y/N): ${NC}")" -n 1 -r
+    
+    echo -e "${CYAN}📊 Git status untuk packages:${NC}"
+    git status packages/
+}
+
+# Confirm sync action
+confirm_sync() {
+    echo -e "${YELLOW}${BOLD}⚠️  PERINGATAN: Sinkronisasi akan menghapus semua perubahan lokal di direktori packages!${NC}"
+    echo -e "${WHITE}Semua modifikasi yang belum di-commit akan hilang.${NC}"
+    echo
+    read -p "$(echo -e "${CYAN}Apakah Anda yakin ingin melanjutkan sinkronisasi? (y/N): ${NC}")" -n 1 -r
     echo
     if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-        print_info "Rollback dibatalkan oleh user"
+        print_info "Sinkronisasi dibatalkan oleh user"
         exit 0
     fi
 }
 
-# Main script
-clear
-print_header
-echo
-
-# Get repository URL
-REPO_URL=$(get_repo_url "$1")
-
-if [ -z "$REPO_URL" ]; then
-    print_error "Tidak dapat mendeteksi URL repository!"
-    print_info "💡 Gunakan: ./git-clone.sh <repository-url>"
-    print_info "💡 Atau jalankan di dalam direktori git yang valid"
-    exit 1
-fi
-
-print_info "📂 Repository URL: $REPO_URL"
-print_separator
-echo
-
-# Get directory name
-DIR_NAME=$(get_dir_name "$REPO_URL")
-
-# Step 1: Confirm rollback if directory exists
-if [ -d "$DIR_NAME" ]; then
-    print_step "1" "Konfirmasi rollback untuk direktori yang ada"
-    confirm_rollback
+# Main script execution
+main() {
+    clear
+    print_header
     echo
     
-    print_step "2" "Menghapus direktori lokal untuk rollback"
-    if rm -rf "$DIR_NAME"; then
-        print_success "Direktori lokal berhasil dihapus"
+    # Validation steps
+    validate_git_repo
+    validate_packages_dir
+    
+    # Show current repository info
+    local repo_url=$(git remote get-url origin)
+    local current_branch=$(git branch --show-current)
+    print_info "📂 Repository: $repo_url"
+    print_info "🌿 Current branch: $current_branch"
+    print_separator
+    echo
+    
+    # Confirm action
+    confirm_sync
+    echo
+    
+    # Sync process
+    fetch_remote_changes
+    echo
+    
+    reset_packages_directory
+    echo
+    
+    clean_untracked_files
+    echo
+    
+    # Verification
+    if verify_sync; then
+        echo
+        show_packages_status
+        echo
+        
+        # Final success message
+        print_separator
+        echo -e "${GREEN}${BOLD}🎉 SINKRONISASI SELESAI! 🎉${NC}"
+        echo -e "${CYAN}${BOLD}📦 Direktori packages telah disinkronkan dengan GitHub${NC}"
+        echo -e "${GREEN}${BOLD}✨ Struktur packages identik dengan remote repository${NC}"
+        print_separator
+        echo
+        print_info "💡 Tip: Jalankan './dev-server.sh' untuk memulai development server"
     else
-        print_error "Gagal menghapus direktori lokal"
+        print_error "Sinkronisasi tidak berhasil sepenuhnya"
+        print_info "💡 Periksa status git dan coba lagi"
         exit 1
     fi
-else
-    print_step "1" "Memeriksa direktori target"
-    print_info "Direktori $DIR_NAME tidak ada, akan membuat fresh clone"
-fi
-echo
+}
 
-# Step 2/3: Clone repository from GitHub
-print_step "$([ -d "../temp_check" ] && echo "3" || echo "2")" "Melakukan fresh clone dari GitHub"
-if git clone "$REPO_URL"; then
-    print_success "Repository berhasil di-rollback dari GitHub: $DIR_NAME"
-else
-    print_error "Gagal melakukan clone repository dari GitHub"
-    exit 1
-fi
-echo
-
-# Final Step: Enter directory and show status
-FINAL_STEP=$([ -d "../temp_check" ] && echo "4" || echo "3")
-print_step "$FINAL_STEP" "Masuk ke direktori dan menampilkan status"
-cd "$DIR_NAME" || exit 1
-print_success "Berhasil masuk ke direktori: $(pwd)"
-echo
-print_info "📊 Status repository (5 commit terakhir):"
-git log --oneline -5
-echo
-print_info "📋 Branch information:"
-git branch -a
-echo
-
-# Final message
-print_separator
-echo -e "${GREEN}${BOLD}🎉 ROLLBACK SELESAI! 🎉${NC}"
-echo -e "${CYAN}${BOLD}📁 Direktori fresh: $DIR_NAME${NC}"
-echo -e "${PURPLE}${BOLD}🔗 Repository: $REPO_URL${NC}"
-echo -e "${GREEN}${BOLD}✨ Semua file telah di-rollback ke versi GitHub${NC}"
-print_separator
-echo
-print_info "💡 Tip: Gunakan 'cd $DIR_NAME' untuk masuk ke direktori project"
-print_info "🔧 Tip: Jalankan './dev-server.sh' untuk memulai development server"
+# Execute main function
+main "$@"

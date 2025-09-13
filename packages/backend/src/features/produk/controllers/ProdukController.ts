@@ -43,7 +43,8 @@ export class ProdukController {
   static async createKategori(req: Request, res: Response) {
     try {
       const data = CreateKategoriSchema.parse(req.body);
-      const kategori = await ProdukService.createKategori(data);
+      const tenantId = req.user?.tenantId || '7f69ce68-9068-11f0-8eff-00155d24a169';
+      const kategori = await ProdukService.createKategori(data, tenantId);
       
       return res.status(201).json({
         success: true,
@@ -70,7 +71,7 @@ export class ProdukController {
 
   static async updateKategori(req: Request, res: Response) {
     try {
-      const id = parseInt(req.params.id);
+      const id = String(req.params.id);
       const data = UpdateKategoriSchema.parse({ ...req.body, id });
       
       const kategori = await ProdukService.updateKategori(data);
@@ -100,7 +101,7 @@ export class ProdukController {
 
   static async deleteKategori(req: Request, res: Response) {
     try {
-      const id = parseInt(req.params.id);
+      const id = String(req.params.id);
       await ProdukService.deleteKategori(id);
       
       return res.json({
@@ -138,7 +139,8 @@ export class ProdukController {
   static async createBrand(req: Request, res: Response) {
     try {
       const data = CreateBrandSchema.parse(req.body);
-      const brand = await ProdukService.createBrand(data);
+      const tenantId = req.user?.tenantId || '7f69ce68-9068-11f0-8eff-00155d24a169';
+      const brand = await ProdukService.createBrand(data, tenantId);
       
       return res.status(201).json({
         success: true,
@@ -165,7 +167,7 @@ export class ProdukController {
 
   static async updateBrand(req: Request, res: Response) {
     try {
-      const id = parseInt(req.params.id);
+      const id = String(req.params.id);
       const data = UpdateBrandSchema.parse({ ...req.body, id });
       
       const brand = await ProdukService.updateBrand(data);
@@ -195,7 +197,7 @@ export class ProdukController {
 
   static async deleteBrand(req: Request, res: Response) {
     try {
-      const id = parseInt(req.params.id);
+      const id = String(req.params.id);
       await ProdukService.deleteBrand(id);
       
       return res.json({
@@ -232,7 +234,7 @@ export class ProdukController {
 
   static async getSupplierById(req: Request, res: Response) {
     try {
-      const id = parseInt(req.params.id);
+      const id = String(req.params.id);
       const supplier = await ProdukService.getSupplierById(id);
       
       if (!supplier) {
@@ -286,7 +288,7 @@ export class ProdukController {
 
   static async updateSupplier(req: Request, res: Response) {
     try {
-      const id = parseInt(req.params.id);
+      const id = String(req.params.id);
       const data = UpdateSupplierSchema.parse({ ...req.body, id });
       
       const supplier = await ProdukService.updateSupplier(data);
@@ -316,7 +318,7 @@ export class ProdukController {
 
   static async deleteSupplier(req: Request, res: Response) {
     try {
-      const id = parseInt(req.params.id);
+      const id = String(req.params.id);
       await ProdukService.deleteSupplier(id);
       
       return res.json({

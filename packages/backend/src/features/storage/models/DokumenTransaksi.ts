@@ -14,7 +14,7 @@ export const StatusFileEnum = z.enum(['aktif', 'dihapus', 'arsip'])
 
 // Schema untuk membuat dokumen baru
 export const CreateDokumenSchema = z.object({
-  id_transaksi: z.number().int().positive().optional(),
+  id_transaksi: z.string().uuid().optional(),
   kunci_objek: z.string().min(1, 'Kunci objek diperlukan'),
   nama_file_asli: z.string().min(1, 'Nama file asli diperlukan'),
   ukuran_file: z.number().int().positive('Ukuran file harus positif'),
@@ -36,7 +36,7 @@ export const UpdateDokumenSchema = z.object({
 export const DokumenQuerySchema = z.object({
   kategori: KategoriFileEnum.optional(),
   status: StatusFileEnum.optional(),
-  id_transaksi: z.coerce.number().int().positive().optional(),
+  id_transaksi: z.string().uuid().optional(),
   search: z.string().optional(),
   page: z.coerce.number().int().positive().default(1),
   limit: z.coerce.number().int().min(1).max(100).default(20)
@@ -52,14 +52,14 @@ export type DokumenQuery = z.infer<typeof DokumenQuerySchema>
 // Interface untuk dokumen dari database
 export interface DokumenTransaksi {
   id: number
-  id_transaksi?: number | null
+  id_transaksi?: string | null
   kunci_objek: string
   nama_file_asli: string
   ukuran_file: number
   tipe_mime: string
   kategori: KategoriFile
-  id_pengguna: number
-  id_toko: number
+  id_pengguna: string
+  id_toko: string
   deskripsi?: string | null
   status: StatusFile
   dibuat_pada: string

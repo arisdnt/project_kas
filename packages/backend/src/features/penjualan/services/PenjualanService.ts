@@ -21,10 +21,10 @@ function generateKodeTransaksi(date = new Date()): string {
 
 export class PenjualanService {
   static async createTransaksi(
-    userId: number,
-    tenantId: number,
+    userId: string,
+    tenantId: string,
     payload: CreateTransaksi,
-  ): Promise<{ id: number; kode_transaksi: string }> {
+  ): Promise<{ id: string; kode_transaksi: string }> {
     return executeTransaction(async (conn: PoolConnection) => {
       // Hitung total dari payload (dengan harga yang dikirim klien)
       const jumlah_total = payload.items.reduce((s, it) => s + it.harga * it.jumlah, 0)
@@ -43,7 +43,12 @@ export class PenjualanService {
           payload.metode_pembayaran,
         ],
       )
-      const transaksiId = res.insertId
+      // Get the uuid of the inserted transaksi
+      const [trxRows] = await conn.execute<RowDataPacket[]>(
+        'SELECT uuid FROM transaksi WHERE id = ? LIMIT 1',
+        [res.insertId],
+      )
+      const transaksiId: string = (trxRows as any)[0].uuid
 
       // Insert item_transaksi dan update stok
       for (const item of payload.items) {
@@ -64,11 +69,11 @@ export class PenjualanService {
     })
   }
 
-  static async getDetailTransaksi(id: number, tenantId: number): Promise<TransaksiWithItems | null> {
+  static async getDetailTransaksi(id: string, tenantId: string): Promise<TransaksiWithItems | null> {
       // Ambil header
       const [trxRows] = await pool.execute<RowDataPacket[]>(
-        `SELECT t.id, t.kode_transaksi, t.id_toko, t.id_pengguna, t.id_pelanggan, t.jumlah_total, t.metode_pembayaran, t.status, t.dibuat_pada
-         FROM transaksi t WHERE t.id = ? AND t.id_toko = ?`,
+        `SELECT t.uuid as id, t.kode_transaksi, t.id_toko, t.id_pengguna, t.id_pelanggan, t.jumlah_total, t.metode_pembayaran, t.status, t.dibuat_pada
+         FROM transaksi t WHERE t.uuid = ? AND t.id_toko = ?`,
         [id, tenantId],
       )
       if (trxRows.length === 0) return null
@@ -78,17 +83,17 @@ export class PenjualanService {
         `SELECT it.id, it.id_transaksi, it.id_produk, it.jumlah, it.harga_saat_jual,
                 p.nama, p.sku
            FROM item_transaksi it
-           JOIN produk p ON p.id = it.id_produk
+           JOIN produk p ON p.uuid = it.id_produk
           WHERE it.id_transaksi = ?`,
         [id],
       )
 
       // Ambil pelanggan (opsional)
-      let pelanggan: { id: number; nama?: string | null; telepon?: string | null } | null = null
-      const pelId = trxRows[0].id_pelanggan as number | null
+      let pelanggan: { id: string; nama?: string | null; telepon?: string | null } | null = null
+      const pelId = trxRows[0].id_pelanggan as string | null
       if (pelId != null) {
         const [pelRows] = await pool.execute<RowDataPacket[]>(
-          `SELECT id, nama, telepon FROM pelanggan WHERE id = ? AND id_toko = ?`,
+          `SELECT uuid as id, nama, telepon FROM pelanggan WHERE uuid = ? AND id_toko = ?`,
           [pelId, tenantId],
         )
         if (pelRows.length > 0) {
@@ -145,4 +150,3 @@ export class PenjualanService {
     return lines.join('\n')
   }
 }
-

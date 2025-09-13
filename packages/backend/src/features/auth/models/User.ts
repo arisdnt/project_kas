@@ -22,8 +22,8 @@ export enum UserStatus {
 
 // Schema validasi untuk User
 export const UserSchema = z.object({
-  id: z.number().int().positive(),
-  tenantId: z.number().int().positive(),
+  id: z.string().uuid(),
+  tenantId: z.string().uuid(),
   username: z.string().min(3).max(50),
   email: z.string().email(),
   password: z.string().min(8),
@@ -53,7 +53,8 @@ export const UpdateUserSchema = CreateUserSchema.partial().omit({
 export const LoginSchema = z.object({
   username: z.string().min(1, 'Username is required'),
   password: z.string().min(1, 'Password is required'),
-  tenantId: z.number().int().positive().optional()
+  // Accept UUID tenantId after migration; keep optional
+  tenantId: z.string().uuid().optional()
 });
 
 // Schema untuk change password
@@ -75,8 +76,8 @@ export type ChangePasswordRequest = z.infer<typeof ChangePasswordSchema>;
 
 // Interface untuk JWT payload
 export interface JWTPayload {
-  userId: number;
-  tenantId: number;
+  userId: string; // pengguna.uuid
+  tenantId: string; // toko.uuid
   username: string;
   role: UserRole;
   iat?: number;
@@ -85,8 +86,8 @@ export interface JWTPayload {
 
 // Interface untuk authenticated request
 export interface AuthenticatedUser {
-  id: number;
-  tenantId: number;
+  id: string; // pengguna.uuid
+  tenantId: string; // toko.uuid
   username: string;
   email: string;
   fullName: string;

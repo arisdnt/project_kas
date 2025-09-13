@@ -36,7 +36,7 @@ export class ProdukService {
   static async getAllKategori(): Promise<Kategori[]> {
     try {
       const [rows] = await pool.execute<RowDataPacket[]>(
-        'SELECT id, nama FROM kategori ORDER BY nama ASC'
+        'SELECT id, nama, deskripsi FROM kategori WHERE status = "aktif" ORDER BY nama ASC'
       );
       return rows as Kategori[];
     } catch (error) {
@@ -48,17 +48,16 @@ export class ProdukService {
   /**
    * Membuat kategori baru
    */
-  static async createKategori(data: CreateKategori): Promise<Kategori> {
+  static async createKategori(data: CreateKategori, tenantId: string): Promise<Kategori> {
     try {
       const [result] = await pool.execute<ResultSetHeader>(
-        'INSERT INTO kategori (nama) VALUES (?)',
-        [data.nama]
+        'INSERT INTO kategori (nama, tenant_id) VALUES (?, ?)',
+        [data.nama, tenantId]
       );
-      
-      return {
-        id: result.insertId,
-        nama: data.nama
-      };
+      const [newRows] = await pool.execute<RowDataPacket[]>(
+        'SELECT id, nama, deskripsi FROM kategori WHERE id = LAST_INSERT_ID() LIMIT 1'
+      );
+      return newRows[0] as Kategori;
     } catch (error: any) {
       logger.error({ error }, 'Error creating kategori');
       if (error.code === 'ER_DUP_ENTRY') {
@@ -95,7 +94,7 @@ export class ProdukService {
   /**
    * Menghapus kategori
    */
-  static async deleteKategori(id: number): Promise<void> {
+  static async deleteKategori(id: string): Promise<void> {
     try {
       const [result] = await pool.execute<ResultSetHeader>(
         'DELETE FROM kategori WHERE id = ?',
@@ -119,7 +118,7 @@ export class ProdukService {
   static async getAllBrand(): Promise<Brand[]> {
     try {
       const [rows] = await pool.execute<RowDataPacket[]>(
-        'SELECT id, nama FROM brand ORDER BY nama ASC'
+        'SELECT id, nama, deskripsi FROM brand WHERE status = "aktif" ORDER BY nama ASC'
       );
       return rows as Brand[];
     } catch (error) {
@@ -131,17 +130,16 @@ export class ProdukService {
   /**
    * Membuat brand baru
    */
-  static async createBrand(data: CreateBrand): Promise<Brand> {
+  static async createBrand(data: CreateBrand, tenantId: string): Promise<Brand> {
     try {
       const [result] = await pool.execute<ResultSetHeader>(
-        'INSERT INTO brand (nama) VALUES (?)',
-        [data.nama]
+        'INSERT INTO brand (nama, tenant_id) VALUES (?, ?)',
+        [data.nama, tenantId]
       );
-      
-      return {
-        id: result.insertId,
-        nama: data.nama
-      };
+      const [newRows] = await pool.execute<RowDataPacket[]>(
+        'SELECT id, nama, deskripsi FROM brand WHERE id = LAST_INSERT_ID() LIMIT 1'
+      );
+      return newRows[0] as Brand;
     } catch (error: any) {
       logger.error({ error }, 'Error creating brand');
       if (error.code === 'ER_DUP_ENTRY') {
@@ -178,7 +176,7 @@ export class ProdukService {
   /**
    * Menghapus brand
    */
-  static async deleteBrand(id: number): Promise<void> {
+  static async deleteBrand(id: string): Promise<void> {
     try {
       const [result] = await pool.execute<ResultSetHeader>(
         'DELETE FROM brand WHERE id = ?',
@@ -209,7 +207,7 @@ export class ProdukService {
       
       // Get total count
       const [countRows] = await pool.execute<RowDataPacket[]>(
-        'SELECT COUNT(*) as total FROM supplier'
+        'SELECT COUNT(*) as total FROM supplier WHERE status = "aktif"'
       );
       const total = countRows[0].total;
       
@@ -218,6 +216,7 @@ export class ProdukService {
         `SELECT id, nama, kontak_person, email, telepon, alamat, 
                 dibuat_pada, diperbarui_pada 
          FROM supplier 
+         WHERE status = "aktif"
          ORDER BY nama ASC 
          LIMIT ${limit} OFFSET ${offset}`
       );
@@ -236,7 +235,7 @@ export class ProdukService {
   /**
    * Mendapatkan supplier berdasarkan ID
    */
-  static async getSupplierById(id: number): Promise<Supplier | null> {
+  static async getSupplierById(id: string): Promise<Supplier | null> {
     try {
       const [rows] = await pool.execute<RowDataPacket[]>(
         `SELECT id, nama, kontak_person, email, telepon, alamat, 
@@ -263,8 +262,11 @@ export class ProdukService {
         [data.nama, data.kontak_person || null, data.email || null, 
          data.telepon || null, data.alamat || null]
       );
-      
-      const newSupplier = await this.getSupplierById(result.insertId);
+      const [uuidRows] = await pool.execute<RowDataPacket[]>(
+        'SELECT uuid FROM supplier WHERE id = ? LIMIT 1',
+        [result.insertId]
+      );
+      const newSupplier = await this.getSupplierById((uuidRows as any)[0].uuid);
       if (!newSupplier) {
         throw new Error('Gagal mengambil data supplier yang baru dibuat');
       }
@@ -284,7 +286,7 @@ export class ProdukService {
       const [result] = await pool.execute<ResultSetHeader>(
         `UPDATE supplier 
          SET nama = ?, kontak_person = ?, email = ?, telepon = ?, alamat = ? 
-         WHERE id = ?`,
+         WHERE uuid = ?`,
         [data.nama, data.kontak_person || null, data.email || null,
          data.telepon || null, data.alamat || null, data.id]
       );
@@ -308,10 +310,10 @@ export class ProdukService {
   /**
    * Menghapus supplier
    */
-  static async deleteSupplier(id: number): Promise<void> {
+  static async deleteSupplier(id: string): Promise<void> {
     try {
       const [result] = await pool.execute<ResultSetHeader>(
-        'DELETE FROM supplier WHERE id = ?',
+        'DELETE FROM supplier WHERE uuid = ?',
         [id]
       );
       

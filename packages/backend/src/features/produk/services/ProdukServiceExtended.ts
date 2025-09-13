@@ -24,7 +24,7 @@ export class ProdukServiceExtended {
   /**
    * Mendapatkan semua produk dengan pagination dan filter (Optimized)
    */
-  static async getAllProduk(query: ProdukQuery, storeId: number): Promise<{
+  static async getAllProduk(query: ProdukQuery, storeId: string): Promise<{
     produk: ProdukWithRelations[];
     total: number;
     totalPages: number;
@@ -39,31 +39,31 @@ export class ProdukServiceExtended {
       const params: any[] = [];
       
       if (search) {
-        // Optimized search with FULLTEXT index hint
-        whereClause += ' AND (p.nama LIKE ? OR p.sku = ? OR p.deskripsi LIKE ?)';
+        // Search by nama or kode
+        whereClause += ' AND (p.nama LIKE ? OR p.kode LIKE ?)';
         const searchTerm = `%${search}%`;
-        params.push(searchTerm, search, searchTerm);
+        params.push(searchTerm, searchTerm);
       }
       
       if (kategori) {
-        whereClause += ' AND p.id_kategori = ?';
+        whereClause += ' AND p.kategori_id = ?';
         params.push(kategori);
       }
       
       if (brand) {
-        whereClause += ' AND p.id_brand = ?';
+        whereClause += ' AND p.brand_id = ?';
         params.push(brand);
       }
       
       if (supplier) {
-        whereClause += ' AND p.id_supplier = ?';
+        whereClause += ' AND p.supplier_id = ?';
         params.push(supplier);
       }
       
       // Optimized count query with LIMIT for performance
       const countQuery = `
         SELECT COUNT(*) as total 
-        FROM produk p USE INDEX (idx_produk_composite)
+        FROM produk p
         ${whereClause}
       `;
       const [countRows] = await pool.execute<RowDataPacket[]>(countQuery, params);
@@ -71,18 +71,18 @@ export class ProdukServiceExtended {
       
       // Get produk with relations - optimized with proper indexing
       const baseQuery = `
-        SELECT /*+ USE_INDEX(p, idx_produk_composite) */
-          p.id, p.nama, p.deskripsi, p.sku, p.id_kategori, p.id_brand, p.id_supplier,
+        SELECT
+          p.id, p.nama, p.satuan, p.kategori_id, p.brand_id, p.supplier_id,
           p.dibuat_pada, p.diperbarui_pada,
           k.nama as kategori_nama,
           b.nama as brand_nama,
           s.nama as supplier_nama
-        FROM produk p USE INDEX (idx_produk_composite)
-        LEFT JOIN kategori k ON p.id_kategori = k.id
-        LEFT JOIN brand b ON p.id_brand = b.id
-        LEFT JOIN supplier s ON p.id_supplier = s.id
+        FROM produk p
+        LEFT JOIN kategori k ON p.kategori_id = k.id
+        LEFT JOIN brand b ON p.brand_id = b.id
+        LEFT JOIN supplier s ON p.supplier_id = s.id
         ${whereClause}
-        ORDER BY p.id DESC
+        ORDER BY p.dibuat_pada DESC
         LIMIT ${limit + 1} OFFSET ${offset}
       `;
       
@@ -101,15 +101,14 @@ export class ProdukServiceExtended {
       const actualRows = hasNextPage ? rows.slice(0, limit) : rows;
       
       // Get inventaris data with optimized batch query
-      const produkIds = actualRows.map(row => row.id);
-      let inventarisMap: { [key: number]: any } = {};
+      const produkIds: string[] = actualRows.map((row: any) => row.id as string);
+      let inventarisMap: { [key: string]: any } = {};
       
       if (produkIds.length > 0) {
         const inventarisQuery = `
-          SELECT /*+ USE_INDEX(inventaris, idx_inventaris_toko_produk) */
-            id_produk, jumlah, harga, harga_beli 
-          FROM inventaris USE INDEX (idx_inventaris_toko_produk)
-          WHERE id_toko = ? AND id_produk IN (${produkIds.map(() => '?').join(',')})
+          SELECT produk_id, stok_tersedia, harga_jual_toko 
+          FROM inventaris
+          WHERE toko_id = ? AND produk_id IN (${produkIds.map(() => '?').join(',')})
         `;
         const inventarisParams = [storeId, ...produkIds];
         
@@ -119,10 +118,9 @@ export class ProdukServiceExtended {
         );
         
         inventarisRows.forEach((row: any) => {
-          inventarisMap[row.id_produk] = {
-            jumlah: row.jumlah,
-            harga: row.harga,
-            harga_beli: row.harga_beli
+          inventarisMap[row.produk_id] = {
+            stok_tersedia: row.stok_tersedia,
+            harga_jual_toko: row.harga_jual_toko
           };
         });
       }
@@ -131,22 +129,23 @@ export class ProdukServiceExtended {
       const produk: ProdukWithRelations[] = actualRows.map((row: any) => ({
         id: row.id,
         nama: row.nama,
-        deskripsi: row.deskripsi,
-        sku: row.sku,
-        id_kategori: row.id_kategori,
-        id_brand: row.id_brand,
-        id_supplier: row.id_supplier,
+        satuan: row.satuan,
+        kategori_id: row.kategori_id,
+        brand_id: row.brand_id,
+        supplier_id: row.supplier_id,
         dibuat_pada: row.dibuat_pada,
         diperbarui_pada: row.diperbarui_pada,
-        kategori: row.kategori_nama ? { id: row.id_kategori, nama: row.kategori_nama } : undefined,
-        brand: row.brand_nama ? { id: row.id_brand, nama: row.brand_nama } : undefined,
-        supplier: row.supplier_nama ? { id: row.id_supplier, nama: row.supplier_nama } : undefined,
+        kategori: row.kategori_nama ? { id: row.kategori_id, nama: row.kategori_nama } : undefined,
+        brand: row.brand_nama ? { id: row.brand_id, nama: row.brand_nama } : undefined,
+        supplier: row.supplier_nama ? { id: row.supplier_id, nama: row.supplier_nama } : undefined,
         inventaris: inventarisMap[row.id] ? [{
           id_toko: storeId,
           id_produk: row.id,
-          jumlah: inventarisMap[row.id].jumlah,
-          harga: parseFloat(inventarisMap[row.id].harga),
-          harga_beli: inventarisMap[row.id].harga_beli ? parseFloat(inventarisMap[row.id].harga_beli) : undefined
+          stok_tersedia: inventarisMap[row.id].stok_tersedia,
+          stok_reserved: 0,
+          harga_jual_toko: inventarisMap[row.id].harga_jual_toko ? parseFloat(inventarisMap[row.id].harga_jual_toko) : undefined,
+          stok_minimum_toko: 0,
+          lokasi_rak: undefined
         }] : []
       }));
       
@@ -165,21 +164,21 @@ export class ProdukServiceExtended {
   /**
    * Mendapatkan produk berdasarkan ID dengan relasi
    */
-  static async getProdukById(id: number, storeId: number): Promise<ProdukWithRelations | null> {
+  static async getProdukById(id: string, storeId: string): Promise<ProdukWithRelations | null> {
     try {
       const [rows] = await pool.execute<RowDataPacket[]>(
         `SELECT 
-          p.id, p.nama, p.deskripsi, p.sku, p.id_kategori, p.id_brand, p.id_supplier,
+          p.id, p.nama, p.satuan, p.kategori_id, p.brand_id, p.supplier_id,
           p.dibuat_pada, p.diperbarui_pada,
           k.nama as kategori_nama,
           b.nama as brand_nama,
           s.nama as supplier_nama,
-          i.jumlah, i.harga, i.harga_beli
+          i.stok_tersedia, i.stok_reserved, i.harga_jual_toko, i.stok_minimum_toko, i.lokasi_rak
         FROM produk p
-        LEFT JOIN kategori k ON p.id_kategori = k.id
-        LEFT JOIN brand b ON p.id_brand = b.id
-        LEFT JOIN supplier s ON p.id_supplier = s.id
-        LEFT JOIN inventaris i ON p.id = i.id_produk AND i.id_toko = ?
+        LEFT JOIN kategori k ON p.kategori_id = k.id
+        LEFT JOIN brand b ON p.brand_id = b.id
+        LEFT JOIN supplier s ON p.supplier_id = s.id
+        LEFT JOIN inventaris i ON p.id = i.produk_id AND i.toko_id = ?
         WHERE p.id = ?`,
         [storeId, id]
       );
@@ -192,22 +191,23 @@ export class ProdukServiceExtended {
       return {
         id: row.id,
         nama: row.nama,
-        deskripsi: row.deskripsi,
-        sku: row.sku,
-        id_kategori: row.id_kategori,
-        id_brand: row.id_brand,
-        id_supplier: row.id_supplier,
+        satuan: row.satuan,
+        kategori_id: row.kategori_id,
+        brand_id: row.brand_id,
+        supplier_id: row.supplier_id,
         dibuat_pada: row.dibuat_pada,
         diperbarui_pada: row.diperbarui_pada,
-        kategori: row.kategori_nama ? { id: row.id_kategori, nama: row.kategori_nama } : undefined,
-        brand: row.brand_nama ? { id: row.id_brand, nama: row.brand_nama } : undefined,
-        supplier: row.supplier_nama ? { id: row.id_supplier, nama: row.supplier_nama } : undefined,
-        inventaris: row.jumlah !== null ? [{
+        kategori: row.kategori_nama ? { id: row.kategori_id, nama: row.kategori_nama } : undefined,
+        brand: row.brand_nama ? { id: row.brand_id, nama: row.brand_nama } : undefined,
+        supplier: row.supplier_nama ? { id: row.supplier_id, nama: row.supplier_nama } : undefined,
+        inventaris: row.stok_tersedia !== null ? [{
           id_toko: storeId,
           id_produk: row.id,
-          jumlah: row.jumlah,
-          harga: parseFloat(row.harga),
-          harga_beli: row.harga_beli ? parseFloat(row.harga_beli) : undefined
+          stok_tersedia: row.stok_tersedia,
+          stok_reserved: 0,
+          harga_jual_toko: row.harga_jual_toko ? parseFloat(row.harga_jual_toko) : undefined,
+          stok_minimum_toko: 0,
+          lokasi_rak: undefined
         }] : []
       };
     } catch (error) {
@@ -221,27 +221,42 @@ export class ProdukServiceExtended {
    */
   static async createProduk(data: CreateProduk): Promise<Produk> {
     try {
+      // Generate kode produk otomatis jika tidak ada
+      const kode = data.kode || `PRD-${Date.now()}`;
+      
       const [result] = await pool.execute<ResultSetHeader>(
-        `INSERT INTO produk (nama, deskripsi, sku, id_kategori, id_brand, id_supplier) 
-         VALUES (?, ?, ?, ?, ?, ?)`,
+        `INSERT INTO produk (tenant_id, nama, satuan, kategori_id, brand_id, supplier_id, kode, harga_beli, harga_jual) 
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
+          '7f69ce68-9068-11f0-8eff-00155d24a169', // Default tenant_id
           data.nama,
-          data.deskripsi || null,
-          data.sku || null,
-          data.id_kategori || null,
-          data.id_brand || null,
-          data.id_supplier || null
+          data.satuan || 'pcs',
+          data.kategori_id || '7f6c3bd6-9068-11f0-8eff-00155d24a169', // Default kategori: Makanan
+          data.brand_id || '7f6cbd6d-9068-11f0-8eff-00155d24a169', // Default brand: Generic
+          data.supplier_id || '7f6d5025-9068-11f0-8eff-00155d24a169', // Default supplier: Supplier Umum
+          kode,
+          data.harga_beli || 0,
+          data.harga_jual || 0
         ]
       );
       
+      // Get the created product by kode since we can't use insertId with UUID
+      const [rows] = await pool.execute<RowDataPacket[]>(
+        'SELECT * FROM produk WHERE kode = ? AND tenant_id = ? LIMIT 1',
+        [kode, '7f69ce68-9068-11f0-8eff-00155d24a169']
+      );
+      
+      const createdProduk = rows[0] as any;
       return {
-        id: result.insertId,
-        nama: data.nama,
-        deskripsi: data.deskripsi,
-        sku: data.sku,
-        id_kategori: data.id_kategori,
-        id_brand: data.id_brand,
-        id_supplier: data.id_supplier
+        id: createdProduk.id,
+        nama: createdProduk.nama,
+        satuan: createdProduk.satuan,
+        kategori_id: createdProduk.kategori_id,
+        brand_id: createdProduk.brand_id,
+        supplier_id: createdProduk.supplier_id,
+        kode: createdProduk.kode,
+        harga_beli: createdProduk.harga_beli,
+        harga_jual: createdProduk.harga_jual
       };
     } catch (error: any) {
       logger.error({ error }, 'Error creating produk');
@@ -259,15 +274,14 @@ export class ProdukServiceExtended {
     try {
       const [result] = await pool.execute<ResultSetHeader>(
         `UPDATE produk 
-         SET nama = ?, deskripsi = ?, sku = ?, id_kategori = ?, id_brand = ?, id_supplier = ?
+         SET nama = ?, satuan = ?, kategori_id = ?, brand_id = ?, supplier_id = ?
          WHERE id = ?`,
         [
           data.nama,
-          data.deskripsi || null,
-          data.sku || null,
-          data.id_kategori || null,
-          data.id_brand || null,
-          data.id_supplier || null,
+          data.satuan || 'pcs',
+          data.kategori_id || '7f6c3bd6-9068-11f0-8eff-00155d24a169', // Default kategori: Makanan
+          data.brand_id || '7f6cbd6d-9068-11f0-8eff-00155d24a169', // Default brand: Generic
+          data.supplier_id || '7f6d5025-9068-11f0-8eff-00155d24a169', // Default supplier: Supplier Umum
           data.id
         ]
       );
@@ -279,9 +293,6 @@ export class ProdukServiceExtended {
       return data as Produk;
     } catch (error: any) {
       logger.error({ error }, 'Error updating produk');
-      if (error.code === 'ER_DUP_ENTRY') {
-        throw new Error('SKU produk sudah ada');
-      }
       throw new Error('Gagal mengupdate produk');
     }
   }
@@ -289,7 +300,7 @@ export class ProdukServiceExtended {
   /**
    * Menghapus produk
    */
-  static async deleteProduk(id: number): Promise<void> {
+  static async deleteProduk(id: string): Promise<void> {
     try {
       const [result] = await pool.execute<ResultSetHeader>(
         'DELETE FROM produk WHERE id = ?',
@@ -310,7 +321,7 @@ export class ProdukServiceExtended {
   /**
    * Mendapatkan inventaris berdasarkan toko
    */
-  static async getInventarisByToko(storeId: number, page: number = 1, limit: number = 10): Promise<{
+  static async getInventarisByToko(storeId: string, page: number = 1, limit: number = 10): Promise<{
     inventaris: InventarisWithProduk[];
     total: number;
     totalPages: number;
@@ -320,7 +331,7 @@ export class ProdukServiceExtended {
       
       // Get total count
       const [countRows] = await pool.execute<RowDataPacket[]>(
-        'SELECT COUNT(*) as total FROM inventaris WHERE id_toko = ?',
+        'SELECT COUNT(*) as total FROM inventaris WHERE toko_id = ?',
         [storeId]
       );
       const total = countRows[0].total;
@@ -328,32 +339,33 @@ export class ProdukServiceExtended {
       // Get inventaris with produk
       const [rows] = await pool.execute<RowDataPacket[]>(
         `SELECT 
-          i.id_toko, i.id_produk, i.jumlah, i.harga, i.harga_beli, i.diperbarui_pada,
-          p.nama as produk_nama, p.deskripsi, p.sku,
+          i.toko_id, i.produk_id, i.stok_tersedia, i.stok_reserved, i.harga_jual_toko, i.stok_minimum_toko, i.lokasi_rak, i.terakhir_update,
+          p.nama as produk_nama, p.satuan,
           k.nama as kategori_nama,
           b.nama as brand_nama
         FROM inventaris i
-        JOIN produk p ON i.id_produk = p.id
-        LEFT JOIN kategori k ON p.id_kategori = k.id
-        LEFT JOIN brand b ON p.id_brand = b.id
-        WHERE i.id_toko = ?
+        JOIN produk p ON i.produk_id = p.id
+        LEFT JOIN kategori k ON p.kategori_id = k.id
+        LEFT JOIN brand b ON p.brand_id = b.id
+        WHERE i.toko_id = ?
         ORDER BY p.nama ASC
         LIMIT ${limit} OFFSET ${offset}`,
         [storeId]
       );
       
       const inventaris: InventarisWithProduk[] = rows.map((row: any) => ({
-        id_toko: row.id_toko,
-        id_produk: row.id_produk,
-        jumlah: row.jumlah,
-        harga: parseFloat(row.harga),
-        harga_beli: row.harga_beli ? parseFloat(row.harga_beli) : undefined,
-        diperbarui_pada: row.diperbarui_pada,
+        id_toko: row.toko_id,
+        id_produk: row.produk_id,
+        stok_tersedia: row.stok_tersedia,
+        stok_reserved: row.stok_reserved || 0,
+        harga_jual_toko: row.harga_jual_toko ? parseFloat(row.harga_jual_toko) : undefined,
+        stok_minimum_toko: row.stok_minimum_toko || 0,
+        lokasi_rak: row.lokasi_rak,
+        terakhir_update: row.terakhir_update,
         produk: {
-          id: row.id_produk,
+          id: row.produk_id,
           nama: row.produk_nama,
-          deskripsi: row.deskripsi,
-          sku: row.sku,
+          satuan: row.satuan,
           kategori: row.kategori_nama ? { nama: row.kategori_nama } : undefined,
           brand: row.brand_nama ? { nama: row.brand_nama } : undefined
         }
@@ -376,27 +388,33 @@ export class ProdukServiceExtended {
   static async upsertInventaris(data: CreateInventaris): Promise<Inventaris> {
     try {
       const [result] = await pool.execute<ResultSetHeader>(
-        `INSERT INTO inventaris (id_toko, id_produk, jumlah, harga, harga_beli)
-         VALUES (?, ?, ?, ?, ?)
+        `INSERT INTO inventaris (toko_id, produk_id, stok_tersedia, stok_reserved, harga_jual_toko, stok_minimum_toko, lokasi_rak)
+         VALUES (?, ?, ?, ?, ?, ?, ?)
          ON DUPLICATE KEY UPDATE
-         jumlah = VALUES(jumlah),
-         harga = VALUES(harga),
-         harga_beli = VALUES(harga_beli)`,
+         stok_tersedia = VALUES(stok_tersedia),
+         stok_reserved = VALUES(stok_reserved),
+         harga_jual_toko = VALUES(harga_jual_toko),
+         stok_minimum_toko = VALUES(stok_minimum_toko),
+         lokasi_rak = VALUES(lokasi_rak)`,
         [
           data.id_toko,
           data.id_produk,
-          data.jumlah,
-          data.harga,
-          data.harga_beli || null
+          data.stok_tersedia,
+          data.stok_reserved || 0,
+          data.harga_jual_toko || null,
+          data.stok_minimum_toko || 0,
+          data.lokasi_rak || null
         ]
       );
       
       return {
         id_toko: data.id_toko,
         id_produk: data.id_produk,
-        jumlah: data.jumlah,
-        harga: data.harga,
-        harga_beli: data.harga_beli
+        stok_tersedia: data.stok_tersedia,
+        stok_reserved: data.stok_reserved || 0,
+        harga_jual_toko: data.harga_jual_toko,
+        stok_minimum_toko: data.stok_minimum_toko || 0,
+        lokasi_rak: data.lokasi_rak
       };
     } catch (error) {
       logger.error({ error }, 'Error upserting inventaris');
@@ -407,10 +425,10 @@ export class ProdukServiceExtended {
   /**
    * Mengupdate stok inventaris
    */
-  static async updateStok(storeId: number, productId: number, newQuantity: number): Promise<void> {
+  static async updateStok(storeId: string, productId: string, newQuantity: number): Promise<void> {
     try {
       const [result] = await pool.execute<ResultSetHeader>(
-        'UPDATE inventaris SET jumlah = ? WHERE id_toko = ? AND id_produk = ?',
+        'UPDATE inventaris SET stok_tersedia = ? WHERE toko_id = ? AND produk_id = ?',
         [newQuantity, storeId, productId]
       );
       
@@ -426,19 +444,21 @@ export class ProdukServiceExtended {
   /**
    * Menghapus inventaris
    */
-  static async deleteInventaris(storeId: number, productId: number): Promise<void> {
+  static async deleteInventaris(storeId: string, productId: string): Promise<void> {
     try {
+      const query = 'DELETE FROM inventaris WHERE toko_id = ? AND produk_id = ?';
+      logger.info({ storeId, productId, query }, 'Executing delete query');
       const [result] = await pool.execute<ResultSetHeader>(
-        'DELETE FROM inventaris WHERE id_toko = ? AND id_produk = ?',
+        query,
         [storeId, productId]
       );
       
       if (result.affectedRows === 0) {
         throw new Error('Inventaris tidak ditemukan');
       }
-    } catch (error) {
-      logger.error({ error }, 'Error deleting inventaris');
-      throw new Error('Gagal menghapus inventaris');
+    } catch (error: any) {
+      logger.error({ error: error.message || error }, 'Error deleting inventaris');
+      throw error;
     }
   }
 }

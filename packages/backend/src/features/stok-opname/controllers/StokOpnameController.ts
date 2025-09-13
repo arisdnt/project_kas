@@ -22,9 +22,9 @@ export class StokOpnameController {
       const limit = parseInt(req.query.limit as string) || 25;
       
       const filters: StokOpnameFilters = {
-        kategoriId: req.query.kategori ? parseInt(req.query.kategori as string) : undefined,
-        brandId: req.query.brand ? parseInt(req.query.brand as string) : undefined,
-        supplierId: req.query.supplier ? parseInt(req.query.supplier as string) : undefined,
+        kategoriId: req.query.kategori ? String(req.query.kategori) : undefined,
+        brandId: req.query.brand ? String(req.query.brand) : undefined,
+        supplierId: req.query.supplier ? String(req.query.supplier) : undefined,
         status: req.query.status as any,
         tanggal: req.query.tanggal as string,
         search: req.query.search as string

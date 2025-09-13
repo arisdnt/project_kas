@@ -150,9 +150,9 @@ export const ensureTenantAccess = (req: Request, res: Response, next: NextFuncti
   }
 
   // Extract tenant ID from request (bisa dari params, query, atau body)
-  const requestTenantId = req.params.tenantId || req.query.tenantId || req.body.tenantId;
+  const requestTenantId = (req.params.tenantId || req.query.tenantId || req.body.tenantId) as string | undefined;
   
-  if (requestTenantId && parseInt(requestTenantId) !== req.user.tenantId) {
+  if (requestTenantId && requestTenantId !== req.user.tenantId) {
     // Super admin bisa akses semua tenant
     if (req.user.role !== UserRole.SUPER_ADMIN) {
       logger.warn({
@@ -203,7 +203,7 @@ export const optionalAuth = async (req: Request, res: Response, next: NextFuncti
  * Middleware untuk rate limiting per user
  */
 export const userRateLimit = (maxRequests: number, windowMs: number) => {
-  const userRequests = new Map<number, { count: number; resetTime: number }>();
+  const userRequests = new Map<string, { count: number; resetTime: number }>();
   
   return (req: Request, res: Response, next: NextFunction) => {
     if (!req.user) {

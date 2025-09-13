@@ -21,7 +21,7 @@ router.use(authenticate);
  * @access Private - Admin/Cashier
  */
 router.get('/', 
-  authorize(UserRole.ADMIN, UserRole.CASHIER), 
+  authorize(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.CASHIER), 
   ProdukControllerExtended.getInventarisByToko
 );
 
@@ -31,7 +31,7 @@ router.get('/',
  * @access Private - Admin
  */
 router.post('/', 
-  authorize(UserRole.ADMIN), 
+  authorize(UserRole.SUPER_ADMIN, UserRole.ADMIN), 
   ProdukControllerExtended.upsertInventaris
 );
 
@@ -41,7 +41,7 @@ router.post('/',
  * @access Private - Admin
  */
 router.put('/', 
-  authorize(UserRole.ADMIN), 
+  authorize(UserRole.SUPER_ADMIN, UserRole.ADMIN), 
   ProdukControllerExtended.upsertInventaris
 );
 
@@ -51,7 +51,7 @@ router.put('/',
  * @access Private - Admin
  */
 router.put('/:productId/stok', 
-  authorize(UserRole.ADMIN), 
+  authorize(UserRole.SUPER_ADMIN, UserRole.ADMIN), 
   ProdukControllerExtended.updateStok
 );
 
@@ -61,7 +61,7 @@ router.put('/:productId/stok',
  * @access Private - Admin
  */
 router.delete('/:id', 
-  authorize(UserRole.ADMIN), 
+  authorize(UserRole.SUPER_ADMIN, UserRole.ADMIN), 
   ProdukControllerExtended.deleteInventaris
 );
 

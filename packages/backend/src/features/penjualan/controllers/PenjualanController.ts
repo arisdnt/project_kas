@@ -28,7 +28,7 @@ export class PenjualanController {
       if (!req.user) {
         return res.status(401).json({ success: false, message: 'Unauthorized' })
       }
-      const id = Number(req.params.id)
+      const id = String(req.params.id)
       const detail = await PenjualanService.getDetailTransaksi(id, req.user.tenantId)
       if (!detail) return res.status(404).json({ success: false, message: 'Transaksi tidak ditemukan' })
       return res.json({ success: true, data: detail })
@@ -43,7 +43,7 @@ export class PenjualanController {
       if (!req.user) {
         return res.status(401).json({ success: false, message: 'Unauthorized' })
       }
-      const id = Number(req.params.id)
+      const id = String(req.params.id)
       const detail = await PenjualanService.getDetailTransaksi(id, req.user.tenantId)
       if (!detail) return res.status(404).json({ success: false, message: 'Transaksi tidak ditemukan' })
       // Format sebagai teks struk (untuk stub). Integrasi printer server bisa ditambahkan di sini.
@@ -57,4 +57,3 @@ export class PenjualanController {
     }
   }
 }
-

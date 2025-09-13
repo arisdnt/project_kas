@@ -5,19 +5,19 @@
 
 export interface StokOpname {
   id: number;
-  id_produk: number;
+  id_produk: string;
   nama_produk: string;
   sku?: string;
   kategori?: {
-    id?: number;
+    id?: string;
     nama: string;
   };
   brand?: {
-    id?: number;
+    id?: string;
     nama: string;
   };
   supplier?: {
-    id?: number;
+    id?: string;
     nama: string;
   };
   stok_sistem?: number;
@@ -32,7 +32,7 @@ export interface StokOpname {
 }
 
 export interface StokOpnameCreateRequest {
-  id_produk: number;
+  id_produk: string;
   stok_fisik: number;
   catatan?: string;
 }
@@ -44,9 +44,9 @@ export interface StokOpnameUpdateRequest {
 }
 
 export interface StokOpnameFilters {
-  kategoriId?: number;
-  brandId?: number;
-  supplierId?: number;
+  kategoriId?: string;
+  brandId?: string;
+  supplierId?: string;
   status?: 'all' | 'pending' | 'completed' | 'cancelled';
   tanggal?: string;
   search?: string;

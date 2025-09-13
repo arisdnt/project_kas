@@ -13,7 +13,7 @@ export class StokOpnameService {
    * Get all stok opname with pagination and filters
    */
   static async getAll(
-    tenantId: number,
+    tenantId: string,
     page: number = 1,
     limit: number = 25,
     filters: StokOpnameFilters = {}
@@ -26,17 +26,17 @@ export class StokOpnameService {
 
     // Build WHERE clause based on filters
     if (filters.kategoriId) {
-      whereClause += ' AND k.id = ?';
+      whereClause += ' AND k.uuid = ?';
       params.push(filters.kategoriId);
     }
 
     if (filters.brandId) {
-      whereClause += ' AND b.id = ?';
+      whereClause += ' AND b.uuid = ?';
       params.push(filters.brandId);
     }
 
     if (filters.supplierId) {
-      whereClause += ' AND s.id = ?';
+      whereClause += ' AND s.uuid = ?';
       params.push(filters.supplierId);
     }
 
@@ -75,11 +75,11 @@ export class StokOpnameService {
         i.diperbarui_pada,
         'Data dari inventaris' as catatan
       FROM inventaris i
-      LEFT JOIN produk p ON i.id_produk = p.id
-      LEFT JOIN toko t ON i.id_toko = t.id
-      LEFT JOIN kategori k ON p.id_kategori = k.id
-      LEFT JOIN brand b ON p.id_brand = b.id
-      LEFT JOIN supplier s ON p.id_supplier = s.id
+      LEFT JOIN produk p ON i.id_produk = p.uuid
+      LEFT JOIN toko t ON i.id_toko = t.uuid
+      LEFT JOIN kategori k ON p.id_kategori = k.uuid
+      LEFT JOIN brand b ON p.id_brand = b.uuid
+      LEFT JOIN supplier s ON p.id_supplier = s.uuid
       WHERE i.id_toko = ?
       ORDER BY i.diperbarui_pada DESC
       LIMIT ${limit} OFFSET ${offset}
@@ -88,11 +88,11 @@ export class StokOpnameService {
     const countQuery = `
       SELECT COUNT(*) as total
       FROM inventaris i
-      LEFT JOIN produk p ON i.id_produk = p.id
-      LEFT JOIN toko t ON i.id_toko = t.id
-      LEFT JOIN kategori k ON p.id_kategori = k.id
-      LEFT JOIN brand b ON p.id_brand = b.id
-      LEFT JOIN supplier s ON p.id_supplier = s.id
+      LEFT JOIN produk p ON i.id_produk = p.uuid
+      LEFT JOIN toko t ON i.id_toko = t.uuid
+      LEFT JOIN kategori k ON p.id_kategori = k.uuid
+      LEFT JOIN brand b ON p.id_brand = b.uuid
+      LEFT JOIN supplier s ON p.id_supplier = s.uuid
       WHERE i.id_toko = ?
     `;
 
@@ -168,10 +168,10 @@ export class StokOpnameService {
         so.diperbarui_pada,
         so.catatan
       FROM stok_opname so
-      LEFT JOIN produk p ON so.id_produk = p.id
-      LEFT JOIN kategori k ON p.kategori_id = k.id
-      LEFT JOIN brand b ON p.brand_id = b.id
-      LEFT JOIN supplier s ON p.supplier_id = s.id
+      LEFT JOIN produk p ON so.id_produk = p.uuid
+      LEFT JOIN kategori k ON p.kategori_id = k.uuid
+      LEFT JOIN brand b ON p.brand_id = b.uuid
+      LEFT JOIN supplier s ON p.supplier_id = s.uuid
       WHERE so.id = ?
     `;
 
@@ -217,7 +217,7 @@ export class StokOpnameService {
 
     // Get current stock from inventaris
     const [inventarisRows] = await connection.execute(
-      'SELECT stok FROM inventaris WHERE produk_id = ?',
+      'SELECT jumlah as stok FROM inventaris WHERE id_produk = ?',
       [data.id_produk]
     ) as [RowDataPacket[], any];
 

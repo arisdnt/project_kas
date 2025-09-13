@@ -6,6 +6,8 @@
 import { Request, Response } from 'express';
 import { ProdukServiceExtended } from '../services/ProdukServiceExtended';
 import { logger } from '@/core/utils/logger';
+import pool from '@/core/database/connection';
+import { RowDataPacket } from 'mysql2';
 import {
   CreateProdukSchema,
   UpdateProdukSchema,
@@ -14,6 +16,21 @@ import {
 } from '../models/Produk';
 
 export class ProdukControllerExtended {
+  /**
+   * Helper function to get store ID from tenant ID
+   */
+  private static async getStoreIdFromTenant(tenantId: string): Promise<string | null> {
+    try {
+      const [rows] = await pool.execute<RowDataPacket[]>(
+        'SELECT id FROM toko WHERE tenant_id = ? AND status = "aktif" LIMIT 1',
+        [tenantId]
+      );
+      return rows.length > 0 ? rows[0].id : null;
+    } catch (error) {
+      logger.error({ error }, 'Error getting store ID from tenant');
+      return null;
+    }
+  }
   // ===== PRODUK ENDPOINTS =====
   
   static async getAllProduk(req: Request, res: Response) {
@@ -65,14 +82,7 @@ export class ProdukControllerExtended {
 
   static async getProdukById(req: Request, res: Response) {
     try {
-      const id = parseInt(req.params.id);
-      
-      if (isNaN(id)) {
-        return res.status(400).json({
-          success: false,
-          message: 'ID produk tidak valid'
-        });
-      }
+      const id = String(req.params.id);
       
       const storeId = (req as any).user?.tenantId;
       if (!storeId) {
@@ -134,14 +144,7 @@ export class ProdukControllerExtended {
 
   static async updateProduk(req: Request, res: Response) {
     try {
-      const id = parseInt(req.params.id);
-      
-      if (isNaN(id)) {
-        return res.status(400).json({
-          success: false,
-          message: 'ID produk tidak valid'
-        });
-      }
+      const id = String(req.params.id);
       
       const data = UpdateProdukSchema.parse({ ...req.body, id });
       const produk = await ProdukServiceExtended.updateProduk(data);
@@ -171,14 +174,7 @@ export class ProdukControllerExtended {
 
   static async deleteProduk(req: Request, res: Response) {
     try {
-      const id = parseInt(req.params.id);
-      
-      if (isNaN(id)) {
-        return res.status(400).json({
-          success: false,
-          message: 'ID produk tidak valid'
-        });
-      }
+      const id = String(req.params.id);
       
       await ProdukServiceExtended.deleteProduk(id);
       
@@ -199,13 +195,22 @@ export class ProdukControllerExtended {
   
   static async getInventarisByToko(req: Request, res: Response) {
     try {
-      const storeId = (req as any).user?.tenantId;
-      if (!storeId) {
+      const tenantId = (req as any).user?.tenantId;
+      if (!tenantId) {
         return res.status(401).json({
           success: false,
           message: 'Tidak ada tenantId pada token. Silakan login ulang.'
         });
       }
+      
+      const storeId = await ProdukControllerExtended.getStoreIdFromTenant(tenantId);
+      if (!storeId) {
+        return res.status(404).json({
+          success: false,
+          message: 'Toko tidak ditemukan untuk tenant ini'
+        });
+      }
+      
       const page = parseInt(req.query.page as string) || 1;
       const limit = parseInt(req.query.limit as string) || 10;
       
@@ -233,13 +238,22 @@ export class ProdukControllerExtended {
 
   static async upsertInventaris(req: Request, res: Response) {
     try {
-      const storeId = (req as any).user?.tenantId;
-      if (!storeId) {
+      const tenantId = (req as any).user?.tenantId;
+      if (!tenantId) {
         return res.status(401).json({
           success: false,
           message: 'Tidak ada tenantId pada token. Silakan login ulang.'
         });
       }
+      
+      const storeId = await ProdukControllerExtended.getStoreIdFromTenant(tenantId);
+      if (!storeId) {
+        return res.status(404).json({
+          success: false,
+          message: 'Toko tidak ditemukan untuk tenant ini'
+        });
+      }
+      
       const data = CreateInventarisSchema.parse({
         ...req.body,
         id_toko: storeId
@@ -272,23 +286,32 @@ export class ProdukControllerExtended {
 
   static async updateStok(req: Request, res: Response) {
     try {
-      const productId = parseInt(req.params.productId);
+      const productId = String(req.params.productId);
       const { jumlah } = req.body;
       
-      if (isNaN(productId) || typeof jumlah !== 'number' || jumlah < 0) {
+      if (typeof jumlah !== 'number' || jumlah < 0) {
         return res.status(400).json({
           success: false,
           message: 'Parameter tidak valid'
         });
       }
       
-      const storeId = (req as any).user?.tenantId;
-      if (!storeId) {
+      const tenantId = (req as any).user?.tenantId;
+      if (!tenantId) {
         return res.status(401).json({
           success: false,
           message: 'Tidak ada tenantId pada token. Silakan login ulang.'
         });
       }
+      
+      const storeId = await ProdukControllerExtended.getStoreIdFromTenant(tenantId);
+      if (!storeId) {
+        return res.status(404).json({
+          success: false,
+          message: 'Toko tidak ditemukan untuk tenant ini'
+        });
+      }
+      
       await ProdukServiceExtended.updateStok(storeId, productId, jumlah);
       
       return res.json({
@@ -306,24 +329,33 @@ export class ProdukControllerExtended {
 
   static async deleteInventaris(req: Request, res: Response) {
     try {
-      const inventarisId = parseInt(req.params.id);
+      const { productId } = req.params;
       
-      if (isNaN(inventarisId)) {
+      if (!productId) {
         return res.status(400).json({
           success: false,
-          message: 'ID inventaris tidak valid'
+          message: 'Product ID is required'
         });
       }
       
-      const storeId = (req as any).user?.tenantId;
-      if (!storeId) {
+      const tenantId = (req as any).user?.tenantId;
+      if (!tenantId) {
         return res.status(401).json({
           success: false,
           message: 'Tidak ada tenantId pada token. Silakan login ulang.'
         });
       }
       
-      await ProdukServiceExtended.deleteInventaris(storeId, inventarisId);
+      const storeId = await ProdukControllerExtended.getStoreIdFromTenant(tenantId);
+      if (!storeId) {
+        return res.status(404).json({
+          success: false,
+          message: 'Toko tidak ditemukan untuk tenant ini'
+        });
+      }
+      
+      logger.info({ storeId, productId }, 'Attempting to delete inventaris');
+      await ProdukServiceExtended.deleteInventaris(storeId, productId);
       
       return res.json({
         success: true,

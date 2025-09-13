@@ -5,8 +5,8 @@
 import { z } from 'zod'
 
 export const PelangganSchema = z.object({
-  id: z.number().int().positive().optional(),
-  id_toko: z.number().int().positive(),
+  id: z.string().uuid().optional(),
+  id_toko: z.string().uuid(),
   nama: z.string().max(255).optional(),
   email: z.string().email().max(255).optional(),
   telepon: z.string().max(50).optional(),
@@ -20,4 +20,3 @@ export const SearchPelangganQuerySchema = z.object({
 
 export type Pelanggan = z.infer<typeof PelangganSchema>
 export type SearchPelangganQuery = z.infer<typeof SearchPelangganQuerySchema>
-

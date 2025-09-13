@@ -20,5 +20,10 @@
     "npm": ">=9.0.0"
   },
   "author": "Sistem POS Team",
-  "license": "MIT"
+  "license": "MIT",
+  "dependencies": {
+    "bcrypt": "^6.0.0",
+    "minio": "^8.0.6",
+    "mysql2": "^3.14.5"
+  }
 }
