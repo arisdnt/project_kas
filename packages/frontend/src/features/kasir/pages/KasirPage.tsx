@@ -5,6 +5,7 @@ import { ProductSearchForm } from '@/features/kasir/components/ProductSearchForm
 import { PaymentSummary } from '@/features/kasir/components/PaymentSummary'
 import { useKasirStore } from '@/features/kasir/store/kasirStore'
 import { useProdukStore } from '@/features/produk/store/produkStore'
+import { useAuthStore } from '@/core/store/authStore'
 import { Barcode } from 'lucide-react'
 
 export function KasirPage() {
@@ -14,13 +15,14 @@ export function KasirPage() {
   const loadFirst = useProdukStore((s) => s.loadFirst)
   const produkLoading = useProdukStore((s) => s.loading)
   const produkItems = useProdukStore((s) => s.items)
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
 
   useEffect(() => {
     // Load produk minimal untuk kebutuhan pencarian lokal (nama/SKU)
-    if (!produkLoading && produkItems.length === 0) {
+    if (isAuthenticated && !produkLoading && produkItems.length === 0) {
       loadFirst().catch(() => {})
     }
-  }, [loadFirst, produkItems.length, produkLoading])
+  }, [isAuthenticated, loadFirst, produkItems.length, produkLoading])
 
   useEffect(() => {
     const handleGlobalKeyDown = (e: KeyboardEvent) => {

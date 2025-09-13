@@ -3,6 +3,7 @@ import { Input } from '@/core/components/ui/input'
 import { Button } from '@/core/components/ui/button'
 import { useRefDataStore } from '@/features/produk/store/refDataStore'
 import { useProdukStore } from '@/features/produk/store/produkStore'
+import { useAuthStore } from '@/core/store/authStore'
 import { Plus, Search, X } from 'lucide-react'
 
 type Props = {
@@ -12,6 +13,7 @@ type Props = {
 export function ProdukToolbar({ onCreate }: Props) {
   const { kategori, brand, supplier, loadAll } = useRefDataStore()
   const { setSearch, setFilters, loadFirst } = useProdukStore()
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
   const [query, setQuery] = useState('')
   const [kategoriId, setKategoriId] = useState<number | undefined>()
   const [brandId, setBrandId] = useState<number | undefined>()
@@ -23,13 +25,14 @@ export function ProdukToolbar({ onCreate }: Props) {
 
   // Debounced search
   useEffect(() => {
+    if (!isAuthenticated) return
     const id = setTimeout(() => {
       setSearch(query)
       setFilters({ kategoriId, brandId, supplierId })
       loadFirst()
     }, 350)
     return () => clearTimeout(id)
-  }, [query, kategoriId, brandId, supplierId, setSearch, setFilters, loadFirst])
+  }, [query, kategoriId, brandId, supplierId, setSearch, setFilters, loadFirst, isAuthenticated])
 
   const kategoriOpts = useMemo(() => [{ id: -1, nama: 'Semua Kategori' }, ...kategori], [kategori])
   const brandOpts = useMemo(() => [{ id: -1, nama: 'Semua Brand' }, ...brand], [brand])

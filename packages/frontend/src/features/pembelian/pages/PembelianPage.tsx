@@ -5,6 +5,7 @@ import { RestockTable } from '@/features/pembelian/components/RestockTable'
 import { RestockSummary } from '@/features/pembelian/components/RestockSummary'
 import { usePembelianStore } from '@/features/pembelian/store/pembelianStore'
 import { useProdukStore } from '@/features/produk/store/produkStore'
+import { useAuthStore } from '@/core/store/authStore'
 import { Barcode } from 'lucide-react'
 
 export function PembelianPage() {
@@ -14,12 +15,13 @@ export function PembelianPage() {
   const loadFirst = useProdukStore((s) => s.loadFirst)
   const produkLoading = useProdukStore((s) => s.loading)
   const produkItems = useProdukStore((s) => s.items)
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
 
   useEffect(() => {
-    if (!produkLoading && produkItems.length === 0) {
+    if (isAuthenticated && !produkLoading && produkItems.length === 0) {
       loadFirst().catch(() => {})
     }
-  }, [loadFirst, produkItems.length, produkLoading])
+  }, [isAuthenticated, loadFirst, produkItems.length, produkLoading])
 
   useEffect(() => {
     const handleGlobalKeyDown = (e: KeyboardEvent) => {
@@ -34,7 +36,9 @@ export function PembelianPage() {
           break
         case 'F2':
           e.preventDefault()
-          loadFirst().catch(() => {})
+          if (isAuthenticated) {
+            loadFirst().catch(() => {})
+          }
           break
         case 'F9':
           e.preventDefault()

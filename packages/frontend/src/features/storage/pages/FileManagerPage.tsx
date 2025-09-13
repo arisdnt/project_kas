@@ -104,16 +104,18 @@ export function FileManagerPage() {
         return
       }
       
-      const dokumenFiles: FileItem[] = response.data.items.map((dok: DokumenItem) => ({
-        id: dok.id?.toString() || '',
-        key: dok.kunci_objek || '',
-        name: dok.nama_file_asli || 'Unknown',
-        size: dok.ukuran_file || 0,
-        type: dok.tipe_mime || 'application/octet-stream',
-        category: dok.kategori as UploadTarget || 'umum',
-        uploadedBy: dok.diupload_oleh?.toString() || 'Unknown',
-        uploadedAt: new Date(dok.tanggal_upload || Date.now())
-      }))
+      const dokumenFiles: FileItem[] = response.data.items
+        .filter((dok: DokumenItem) => dok.id && dok.id.trim() !== '') // Filter out invalid IDs
+        .map((dok: DokumenItem) => ({
+          id: dok.id, // ID is already a string UUID from backend
+          key: dok.kunci_objek || '',
+          name: dok.nama_file_asli || 'Unknown',
+          size: dok.ukuran_file || 0,
+          type: dok.tipe_mime || 'application/octet-stream',
+          category: dok.kategori as UploadTarget || 'umum',
+          uploadedBy: dok.diupload_oleh?.toString() || 'Unknown',
+          uploadedAt: new Date(dok.tanggal_upload || Date.now())
+        }))
       
       if (isLoadMore) {
         setFiles(prev => [...prev, ...dokumenFiles])
@@ -228,12 +230,17 @@ export function FileManagerPage() {
 
   async function openPreview(file: FileItem) {
     try {
+      // Validate file ID
+      if (!file.id || file.id.trim() === '') {
+        throw new Error('ID file tidak valid')
+      }
+      
       // Use same-origin streaming endpoint to work offline without external viewer/CORS
-      const streamUrl = dokumenService.getStreamUrl(parseInt(file.id))
+      const streamUrl = dokumenService.getStreamUrl(file.id)
       // Also get presigned URL for opening in a new tab / download without auth header
       let openUrl: string | null = null
       try {
-        const presigned = await dokumenService.getFileUrl(parseInt(file.id))
+        const presigned = await dokumenService.getFileUrl(file.id)
         openUrl = presigned.data.url
       } catch {}
       setSelectedFile(file)
@@ -247,7 +254,11 @@ export function FileManagerPage() {
 
   async function resolveAndCopyUrl(fileId: string) {
     try {
-      const response = await dokumenService.getFileUrl(parseInt(fileId))
+      if (!fileId || fileId.trim() === '') {
+        throw new Error('ID file tidak valid')
+      }
+      
+      const response = await dokumenService.getFileUrl(fileId)
       await navigator.clipboard.writeText(response.data.url)
       setCopiedKey(fileId)
       setTimeout(() => setCopiedKey((k) => (k === fileId ? null : k)), 1200)
@@ -262,9 +273,14 @@ export function FileManagerPage() {
     const file = files.find(f => f.id === fileId)
     if (!file) return
 
+    if (!fileId || fileId.trim() === '') {
+      toast({ title: 'Gagal menghapus', description: 'ID file tidak valid', variant: 'destructive' })
+      return
+    }
+
     setIsDeleting(fileId)
     try {
-      await dokumenService.delete(parseInt(fileId))
+      await dokumenService.delete(fileId)
       // Reload files to reset pagination
       await loadFiles()
       toast({ title: 'File berhasil dihapus', description: file.name })

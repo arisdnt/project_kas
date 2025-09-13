@@ -27,29 +27,45 @@ export class DokumenService {
   ): Promise<DokumenTransaksi> {
     const connection = await pool.getConnection()
     try {
+      // Map kategori upload to valid tipe_dokumen enum
+      const getTipeDokumen = (kategori: string): string => {
+        switch (kategori) {
+          case 'dokumen': return 'nota'
+          case 'produk': return 'foto'
+          case 'umum': return 'foto'
+          default: return 'foto'
+        }
+      }
+
+      // Generate UUID for the document
+      const documentId = require('crypto').randomUUID()
+      
       const [result] = await connection.execute<ResultSetHeader>(
         `INSERT INTO dokumen_transaksi 
-         (id_transaksi, kunci_objek, nama_file_asli, ukuran_file, tipe_mime, 
-          kategori, id_pengguna, id_toko, deskripsi, status) 
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+         (id, transaksi_id, nama_file, ukuran_file, mime_type, 
+          tipe_dokumen, path_minio, url_akses, is_public) 
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
+          documentId,
           data.id_transaksi || null,
-          data.kunci_objek,
           data.nama_file_asli,
           data.ukuran_file,
           data.tipe_mime,
-          data.kategori,
-          userId,
-          tenantId,
-          data.deskripsi || null,
-          data.status
+          getTipeDokumen(data.kategori),
+          data.kunci_objek,
+          null, // url_akses will be generated when needed
+          0 // is_public = false by default
         ]
       )
 
-      return await this.getDokumenById(result.insertId.toString(), tenantId)
-    } catch (error) {
-      logger.error({ error, data }, 'Gagal membuat dokumen')
-      throw new Error('Gagal menyimpan metadata dokumen')
+      return await this.getDokumenById(documentId, tenantId)
+    } catch (error: any) {
+      logger.error({ 
+        error: error?.message || error, 
+        stack: error?.stack,
+        data 
+      }, 'Gagal membuat dokumen')
+      throw new Error(`Gagal menyimpan metadata dokumen: ${error?.message || 'Unknown error'}`)
     } finally {
       connection.release()
     }
@@ -68,7 +84,7 @@ export class DokumenService {
         `SELECT id, transaksi_id as id_transaksi, nama_file as nama_file_asli,
                 tipe_dokumen as kategori, mime_type as tipe_mime, ukuran_file,
                 path_minio as kunci_objek, url_akses, is_public,
-                dibuat_pada as tanggal_upload, dibuat_pada as tanggal_diperbarui,
+                dibuat_pada, dibuat_pada as diperbarui_pada,
                 'aktif' as status, '' as id_pengguna, '' as id_toko, '' as deskripsi
          FROM dokumen_transaksi 
          WHERE id = ?`,
@@ -96,8 +112,8 @@ export class DokumenService {
     try {
       const [rows] = await connection.execute<RowDataPacket[]>(
         `SELECT * FROM dokumen_transaksi 
-         WHERE kunci_objek = ? AND id_toko = ? AND status != 'dihapus'`,
-        [kunciObjek, tenantId]
+         WHERE path_minio = ?`,
+        [kunciObjek]
       )
 
       return rows.length > 0 ? (rows[0] as DokumenTransaksi) : null

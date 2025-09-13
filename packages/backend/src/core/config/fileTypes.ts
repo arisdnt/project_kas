@@ -110,6 +110,12 @@ export const fileTypesConfig: FileTypesConfig = {
       extensions: ['.rar'],
       maxSize: 50 * 1024 * 1024, // 50MB
       description: 'RAR Archive'
+    },
+    {
+      mimeType: 'application/vnd.rar',
+      extensions: ['.rar'],
+      maxSize: 50 * 1024 * 1024, // 50MB
+      description: 'RAR Archive (Alternative)'
     }
   ],
   videos: [
@@ -138,6 +144,12 @@ export const fileTypesConfig: FileTypesConfig = {
       extensions: ['.wav'],
       maxSize: 50 * 1024 * 1024, // 50MB
       description: 'WAV Audio'
+    },
+    {
+      mimeType: 'audio/wave',
+      extensions: ['.wav'],
+      maxSize: 50 * 1024 * 1024, // 50MB
+      description: 'WAV Audio (Alternative)'
     }
   ]
 }

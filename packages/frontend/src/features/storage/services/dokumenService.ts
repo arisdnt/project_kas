@@ -12,7 +12,7 @@ const authHeaders = () => {
 }
 
 export interface DokumenItem {
-  id: number
+  id: string // Changed from number to string for UUID support
   kunci_objek: string
   nama_file_asli: string
   ukuran_file: number
@@ -84,7 +84,7 @@ export const dokumenService = {
     return response.json()
   },
 
-  async getById(id: number): Promise<{ success: boolean; data: DokumenItem }> {
+  async getById(id: string): Promise<{ success: boolean; data: DokumenItem }> {
     const response = await fetch(`${BASE}/${id}`, {
       method: 'GET',
       headers: authHeaders()
@@ -111,7 +111,7 @@ export const dokumenService = {
     return response.json()
   },
 
-  async update(id: number, data: UpdateDokumenRequest): Promise<{ success: boolean; data: DokumenItem }> {
+  async update(id: string, data: UpdateDokumenRequest): Promise<{ success: boolean; data: DokumenItem }> {
     const response = await fetch(`${BASE}/${id}`, {
       method: 'PUT',
       headers: authHeaders(),
@@ -125,7 +125,7 @@ export const dokumenService = {
     return response.json()
   },
 
-  async delete(id: number): Promise<{ success: boolean; message: string }> {
+  async delete(id: string): Promise<{ success: boolean; message: string }> {
     const response = await fetch(`${BASE}/${id}`, {
       method: 'DELETE',
       headers: authHeaders()
@@ -138,7 +138,7 @@ export const dokumenService = {
     return response.json()
   },
 
-  async getFileUrl(id: number): Promise<{ success: boolean; data: { url: string } }> {
+  async getFileUrl(id: string): Promise<{ success: boolean; data: { url: string } }> {
     const response = await fetch(`${BASE}/${id}/url`, {
       method: 'GET',
       headers: authHeaders()
@@ -151,7 +151,7 @@ export const dokumenService = {
     return response.json()
   },
 
-  getStreamUrl(id: number): string {
+  getStreamUrl(id: string): string {
     // Same-origin API for streaming; components can fetch with Authorization
     return `${BASE}/${id}/stream`
   }

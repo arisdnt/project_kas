@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Input } from '@/core/components/ui/input'
 import { Button } from '@/core/components/ui/button'
 import { useBrandStore } from '@/features/brand/store/brandStore'
+import { useAuthStore } from '@/core/store/authStore'
 import { Plus, Search, X } from 'lucide-react'
 
 type Props = {
@@ -10,15 +11,17 @@ type Props = {
 
 export function BrandToolbar({ onCreate }: Props) {
   const { setSearch, loadFirst } = useBrandStore()
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
   const [query, setQuery] = useState('')
 
   useEffect(() => {
+    if (!isAuthenticated) return
     const id = setTimeout(() => {
       setSearch(query)
       loadFirst()
     }, 350)
     return () => clearTimeout(id)
-  }, [query, setSearch, loadFirst])
+  }, [query, setSearch, loadFirst, isAuthenticated])
 
   return (
     <div className="flex flex-col sm:flex-row items-stretch gap-2 sm:gap-3">

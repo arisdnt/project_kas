@@ -65,7 +65,7 @@ export function InventarisToolbar({ onCreate }: Props) {
           onChange={(e) => setKategoriId(Number(e.target.value) === -1 ? undefined : Number(e.target.value))}
         >
           {kategoriOpts.map((o) => (
-            <option key={o.id} value={o.id}>
+            <option key={`kategori-${o.id}`} value={o.id}>
               {o.nama}
             </option>
           ))}
@@ -77,7 +77,7 @@ export function InventarisToolbar({ onCreate }: Props) {
           onChange={(e) => setBrandId(Number(e.target.value) === -1 ? undefined : Number(e.target.value))}
         >
           {brandOpts.map((o) => (
-            <option key={o.id} value={o.id}>
+            <option key={`brand-${o.id}`} value={o.id}>
               {o.nama}
             </option>
           ))}
@@ -89,7 +89,7 @@ export function InventarisToolbar({ onCreate }: Props) {
           onChange={(e) => setSupplierId(Number(e.target.value) === -1 ? undefined : Number(e.target.value))}
         >
           {supplierOpts.map((o) => (
-            <option key={o.id} value={o.id}>
+            <option key={`supplier-${o.id}`} value={o.id}>
               {o.nama}
             </option>
           ))}

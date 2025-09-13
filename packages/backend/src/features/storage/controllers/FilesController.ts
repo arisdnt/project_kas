@@ -75,32 +75,25 @@ export class FilesController {
       // Upload file to storage
       const result = await StorageService.uploadFile(req.file, parsed)
       
-      // Save metadata to database with enhanced error handling
-      let dokumen = null
-      try {
-        dokumen = await DokumenService.createDokumen(
-          req.user.id,
-          req.user.tenantId,
-          {
-            status: 'aktif',
-            kunci_objek: result.key,
-            nama_file_asli: req.file.originalname,
-            ukuran_file: req.file.size,
-            tipe_mime: req.file.mimetype,
-            kategori: parsed.target
-          }
-        )
-      } catch (dbError) {
-        logger.error('Failed to save file metadata to database:', dbError)
-        // File uploaded but metadata save failed - consider cleanup
-        // For now, we'll still return success but log the issue
-      }
+      // Save metadata to database
+      const dokumen = await DokumenService.createDokumen(
+        req.user.id,
+        req.user.tenantId,
+        {
+          status: 'aktif',
+          kunci_objek: result.key,
+          nama_file_asli: req.file.originalname,
+          ukuran_file: req.file.size,
+          tipe_mime: req.file.mimetype,
+          kategori: parsed.target
+        }
+      )
       
       return res.status(201).json({
         success: true,
         message: 'File berhasil diunggah',
         data: {
-          id: dokumen?.id || null,
+          id: dokumen.id,
           key: result.key,
           nama_file: req.file.originalname,
           ukuran: req.file.size,

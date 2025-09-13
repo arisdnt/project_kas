@@ -3,6 +3,7 @@ import { Input } from '@/core/components/ui/input'
 import { Button } from '@/core/components/ui/button'
 import { useRefDataStore } from '@/features/produk/store/refDataStore'
 import { useMutasiStokStore } from '../store/mutasiStokStore'
+import { useAuthStore } from '@/core/store/authStore'
 import { Plus, Search, X, Calendar } from 'lucide-react'
 
 type Props = {
@@ -12,6 +13,7 @@ type Props = {
 export function MutasiStokToolbar({ onCreate }: Props) {
   const { kategori, brand, loadAll } = useRefDataStore()
   const { setSearch, setFilters, loadFirst } = useMutasiStokStore()
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
   const [query, setQuery] = useState('')
   const [kategoriId, setKategoriId] = useState<number | undefined>()
   const [brandId, setBrandId] = useState<number | undefined>()
@@ -24,13 +26,14 @@ export function MutasiStokToolbar({ onCreate }: Props) {
 
   // Debounced search
   useEffect(() => {
+    if (!isAuthenticated) return
     const id = setTimeout(() => {
       setSearch(query)
       setFilters({ kategoriId, brandId, jenisMutasi, tanggal: tanggal || undefined })
       loadFirst()
     }, 350)
     return () => clearTimeout(id)
-  }, [query, kategoriId, brandId, jenisMutasi, tanggal, setSearch, setFilters, loadFirst])
+  }, [query, kategoriId, brandId, jenisMutasi, tanggal, setSearch, setFilters, loadFirst, isAuthenticated])
 
   const kategoriOpts = useMemo(() => [{ id: -1, nama: 'Semua Kategori' }, ...kategori], [kategori])
   const brandOpts = useMemo(() => [{ id: -1, nama: 'Semua Brand' }, ...brand], [brand])
