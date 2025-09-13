@@ -1,17 +1,17 @@
 #!/bin/bash
 
-# Git Clone Automation Script
-# Fungsi: Clone ulang repository dari GitHub dengan mudah
+# Git Rollback Automation Script
+# Fungsi: Rollback project dari GitHub ketika terjadi kesalahan koding
 # Author: Project Kas Team
 
-# Color definitions
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-PURPLE='\033[0;35m'
-CYAN='\033[0;36m'
-WHITE='\033[1;37m'
+# Color definitions - Optimized for dark terminal background
+RED='\033[1;91m'      # Bright Red
+GREEN='\033[1;92m'    # Bright Green
+YELLOW='\033[1;93m'   # Bright Yellow
+BLUE='\033[1;94m'     # Bright Blue
+PURPLE='\033[1;95m'   # Bright Magenta
+CYAN='\033[1;96m'     # Bright Cyan
+WHITE='\033[1;97m'    # Bright White
 BOLD='\033[1m'
 NC='\033[0m' # No Color
 
@@ -34,7 +34,7 @@ print_info() {
 
 print_header() {
     echo -e "${PURPLE}${BOLD}╔══════════════════════════════════════════════════════════════╗${NC}"
-    echo -e "${PURPLE}${BOLD}║                   🔄 GIT CLONE AUTOMATION                   ║${NC}"
+    echo -e "${PURPLE}${BOLD}║                  🔄 GIT ROLLBACK AUTOMATION                 ║${NC}"
     echo -e "${PURPLE}${BOLD}╚══════════════════════════════════════════════════════════════╝${NC}"
 }
 
@@ -62,6 +62,19 @@ get_dir_name() {
     basename "$1" .git
 }
 
+# Confirm rollback action
+confirm_rollback() {
+    echo -e "${YELLOW}${BOLD}⚠️  PERINGATAN: Rollback akan menghapus semua perubahan lokal!${NC}"
+    echo -e "${WHITE}Semua file yang belum di-commit akan hilang.${NC}"
+    echo
+    read -p "$(echo -e "${CYAN}Apakah Anda yakin ingin melanjutkan rollback? (y/N): ${NC}")" -n 1 -r
+    echo
+    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+        print_info "Rollback dibatalkan oleh user"
+        exit 0
+    fi
+}
+
 # Main script
 clear
 print_header
@@ -83,54 +96,56 @@ echo
 
 # Get directory name
 DIR_NAME=$(get_dir_name "$REPO_URL")
-BACKUP_DIR="${DIR_NAME}_backup_$(date +%Y%m%d_%H%M%S)"
 
-# Step 1: Backup existing directory if exists
-print_step "1" "Memeriksa dan backup direktori yang ada"
+# Step 1: Confirm rollback if directory exists
 if [ -d "$DIR_NAME" ]; then
-    if mv "$DIR_NAME" "$BACKUP_DIR"; then
-        print_success "Direktori lama di-backup ke: $BACKUP_DIR"
+    print_step "1" "Konfirmasi rollback untuk direktori yang ada"
+    confirm_rollback
+    echo
+    
+    print_step "2" "Menghapus direktori lokal untuk rollback"
+    if rm -rf "$DIR_NAME"; then
+        print_success "Direktori lokal berhasil dihapus"
     else
-        print_error "Gagal membackup direktori lama"
+        print_error "Gagal menghapus direktori lokal"
         exit 1
     fi
 else
-    print_info "Tidak ada direktori yang perlu di-backup"
+    print_step "1" "Memeriksa direktori target"
+    print_info "Direktori $DIR_NAME tidak ada, akan membuat fresh clone"
 fi
 echo
 
-# Step 2: Clone repository
-print_step "2" "Melakukan clone repository dari GitHub"
+# Step 2/3: Clone repository from GitHub
+print_step "$([ -d "../temp_check" ] && echo "3" || echo "2")" "Melakukan fresh clone dari GitHub"
 if git clone "$REPO_URL"; then
-    print_success "Repository berhasil di-clone ke direktori: $DIR_NAME"
+    print_success "Repository berhasil di-rollback dari GitHub: $DIR_NAME"
 else
-    print_error "Gagal melakukan clone repository"
-    # Restore backup if clone failed
-    if [ -d "$BACKUP_DIR" ]; then
-        mv "$BACKUP_DIR" "$DIR_NAME"
-        print_info "Direktori backup telah dipulihkan"
-    fi
+    print_error "Gagal melakukan clone repository dari GitHub"
     exit 1
 fi
 echo
 
-# Step 3: Enter directory and show status
-print_step "3" "Masuk ke direktori dan menampilkan status"
+# Final Step: Enter directory and show status
+FINAL_STEP=$([ -d "../temp_check" ] && echo "4" || echo "3")
+print_step "$FINAL_STEP" "Masuk ke direktori dan menampilkan status"
 cd "$DIR_NAME" || exit 1
 print_success "Berhasil masuk ke direktori: $(pwd)"
 echo
-print_info "📊 Status repository:"
+print_info "📊 Status repository (5 commit terakhir):"
 git log --oneline -5
+echo
+print_info "📋 Branch information:"
+git branch -a
 echo
 
 # Final message
 print_separator
-echo -e "${GREEN}${BOLD}🎉 CLONE SELESAI! 🎉${NC}"
-echo -e "${CYAN}${BOLD}📁 Direktori baru: $DIR_NAME${NC}"
+echo -e "${GREEN}${BOLD}🎉 ROLLBACK SELESAI! 🎉${NC}"
+echo -e "${CYAN}${BOLD}📁 Direktori fresh: $DIR_NAME${NC}"
 echo -e "${PURPLE}${BOLD}🔗 Repository: $REPO_URL${NC}"
-if [ -d "../$BACKUP_DIR" ]; then
-    echo -e "${YELLOW}${BOLD}💾 Backup tersimpan: $BACKUP_DIR${NC}"
-fi
+echo -e "${GREEN}${BOLD}✨ Semua file telah di-rollback ke versi GitHub${NC}"
 print_separator
 echo
 print_info "💡 Tip: Gunakan 'cd $DIR_NAME' untuk masuk ke direktori project"
+print_info "🔧 Tip: Jalankan './dev-server.sh' untuk memulai development server"

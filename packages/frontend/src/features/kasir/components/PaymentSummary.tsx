@@ -3,7 +3,8 @@ import { Card, CardContent } from '@/core/components/ui/card'
 import { Button } from '@/core/components/ui/button'
 import { PaymentModal } from './PaymentModal'
 import { useKasirStore, useKasirTotals } from '@/features/kasir/store/kasirStore'
-import { ShoppingCart, CreditCard } from 'lucide-react'
+import { ShoppingCart, CreditCard, Store } from 'lucide-react'
+import { config } from '@/core/config'
 
 export function PaymentSummary() {
   const [showPaymentModal, setShowPaymentModal] = useState(false)
@@ -33,23 +34,50 @@ export function PaymentSummary() {
           </div>
 
           <div className="space-y-4">
+            {/* Header Toko */}
+            <div className="text-center border-2 border-gray-800 p-4 bg-white">
+              <div className="flex items-center justify-center gap-2 mb-2">
+                <Store className="h-6 w-6 text-gray-800" />
+                <h3 className="text-lg font-bold text-gray-900">{config.infoToko.nama}</h3>
+              </div>
+              <p className="text-sm text-gray-700 mb-1">{config.infoToko.alamat}</p>
+              <p className="text-xs text-gray-600">Telp: {config.infoToko.teleponKontak}</p>
+              <p className="text-xs text-gray-600">Email: {config.infoToko.emailKontak}</p>
+              <div className="mt-2 pt-2 border-t border-gray-300">
+                <p className="text-xs font-semibold text-gray-800">INVOICE</p>
+                <p className="text-xs text-gray-600">
+                  {new Date().toLocaleDateString('id-ID', { 
+                    day: '2-digit', 
+                    month: '2-digit', 
+                    year: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                  })}
+                </p>
+              </div>
+            </div>
             {/* Daftar Barang */}
             <div className="space-y-2">
-              <h4 className="text-sm font-medium text-gray-700 border-b pb-1">Daftar Barang</h4>
+              <h4 className="text-sm font-medium text-gray-700 border-b-2 border-gray-800 pb-1">Daftar Barang</h4>
               {items.length === 0 ? (
-                <div className="text-center py-4 text-gray-500">
+                <div className="text-center py-4 text-gray-500 border border-gray-300 rounded">
                   <p className="text-xs">Keranjang kosong</p>
                 </div>
               ) : (
-                <div className="space-y-1 text-xs font-mono">
+                <div className="space-y-1 text-xs font-mono border border-gray-300 rounded">
+                  <div className="bg-gray-100 border-b border-gray-300 px-2 py-1 font-semibold text-gray-800 grid grid-cols-12 gap-1">
+                    <div className="col-span-6">Nama Barang</div>
+                    <div className="col-span-3 text-right">Harga</div>
+                    <div className="col-span-3 text-right">Jumlah</div>
+                  </div>
                   {items.map((item, index) => (
-                    <div key={index} className="space-y-0.5">
-                      <div className="text-gray-900 font-medium">{item.nama}</div>
-                      <div className="flex justify-between text-gray-600">
-                        <span>{item.qty} x {formatCurrency(item.harga)}</span>
-                        <span>{formatCurrency(item.qty * item.harga)}</span>
+                    <div key={index} className="px-2 py-1 border-b border-gray-200 last:border-b-0">
+                      <div className="text-gray-900 font-medium mb-0.5">{item.nama}</div>
+                      <div className="grid grid-cols-12 gap-1 text-gray-700">
+                        <div className="col-span-3 text-xs">{item.qty} x</div>
+                        <div className="col-span-3 text-right">{formatCurrency(item.harga)}</div>
+                        <div className="col-span-6 text-right font-semibold">{formatCurrency(item.qty * item.harga)}</div>
                       </div>
-                      {index < items.length - 1 && <div className="border-b border-dotted border-gray-200 my-1"></div>}
                     </div>
                   ))}
                 </div>
@@ -59,25 +87,25 @@ export function PaymentSummary() {
             {/* Ringkasan Pembayaran */}
             {items.length > 0 && (
               <div className="space-y-3">
-                <h4 className="text-sm font-medium text-gray-700 border-b pb-1">Ringkasan</h4>
-                <div className="space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">Subtotal</span>
-                    <span className="font-mono">{formatCurrency(subtotal)}</span>
+                <h4 className="text-sm font-medium text-gray-700 border-b-2 border-gray-800 pb-1">Ringkasan Pembayaran</h4>
+                <div className="space-y-2 border border-gray-300 rounded p-3 bg-gray-50">
+                  <div className="flex justify-between text-sm border-b border-gray-200 pb-1">
+                    <span className="text-gray-700 font-medium">Subtotal</span>
+                    <span className="font-mono font-semibold">{formatCurrency(subtotal)}</span>
                   </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">Pajak</span>
-                    <span className="font-mono">{formatCurrency(pajak)}</span>
+                  <div className="flex justify-between text-sm border-b border-gray-200 pb-1">
+                    <span className="text-gray-700 font-medium">Pajak (11%)</span>
+                    <span className="font-mono font-semibold">{formatCurrency(pajak)}</span>
                   </div>
                   {discount > 0 && (
-                    <div className="flex justify-between text-sm text-green-600">
-                      <span>Diskon</span>
-                      <span className="font-mono">-{formatCurrency(discount)}</span>
+                    <div className="flex justify-between text-sm text-green-600 border-b border-gray-200 pb-1">
+                      <span className="font-medium">Diskon</span>
+                      <span className="font-mono font-semibold">-{formatCurrency(discount)}</span>
                     </div>
                   )}
-                  <div className="border-t border-gray-200 pt-2">
-                    <div className="flex justify-between text-lg font-bold">
-                      <span>Total</span>
+                  <div className="border-t-2 border-gray-800 pt-2 mt-2">
+                    <div className="flex justify-between text-lg font-bold text-gray-900">
+                      <span>TOTAL BAYAR</span>
                       <span className="font-mono">{formatCurrency(total)}</span>
                     </div>
                   </div>
