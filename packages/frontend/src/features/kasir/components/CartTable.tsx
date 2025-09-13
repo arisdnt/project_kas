@@ -34,7 +34,7 @@ export function CartTable({ items }: Props) {
               <td className="px-3 py-2 text-right">{formatCurrency(it.harga)}</td>
               <td className="px-3 py-2">
                 <div className="flex items-center justify-center space-x-2">
-                  <Button variant="secondary" className="h-7 px-2" onClick={() => dec(it.id)}>
+                  <Button variant="default" className="h-7 px-2 bg-blue-800 hover:bg-blue-900 text-white" onClick={() => dec(it.id)}>
                     <Minus className="h-4 w-4" />
                   </Button>
                   <input
@@ -42,7 +42,7 @@ export function CartTable({ items }: Props) {
                     value={it.qty}
                     onChange={(e) => setQty(it.id, Number(e.target.value))}
                   />
-                  <Button variant="secondary" className="h-7 px-2" onClick={() => inc(it.id)}>
+                  <Button variant="default" className="h-7 px-2 bg-blue-800 hover:bg-blue-900 text-white" onClick={() => inc(it.id)}>
                     <Plus className="h-4 w-4" />
                   </Button>
                 </div>
