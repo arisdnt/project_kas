@@ -38,17 +38,25 @@ export class ProdukControllerExtended {
       // Validasi query parameters
       const query = ProdukQuerySchema.parse(req.query);
       
-      // Ambil ID toko dari konteks user yang terautentikasi
-      // Di sistem ini, tenantId pada token merepresentasikan id_toko
-      const storeId = (req as any).user?.tenantId;
-      if (!storeId) {
+      // Ambil tenant_id dari user yang terautentikasi
+      const tenantId = (req as any).user?.tenantId;
+      if (!tenantId) {
         return res.status(401).json({
           success: false,
           message: 'Tidak ada tenantId pada token. Silakan login ulang.'
         });
       }
       
-      const result = await ProdukServiceExtended.getAllProduk(query, storeId);
+      // Ambil toko_id berdasarkan tenant_id
+      const storeId = await ProdukControllerExtended.getStoreIdFromTenant(tenantId);
+      if (!storeId) {
+        return res.status(404).json({
+          success: false,
+          message: 'Toko tidak ditemukan untuk tenant ini'
+        });
+      }
+      
+      const result = await ProdukServiceExtended.getAllProduk(query, storeId, tenantId);
       
       return res.json({
         success: true,
@@ -84,14 +92,24 @@ export class ProdukControllerExtended {
     try {
       const id = String(req.params.id);
       
-      const storeId = (req as any).user?.tenantId;
-      if (!storeId) {
+      const tenantId = (req as any).user?.tenantId;
+      if (!tenantId) {
         return res.status(401).json({
           success: false,
           message: 'Tidak ada tenantId pada token. Silakan login ulang.'
         });
       }
-      const produk = await ProdukServiceExtended.getProdukById(id, storeId);
+      
+      // Ambil toko_id berdasarkan tenant_id
+      const storeId = await ProdukControllerExtended.getStoreIdFromTenant(tenantId);
+      if (!storeId) {
+        return res.status(404).json({
+          success: false,
+          message: 'Toko tidak ditemukan untuk tenant ini'
+        });
+      }
+      
+      const produk = await ProdukServiceExtended.getProdukById(id, storeId, tenantId);
       
       if (!produk) {
         return res.status(404).json({

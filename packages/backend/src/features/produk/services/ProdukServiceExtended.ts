@@ -24,7 +24,7 @@ export class ProdukServiceExtended {
   /**
    * Mendapatkan semua produk dengan pagination dan filter (Optimized)
    */
-  static async getAllProduk(query: ProdukQuery, storeId: string): Promise<{
+  static async getAllProduk(query: ProdukQuery, storeId: string, tenantId: string): Promise<{
     produk: ProdukWithRelations[];
     total: number;
     totalPages: number;
@@ -35,8 +35,8 @@ export class ProdukServiceExtended {
       const offset = (page - 1) * limit;
       
       // Build optimized WHERE clause with proper indexing hints
-      let whereClause = 'WHERE 1=1';
-      const params: any[] = [];
+      let whereClause = 'WHERE p.tenant_id = ?';
+      const params: any[] = [tenantId];
       
       if (search) {
         // Search by nama or kode
@@ -164,7 +164,7 @@ export class ProdukServiceExtended {
   /**
    * Mendapatkan produk berdasarkan ID dengan relasi
    */
-  static async getProdukById(id: string, storeId: string): Promise<ProdukWithRelations | null> {
+  static async getProdukById(id: string, storeId: string, tenantId: string): Promise<ProdukWithRelations | null> {
     try {
       const [rows] = await pool.execute<RowDataPacket[]>(
         `SELECT 
@@ -179,8 +179,8 @@ export class ProdukServiceExtended {
         LEFT JOIN brand b ON p.brand_id = b.id
         LEFT JOIN supplier s ON p.supplier_id = s.id
         LEFT JOIN inventaris i ON p.id = i.produk_id AND i.toko_id = ?
-        WHERE p.id = ?`,
-        [storeId, id]
+        WHERE p.id = ? AND p.tenant_id = ?`,
+        [storeId, id, tenantId]
       );
       
       if (rows.length === 0) {
