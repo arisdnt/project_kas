@@ -1,34 +1,49 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/core/components/ui/card';
+import { TransaksiTerbaru } from '@/features/dashboard/services/dashboardService';
 
-interface Txn {
-  id: string;
-  waktu: string;
-  kasir: string;
-  pelanggan?: string;
-  total: number;
-  metode: 'Tunai' | 'Kartu' | 'QRIS';
-  status: 'Berhasil' | 'Batal' | 'Refund';
+interface RecentTransactionsTableProps {
+  data?: TransaksiTerbaru[];
 }
 
-const sampleTxns: Txn[] = [
-  { id: 'TRX-001245', waktu: '10:21', kasir: 'Rani', pelanggan: 'Umum', total: 245000, metode: 'QRIS', status: 'Berhasil' },
-  { id: 'TRX-001244', waktu: '10:18', kasir: 'Rani', pelanggan: 'Budi', total: 510000, metode: 'Kartu', status: 'Berhasil' },
-  { id: 'TRX-001243', waktu: '10:11', kasir: 'Dika', pelanggan: 'Umum', total: 75000, metode: 'Tunai', status: 'Berhasil' },
-  { id: 'TRX-001242', waktu: '09:59', kasir: 'Dika', pelanggan: 'Umum', total: 120000, metode: 'Tunai', status: 'Batal' },
-  { id: 'TRX-001241', waktu: '09:51', kasir: 'Rani', pelanggan: 'Sari', total: 335000, metode: 'QRIS', status: 'Berhasil' },
+// Data dummy sebagai fallback
+const sampleTxns: TransaksiTerbaru[] = [
+  { id: 'TRX-001245', nomorTransaksi: 'TRX-001245', tanggal: '2024-01-15T10:21:00Z', total: 245000, status: 'selesai', metodeBayar: 'qris', namaPelanggan: 'Umum' },
+  { id: 'TRX-001244', nomorTransaksi: 'TRX-001244', tanggal: '2024-01-15T10:18:00Z', total: 510000, status: 'selesai', metodeBayar: 'kartu', namaPelanggan: 'Budi' },
+  { id: 'TRX-001243', nomorTransaksi: 'TRX-001243', tanggal: '2024-01-15T10:11:00Z', total: 75000, status: 'selesai', metodeBayar: 'tunai' },
+  { id: 'TRX-001242', nomorTransaksi: 'TRX-001242', tanggal: '2024-01-15T09:59:00Z', total: 120000, status: 'batal', metodeBayar: 'tunai' },
+  { id: 'TRX-001241', nomorTransaksi: 'TRX-001241', tanggal: '2024-01-15T09:51:00Z', total: 335000, status: 'selesai', metodeBayar: 'qris', namaPelanggan: 'Sari' },
 ];
 
-function StatusBadge({ status }: { status: Txn['status'] }) {
-  const map = {
-    'Berhasil': 'bg-emerald-50 text-emerald-700 border-emerald-200',
-    'Batal': 'bg-red-50 text-red-700 border-red-200',
-    'Refund': 'bg-amber-50 text-amber-700 border-amber-200',
-  } as const;
+function StatusBadge({ status }: { status: string }) {
+  const map: Record<string, string> = {
+    'selesai': 'bg-emerald-50 text-emerald-700 border-emerald-200',
+    'batal': 'bg-red-50 text-red-700 border-red-200',
+    'refund': 'bg-amber-50 text-amber-700 border-amber-200',
+  };
   const cls = map[status] || 'bg-gray-50 text-gray-700 border-gray-200';
-  return <span className={`inline-flex items-center px-2 py-0.5 rounded border text-xs font-medium ${cls}`}>{status}</span>;
+  const displayStatus = status === 'selesai' ? 'Berhasil' : status === 'batal' ? 'Batal' : status === 'refund' ? 'Refund' : status;
+  return <span className={`inline-flex items-center px-2 py-0.5 rounded border text-xs font-medium ${cls}`}>{displayStatus}</span>;
 }
 
-export function RecentTransactionsTable() {
+// Fungsi untuk format waktu
+function formatWaktu(tanggal: string): string {
+  const date = new Date(tanggal);
+  return date.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+}
+
+// Fungsi untuk format metode bayar
+function formatMetodeBayar(metode: string): string {
+  const map: Record<string, string> = {
+    'tunai': 'Tunai',
+    'kartu': 'Kartu',
+    'qris': 'QRIS',
+    'transfer': 'Transfer'
+  };
+  return map[metode] || metode;
+}
+
+export function RecentTransactionsTable({ data }: RecentTransactionsTableProps) {
+  const transaksiData = data && data.length > 0 ? data : sampleTxns;
   return (
     <Card className="h-full">
       <CardHeader className="pb-4">
@@ -49,13 +64,13 @@ export function RecentTransactionsTable() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {sampleTxns.map((t) => (
+              {transaksiData.map((t) => (
                 <tr key={t.id} className="hover:bg-gray-50">
-                  <td className="px-3 py-2 font-mono text-gray-700">{t.id}</td>
-                  <td className="px-3 py-2 text-gray-700">{t.waktu}</td>
-                  <td className="px-3 py-2 text-gray-700">{t.kasir}</td>
-                  <td className="px-3 py-2 text-gray-700">{t.pelanggan || '-'}</td>
-                  <td className="px-3 py-2 text-gray-700">{t.metode}</td>
+                  <td className="px-3 py-2 font-mono text-gray-700">{t.nomorTransaksi}</td>
+                  <td className="px-3 py-2 text-gray-700">{formatWaktu(t.tanggal)}</td>
+                  <td className="px-3 py-2 text-gray-700">-</td>
+                  <td className="px-3 py-2 text-gray-700">{t.namaPelanggan || 'Umum'}</td>
+                  <td className="px-3 py-2 text-gray-700">{formatMetodeBayar(t.metodeBayar)}</td>
                   <td className="px-3 py-2 text-right font-semibold text-gray-900">Rp{t.total.toLocaleString('id-ID')}</td>
                   <td className="px-3 py-2"><StatusBadge status={t.status} /></td>
                 </tr>

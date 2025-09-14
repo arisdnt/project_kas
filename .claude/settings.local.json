@@ -14,7 +14,8 @@
       "Bash(npm run build:*)",
       "Bash(npx tsc:*)",
       "mcp__mcp_server_mysql__mysql_query",
-      "Bash(cat:*)"
+      "Bash(cat:*)",
+      "mcp__mysql__mysql_query"
     ],
     "deny": [],
     "ask": []

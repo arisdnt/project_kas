@@ -1,0 +1,7 @@
+analsia kolom "level" di tabel peran, dan cek bagaimana level peran ini di gunakan di sistem
+buat agar level ini mempengaruhi apa yang bisa dilakukan terhadap sistem yang ada
+1 : god = bisa melakukan seluruh proses crud di seluruh tenan yang ada, mulai dari produk transaksi dan lain lain
+2 : admin = bisa melakukan seluruh proses crud di seluruh toko yang menjadi bawah tenan terkait
+3 : admintoko = bisa melakukan seluruh proses crud terhadap toko terkait
+4 : kasir = bisa melakukan seluruh proses kasir pada toko terkait
+5 : reviewer = hanya bisa malakukan proses read ditoko terkait

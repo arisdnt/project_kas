@@ -122,6 +122,7 @@ import { fileTypesRoutes } from '@/features/storage/routes/fileTypesRoutes';
 import { stokOpnameRoutes } from '@/features/stok-opname/routes/stokOpnameRoutes';
 import profileRoutes from '@/features/profile/routes/profileRoutes';
 import penggunaRoutes from '@/features/pengguna/routes/penggunaRoutes';
+import dashboardRoutes from '@/features/dashboard/routes/dashboardRoutes';
 import { ensureBucket } from '@/core/storage/minioClient';
 
 // Initialize monitoring service
@@ -142,6 +143,7 @@ app.use('/api/files', uploadRateLimiter as any, filesRoutes);
 app.use('/api/dokumen', uploadRateLimiter as any, dokumenRoutes);
 app.use('/api/file-types', fileTypesRoutes);
 app.use('/api/laporan/keuangan', keuanganRoutes);
+app.use('/api/dashboard', dashboardRoutes);
 
 app.get('/api', (req, res) => {
   res.json({
