@@ -22,23 +22,21 @@ export class PenggunaController {
     try {
       // Validasi query parameters
       const query = PenggunaQuerySchema.parse(req.query)
-      let tenantId = req.user?.tenantId
-      
-      // God user dapat mengakses semua tenant atau tenant spesifik
-      if (req.user?.isGodUser && req.query.tenantId) {
-        tenantId = req.query.tenantId as string
-      }
-      
-      if (!tenantId) {
+      // Siapkan scope dari middleware
+      const baseScope = req.accessScope
+      if (!baseScope) {
         return res.status(401).json({
           success: false,
           error: 'Unauthorized',
-          message: 'Tenant ID tidak ditemukan'
+          message: 'Access scope tidak tersedia'
         } as PenggunaResponse)
       }
+      // God user dapat override tenant melalui query
+      const overrideTenantId = (req.user?.isGodUser && req.query.tenantId) ? (req.query.tenantId as string) : undefined
+      const scope = overrideTenantId ? { ...baseScope, tenantId: overrideTenantId } : baseScope
       
       // Ambil data pengguna
-      const result = await PenggunaService.getAllPengguna(query, tenantId)
+      const result = await PenggunaService.getAllPengguna(query, scope)
       
       return res.json({
         success: true,

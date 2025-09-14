@@ -6,6 +6,7 @@
 import { RowDataPacket, ResultSetHeader } from 'mysql2';
 import pool from '@/core/database/connection';
 import { logger } from '@/core/utils/logger';
+import { AccessScope, applyScopeToSql } from '@/core/middleware/accessScope';
 import {
   Produk,
   Inventaris,
@@ -24,7 +25,7 @@ export class ProdukServiceExtended {
   /**
    * Mendapatkan semua produk dengan pagination dan filter (Optimized)
    */
-  static async getAllProduk(query: ProdukQuery, storeId: string, tenantId: string): Promise<{
+  static async getAllProduk(query: ProdukQuery, scope: AccessScope): Promise<{
     produk: ProdukWithRelations[];
     total: number;
     totalPages: number;
@@ -34,9 +35,9 @@ export class ProdukServiceExtended {
       const { page, limit, search, kategori, brand, supplier } = query;
       const offset = (page - 1) * limit;
       
-      // Build optimized WHERE clause with proper indexing hints
-      let whereClause = 'WHERE p.tenant_id = ?';
-      const params: any[] = [tenantId];
+      // Build base WHERE clause (tanpa scope)
+      let whereClause = '';
+      const params: any[] = [];
       
       if (search) {
         // Search by nama or kode
@@ -60,16 +61,17 @@ export class ProdukServiceExtended {
         params.push(supplier);
       }
       
-      // Optimized count query with LIMIT for performance
-      const countQuery = `
+      // Count query + tenant scope (produk tidak memiliki toko_id, jadi enforceStore=false)
+      const countBase = `
         SELECT COUNT(*) as total 
         FROM produk p
         ${whereClause}
       `;
-      const [countRows] = await pool.execute<RowDataPacket[]>(countQuery, params);
+      const scopedCount = applyScopeToSql(countBase, params, { ...scope, enforceStore: false }, { tenantColumn: 'p.tenant_id' });
+      const [countRows] = await pool.execute<RowDataPacket[]>(scopedCount.sql, scopedCount.params);
       const total = countRows[0].total;
       
-      // Get produk with relations - optimized with proper indexing
+      // Get produk with relations - tenant scope only (no toko filter here)
       const baseQuery = `
         SELECT
           p.id, p.nama, p.satuan, p.kategori_id, p.brand_id, p.supplier_id,
@@ -85,16 +87,11 @@ export class ProdukServiceExtended {
         ORDER BY p.dibuat_pada DESC
         LIMIT ${limit + 1} OFFSET ${offset}
       `;
-      
-      // Combine all parameters in correct order: whereClause params only (limit/offset now interpolated)
-      const baseParams = [...params];
+      const scopedSelect = applyScopeToSql(baseQuery, params, { ...scope, enforceStore: false }, { tenantColumn: 'p.tenant_id' });
       
       // Execute main query
       
-      const [rows] = await pool.execute<RowDataPacket[]>(
-        baseQuery, 
-        baseParams
-      );
+      const [rows] = await pool.execute<RowDataPacket[]>(scopedSelect.sql, scopedSelect.params);
       
       // Check if there are more pages
       const hasNextPage = rows.length > limit;
@@ -104,7 +101,8 @@ export class ProdukServiceExtended {
       const produkIds: string[] = actualRows.map((row: any) => row.id as string);
       let inventarisMap: { [key: string]: any } = {};
       
-      if (produkIds.length > 0) {
+      const storeId = scope.storeId;
+      if (produkIds.length > 0 && storeId) {
         const inventarisQuery = `
           SELECT produk_id, stok_tersedia, harga_jual_toko 
           FROM inventaris
@@ -138,7 +136,7 @@ export class ProdukServiceExtended {
         kategori: row.kategori_nama ? { id: row.kategori_id, nama: row.kategori_nama } : undefined,
         brand: row.brand_nama ? { id: row.brand_id, nama: row.brand_nama } : undefined,
         supplier: row.supplier_nama ? { id: row.supplier_id, nama: row.supplier_nama } : undefined,
-        inventaris: inventarisMap[row.id] ? [{
+        inventaris: storeId && inventarisMap[row.id] ? [{
           id_toko: storeId,
           id_produk: row.id,
           stok_tersedia: inventarisMap[row.id].stok_tersedia,
@@ -164,24 +162,33 @@ export class ProdukServiceExtended {
   /**
    * Mendapatkan produk berdasarkan ID dengan relasi
    */
-  static async getProdukById(id: string, storeId: string, tenantId: string): Promise<ProdukWithRelations | null> {
+  static async getProdukById(id: string, scope: AccessScope): Promise<ProdukWithRelations | null> {
     try {
-      const [rows] = await pool.execute<RowDataPacket[]>(
-        `SELECT 
+      const storeId = scope.storeId;
+      let baseQuery = `SELECT 
           p.id, p.nama, p.satuan, p.kategori_id, p.brand_id, p.supplier_id,
           p.dibuat_pada, p.diperbarui_pada,
           k.nama as kategori_nama,
           b.nama as brand_nama,
-          s.nama as supplier_nama,
-          i.stok_tersedia, i.stok_reserved, i.harga_jual_toko, i.stok_minimum_toko, i.lokasi_rak
+          s.nama as supplier_nama`;
+      let joinClause = `
         FROM produk p
         LEFT JOIN kategori k ON p.kategori_id = k.id
         LEFT JOIN brand b ON p.brand_id = b.id
-        LEFT JOIN supplier s ON p.supplier_id = s.id
-        LEFT JOIN inventaris i ON p.id = i.produk_id AND i.toko_id = ?
-        WHERE p.id = ? AND p.tenant_id = ?`,
-        [storeId, id, tenantId]
-      );
+        LEFT JOIN supplier s ON p.supplier_id = s.id`;
+      const params: any[] = [id];
+      if (storeId) {
+        baseQuery += `,
+          i.stok_tersedia, i.stok_reserved, i.harga_jual_toko, i.stok_minimum_toko, i.lokasi_rak`;
+        joinClause += `
+          LEFT JOIN inventaris i ON p.id = i.produk_id AND i.toko_id = ?`;
+        params.unshift(storeId); // order: storeId, id
+      }
+      let sql = `${baseQuery}
+        ${joinClause}
+        WHERE p.id = ?`;
+      const scoped = applyScopeToSql(sql, params, { ...scope, enforceStore: false }, { tenantColumn: 'p.tenant_id' });
+      const [rows] = await pool.execute<RowDataPacket[]>(scoped.sql, scoped.params);
       
       if (rows.length === 0) {
         return null;
@@ -200,7 +207,7 @@ export class ProdukServiceExtended {
         kategori: row.kategori_nama ? { id: row.kategori_id, nama: row.kategori_nama } : undefined,
         brand: row.brand_nama ? { id: row.brand_id, nama: row.brand_nama } : undefined,
         supplier: row.supplier_nama ? { id: row.supplier_id, nama: row.supplier_nama } : undefined,
-        inventaris: row.stok_tersedia !== null ? [{
+        inventaris: storeId && row.stok_tersedia !== null ? [{
           id_toko: storeId,
           id_produk: row.id,
           stok_tersedia: row.stok_tersedia,
@@ -219,7 +226,7 @@ export class ProdukServiceExtended {
   /**
    * Membuat produk baru
    */
-  static async createProduk(data: CreateProduk): Promise<Produk> {
+  static async createProduk(data: CreateProduk, scope: AccessScope): Promise<Produk> {
     try {
       // Generate kode produk otomatis jika tidak ada
       const kode = data.kode || `PRD-${Date.now()}`;
@@ -228,7 +235,7 @@ export class ProdukServiceExtended {
         `INSERT INTO produk (tenant_id, nama, satuan, kategori_id, brand_id, supplier_id, kode, harga_beli, harga_jual) 
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
-          '7f69ce68-9068-11f0-8eff-00155d24a169', // Default tenant_id
+          scope.tenantId,
           data.nama,
           data.satuan || 'pcs',
           data.kategori_id || '7f6c3bd6-9068-11f0-8eff-00155d24a169', // Default kategori: Makanan
@@ -243,7 +250,7 @@ export class ProdukServiceExtended {
       // Get the created product by kode since we can't use insertId with UUID
       const [rows] = await pool.execute<RowDataPacket[]>(
         'SELECT * FROM produk WHERE kode = ? AND tenant_id = ? LIMIT 1',
-        [kode, '7f69ce68-9068-11f0-8eff-00155d24a169']
+        [kode, scope.tenantId]
       );
       
       const createdProduk = rows[0] as any;
@@ -270,19 +277,20 @@ export class ProdukServiceExtended {
   /**
    * Mengupdate produk
    */
-  static async updateProduk(data: UpdateProduk): Promise<Produk> {
+  static async updateProduk(data: UpdateProduk, scope: AccessScope): Promise<Produk> {
     try {
       const [result] = await pool.execute<ResultSetHeader>(
         `UPDATE produk 
          SET nama = ?, satuan = ?, kategori_id = ?, brand_id = ?, supplier_id = ?
-         WHERE id = ?`,
+         WHERE id = ? AND tenant_id = ?`,
         [
           data.nama,
           data.satuan || 'pcs',
           data.kategori_id || '7f6c3bd6-9068-11f0-8eff-00155d24a169', // Default kategori: Makanan
           data.brand_id || '7f6cbd6d-9068-11f0-8eff-00155d24a169', // Default brand: Generic
           data.supplier_id || '7f6d5025-9068-11f0-8eff-00155d24a169', // Default supplier: Supplier Umum
-          data.id
+          data.id,
+          scope.tenantId
         ]
       );
       
@@ -300,11 +308,11 @@ export class ProdukServiceExtended {
   /**
    * Menghapus produk
    */
-  static async deleteProduk(id: string): Promise<void> {
+  static async deleteProduk(id: string, scope: AccessScope): Promise<void> {
     try {
       const [result] = await pool.execute<ResultSetHeader>(
-        'DELETE FROM produk WHERE id = ?',
-        [id]
+        'DELETE FROM produk WHERE id = ? AND tenant_id = ?',
+        [id, scope.tenantId]
       );
       
       if (result.affectedRows === 0) {
@@ -321,12 +329,14 @@ export class ProdukServiceExtended {
   /**
    * Mendapatkan inventaris berdasarkan toko
    */
-  static async getInventarisByToko(storeId: string, page: number = 1, limit: number = 10): Promise<{
+  static async getInventarisByToko(scope: AccessScope, page: number = 1, limit: number = 10): Promise<{
     inventaris: InventarisWithProduk[];
     total: number;
     totalPages: number;
   }> {
     try {
+      const storeId = scope.storeId;
+      if (!storeId) throw new Error('Store ID is required');
       const offset = (page - 1) * limit;
       
       // Get total count
@@ -385,8 +395,11 @@ export class ProdukServiceExtended {
   /**
    * Membuat atau mengupdate inventaris
    */
-  static async upsertInventaris(data: CreateInventaris): Promise<Inventaris> {
+  static async upsertInventaris(data: CreateInventaris, scope: AccessScope): Promise<Inventaris> {
     try {
+      if (scope.enforceStore && scope.storeId && scope.storeId !== data.id_toko) {
+        throw new Error('Access denied to this store');
+      }
       const [result] = await pool.execute<ResultSetHeader>(
         `INSERT INTO inventaris (toko_id, produk_id, stok_tersedia, stok_reserved, harga_jual_toko, stok_minimum_toko, lokasi_rak)
          VALUES (?, ?, ?, ?, ?, ?, ?)
@@ -425,8 +438,10 @@ export class ProdukServiceExtended {
   /**
    * Mengupdate stok inventaris
    */
-  static async updateStok(storeId: string, productId: string, newQuantity: number): Promise<void> {
+  static async updateStok(scope: AccessScope, productId: string, newQuantity: number): Promise<void> {
     try {
+      const storeId = scope.storeId;
+      if (!storeId) throw new Error('Store ID is required');
       const [result] = await pool.execute<ResultSetHeader>(
         'UPDATE inventaris SET stok_tersedia = ? WHERE toko_id = ? AND produk_id = ?',
         [newQuantity, storeId, productId]
@@ -444,8 +459,10 @@ export class ProdukServiceExtended {
   /**
    * Menghapus inventaris
    */
-  static async deleteInventaris(storeId: string, productId: string): Promise<void> {
+  static async deleteInventaris(scope: AccessScope, productId: string): Promise<void> {
     try {
+      const storeId = scope.storeId;
+      if (!storeId) throw new Error('Store ID is required');
       const query = 'DELETE FROM inventaris WHERE toko_id = ? AND produk_id = ?';
       logger.info({ storeId, productId, query }, 'Executing delete query');
       const [result] = await pool.execute<ResultSetHeader>(

@@ -6,6 +6,7 @@
 import { Router } from 'express'
 import { PenggunaController } from '../controllers/PenggunaController'
 import { authenticate, authorize } from '@/features/auth/middleware/authMiddleware'
+import { attachAccessScope } from '@/core/middleware/accessScope'
 import { UserRole } from '@/features/auth/models/User'
 import { 
   requireCRUDAccess, 
@@ -18,6 +19,7 @@ const router = Router()
 
 // Middleware untuk semua routes pengguna
 router.use(authenticate)
+router.use(attachAccessScope)
 
 /**
  * @route GET /api/pengguna

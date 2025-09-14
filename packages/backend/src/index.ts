@@ -20,6 +20,7 @@ import {
 } from '@/core/middleware/rateLimiter';
 import { testConnection, closeConnection } from '@/core/database/connection';
 import { logger } from '@/core/utils/logger';
+import { attachAccessScope } from '@/core/middleware/accessScope';
 
 // Buat Express app
 const app = express();
@@ -62,6 +63,9 @@ app.use((req, res, next) => {
   }, 'HTTP Request');
   next();
 });
+
+// Centralized access scope middleware (sets req.accessScope when authenticated)
+app.use(attachAccessScope);
 
 // Health check endpoint (basic)
 app.get('/health', (req, res) => {

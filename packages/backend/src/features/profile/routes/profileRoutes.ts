@@ -1,11 +1,13 @@
 import { Router } from 'express'
 import { ProfileController } from '../controllers/ProfileController'
 import { authenticate } from '@/features/auth/middleware/authMiddleware'
+import { attachAccessScope } from '@/core/middleware/accessScope'
 
 const router = Router()
 
 // Middleware autentikasi untuk semua routes profile
 router.use(authenticate)
+router.use(attachAccessScope)
 
 // GET /api/profile - Ambil profil lengkap user yang sedang login
 router.get('/', ProfileController.getCompleteProfile)

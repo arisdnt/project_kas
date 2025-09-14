@@ -8,11 +8,14 @@ import { ProdukController } from '../controllers/ProdukController';
 import { ProdukControllerExtended } from '../controllers/ProdukControllerExtended';
 import { authenticate, authorize } from '@/features/auth/middleware/authMiddleware';
 import { UserRole } from '@/features/auth/models/User';
+import { requireStoreWhenNeeded } from '@/core/middleware/accessScope';
+import { attachAccessScope } from '@/core/middleware/accessScope';
 
 const router = Router();
 
 // Middleware untuk semua routes produk
 router.use(authenticate);
+router.use(attachAccessScope);
 
 // ===== KATEGORI ROUTES =====
 router.get('/kategori', authorize(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.CASHIER), ProdukController.getAllKategori);
@@ -41,9 +44,9 @@ router.put('/produk/:id', authorize(UserRole.SUPER_ADMIN, UserRole.ADMIN), Produ
 router.delete('/produk/:id', authorize(UserRole.SUPER_ADMIN, UserRole.ADMIN), ProdukControllerExtended.deleteProduk);
 
 // ===== INVENTARIS ROUTES =====
-router.get('/inventaris', authorize(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.CASHIER), ProdukControllerExtended.getInventarisByToko);
-router.post('/inventaris', authorize(UserRole.SUPER_ADMIN, UserRole.ADMIN), ProdukControllerExtended.upsertInventaris);
-router.put('/inventaris/:productId/stok', authorize(UserRole.SUPER_ADMIN, UserRole.ADMIN), ProdukControllerExtended.updateStok);
-router.delete('/inventaris/:productId', authorize(UserRole.SUPER_ADMIN, UserRole.ADMIN), ProdukControllerExtended.deleteInventaris);
+router.get('/inventaris', authorize(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.CASHIER), requireStoreWhenNeeded, ProdukControllerExtended.getInventarisByToko);
+router.post('/inventaris', authorize(UserRole.SUPER_ADMIN, UserRole.ADMIN), requireStoreWhenNeeded, ProdukControllerExtended.upsertInventaris);
+router.put('/inventaris/:productId/stok', authorize(UserRole.SUPER_ADMIN, UserRole.ADMIN), requireStoreWhenNeeded, ProdukControllerExtended.updateStok);
+router.delete('/inventaris/:productId', authorize(UserRole.SUPER_ADMIN, UserRole.ADMIN), requireStoreWhenNeeded, ProdukControllerExtended.deleteInventaris);
 
 export default router;

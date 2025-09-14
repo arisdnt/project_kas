@@ -71,8 +71,10 @@ export class AuthService {
     try {
       // Query user berdasarkan username dari tabel users dengan join ke pengguna, peran
       const [rows] = await connection.execute<RowDataPacket[]>(
-        `SELECT u.id, u.username, u.password_hash as password, u.tenant_id, u.nama_lengkap as nama, u.status, u.is_super_admin,
-                pr.nama as nama_peran, pr.level, pr.deskripsi as deskripsi_peran
+        `SELECT 
+            u.id, u.username, u.password_hash as password, u.tenant_id, u.nama_lengkap as nama, u.status, u.is_super_admin,
+            p.toko_id,
+            pr.nama as nama_peran, pr.level, pr.deskripsi as deskripsi_peran
          FROM users u
          LEFT JOIN pengguna p ON u.id = p.user_id
          LEFT JOIN peran pr ON p.peran_id = pr.id
@@ -131,7 +133,7 @@ export class AuthService {
       const authenticatedUser: AuthenticatedUser = {
         id: user.id,
         tenantId: user.tenant_id,
-        tokoId: undefined, // Tidak ada toko_id di tabel users
+        tokoId: user.toko_id || undefined,
         username: user.username,
         email: '', // Email tidak ada di tabel pengguna saat ini
         fullName: user.nama || user.username,
@@ -144,7 +146,7 @@ export class AuthService {
       const jwtPayload: JWTPayload = {
         userId: user.id,
         tenantId: user.tenant_id,
-        tokoId: undefined,
+        tokoId: user.toko_id || undefined,
         username: user.username,
         role: mappedRole,
         level: level
@@ -257,6 +259,7 @@ export class AuthService {
       const [rows] = await connection.execute<RowDataPacket[]>(
         `SELECT u.id, u.tenant_id, u.username, u.nama_lengkap as nama, u.status,
                 u.is_super_admin, u.email, u.telepon, u.avatar_url,
+                pg.toko_id,
                 p.nama as nama_peran, p.level
          FROM users u
          LEFT JOIN pengguna pg ON u.id = pg.user_id
@@ -298,7 +301,7 @@ export class AuthService {
       return {
         id: user.id,
         tenantId: user.tenant_id,
-        tokoId: undefined, // Tidak ada toko_id di tabel users
+        tokoId: user.toko_id || undefined,
         username: user.username,
         email: user.email || '',
         fullName: user.nama || user.username,

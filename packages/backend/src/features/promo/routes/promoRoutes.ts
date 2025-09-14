@@ -7,11 +7,13 @@ import { Router } from 'express';
 import { PromoController } from '../controllers/PromoController';
 import { authenticate, authorize } from '@/features/auth/middleware/authMiddleware';
 import { UserRole } from '@/features/auth/models/User';
+import { attachAccessScope, requireStoreWhenNeeded } from '@/core/middleware/accessScope';
 
 const router = Router();
 
 // Middleware untuk semua routes promo
 router.use(authenticate);
+router.use(attachAccessScope);
 
 // ===== PROMO ROUTES =====
 
@@ -22,6 +24,7 @@ router.use(authenticate);
  */
 router.get('/', 
   authorize(UserRole.ADMIN, UserRole.CASHIER), 
+  requireStoreWhenNeeded,
   PromoController.getAllPromos
 );
 
@@ -32,6 +35,7 @@ router.get('/',
  */
 router.get('/stats', 
   authorize(UserRole.ADMIN, UserRole.CASHIER), 
+  requireStoreWhenNeeded,
   PromoController.getPromoStats
 );
 
@@ -42,6 +46,7 @@ router.get('/stats',
  */
 router.get('/active', 
   authorize(UserRole.ADMIN, UserRole.CASHIER), 
+  requireStoreWhenNeeded,
   PromoController.getActivePromos
 );
 
@@ -52,6 +57,7 @@ router.get('/active',
  */
 router.get('/range', 
   authorize(UserRole.ADMIN, UserRole.CASHIER), 
+  requireStoreWhenNeeded,
   PromoController.getPromosByDateRange
 );
 
@@ -62,6 +68,7 @@ router.get('/range',
  */
 router.get('/:id', 
   authorize(UserRole.ADMIN, UserRole.CASHIER), 
+  requireStoreWhenNeeded,
   PromoController.getPromoById
 );
 
@@ -72,6 +79,7 @@ router.get('/:id',
  */
 router.post('/', 
   authorize(UserRole.ADMIN), 
+  requireStoreWhenNeeded,
   PromoController.createPromo
 );
 
@@ -82,6 +90,7 @@ router.post('/',
  */
 router.put('/:id', 
   authorize(UserRole.ADMIN), 
+  requireStoreWhenNeeded,
   PromoController.updatePromo
 );
 
@@ -92,6 +101,7 @@ router.put('/:id',
  */
 router.patch('/:id/toggle', 
   authorize(UserRole.ADMIN), 
+  requireStoreWhenNeeded,
   PromoController.togglePromoStatus
 );
 
@@ -102,6 +112,7 @@ router.patch('/:id/toggle',
  */
 router.delete('/:id', 
   authorize(UserRole.ADMIN), 
+  requireStoreWhenNeeded,
   PromoController.deletePromo
 );
 

@@ -7,9 +7,10 @@ export class KeuanganController {
     try {
       const user = req.user;
       if (!user) return res.status(401).json({ error: 'Unauthorized' });
+      const scope = req.accessScope;
       const { start, end } = req.query as { start?: string; end?: string };
       if (!start || !end) return res.status(400).json({ error: 'Bad Request', message: 'start & end required' });
-      const data = await KeuanganService.getLedger(user.tenantId || null, start, end);
+      const data = await KeuanganService.getLedger(scope?.tenantId || user.tenantId || null, start, end);
       return res.json({ data });
     } catch (e: any) {
       logger.error({ err: e?.message }, 'Ledger error');
@@ -21,9 +22,10 @@ export class KeuanganController {
     try {
       const user = req.user;
       if (!user) return res.status(401).json({ error: 'Unauthorized' });
+      const scope = req.accessScope;
       const { start, end } = req.query as { start?: string; end?: string };
       if (!start || !end) return res.status(400).json({ error: 'Bad Request', message: 'start & end required' });
-      const data = await KeuanganService.getProfitLoss(user.tenantId || null, start, end);
+      const data = await KeuanganService.getProfitLoss(scope?.tenantId || user.tenantId || null, start, end);
       return res.json({ data });
     } catch (e: any) {
       logger.error({ err: e?.message }, 'ProfitLoss error');
@@ -31,4 +33,3 @@ export class KeuanganController {
     }
   }
 }
-

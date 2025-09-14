@@ -6,13 +6,15 @@
 import { Router } from 'express';
 import { StokOpnameController } from '../controllers/StokOpnameController';
 import { authenticate } from '@/features/auth/middleware/authMiddleware';
+import { attachAccessScope, requireStoreWhenNeeded } from '@/core/middleware/accessScope';
 import { validateRequest } from '@/features/storage/middleware/validationMiddleware';
 import { z } from 'zod';
 
 const router = Router();
 
-// Apply auth middleware to all routes
+// Apply auth + access scope middleware to all routes
 router.use(authenticate);
+router.use(attachAccessScope);
 
 /**
  * @route GET /api/stok-opname
@@ -36,6 +38,7 @@ const querySchema = z.object({
 router.get(
   '/',
   validateRequest(querySchema),
+  requireStoreWhenNeeded,
   StokOpnameController.getAll
 );
 
@@ -74,6 +77,7 @@ const createSchema = z.object({
 router.post(
   '/',
   validateRequest(createSchema),
+  requireStoreWhenNeeded,
   StokOpnameController.create
 );
 
@@ -97,6 +101,7 @@ const updateSchema = z.object({
 router.put(
   '/:id',
   validateRequest(updateSchema),
+  requireStoreWhenNeeded,
   StokOpnameController.update
 );
 
@@ -108,6 +113,7 @@ router.put(
 router.delete(
   '/:id',
   validateRequest(getByIdSchema),
+  requireStoreWhenNeeded,
   StokOpnameController.delete
 );
 
@@ -119,6 +125,7 @@ router.delete(
 router.patch(
   '/:id/complete',
   validateRequest(getByIdSchema),
+  requireStoreWhenNeeded,
   StokOpnameController.complete
 );
 
@@ -130,6 +137,7 @@ router.patch(
 router.patch(
   '/:id/cancel',
   validateRequest(getByIdSchema),
+  requireStoreWhenNeeded,
   StokOpnameController.cancel
 );
 

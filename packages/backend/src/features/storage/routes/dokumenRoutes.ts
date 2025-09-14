@@ -1,6 +1,7 @@
 import { Router } from 'express'
 import { DokumenController } from '../controllers/DokumenController'
 import { authenticate, ensureTenantAccess } from '@/features/auth/middleware/authMiddleware'
+import { attachAccessScope } from '@/core/middleware/accessScope'
 import { 
   validateCreateDokumen, 
   validateUpdateDokumen, 
@@ -12,6 +13,7 @@ const router = Router()
 
 // Apply middleware
 router.use(authenticate)
+router.use(attachAccessScope)
 router.use(ensureTenantAccess)
 
 // CRUD routes with validation

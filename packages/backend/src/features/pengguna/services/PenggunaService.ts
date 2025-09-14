@@ -15,12 +15,13 @@ import {
   PenggunaQuery,
   PenggunaStats
 } from '../models/Pengguna'
+import { AccessScope, applyScopeToSql } from '@/core/middleware/accessScope'
 
 export class PenggunaService {
   /**
    * Ambil semua pengguna dengan filter dan pagination
    */
-  static async getAllPengguna(query: PenggunaQuery, tenantId: string): Promise<{
+  static async getAllPengguna(query: PenggunaQuery, scope: AccessScope): Promise<{
     pengguna: Pengguna[]
     pagination: { page: number; limit: number; total: number; totalPages: number }
   }> {
@@ -31,9 +32,9 @@ export class PenggunaService {
       const { page = 1, limit = 10, search, peran_id, status } = query
       const offset = (page - 1) * limit
       
-      // Build WHERE clause - filter berdasarkan tenant_id dari users
-      let whereClause = 'WHERE u.tenant_id = ?'
-      const params: any[] = [tenantId]
+      // Build WHERE clause dasar (filter pencarian/peran/status)
+      let whereClause = ''
+      const params: any[] = []
       
       if (search) {
         whereClause += ' AND (u.username LIKE ? OR p.nama LIKE ?)'
@@ -50,8 +51,8 @@ export class PenggunaService {
         params.push(status)
       }
       
-      // Query untuk total count
-      const countQuery = `
+      // Query untuk total count + scope
+      const countBase = `
         SELECT COUNT(*) as total
         FROM pengguna p
         LEFT JOIN peran r ON p.peran_id = r.id
@@ -59,14 +60,15 @@ export class PenggunaService {
         LEFT JOIN users u ON p.user_id = u.id
         ${whereClause}
       `
+      const scopedCount = applyScopeToSql(countBase, params, scope, { tenantColumn: 'u.tenant_id', storeColumn: 'p.toko_id' })
       
 
       
-      const [countResult] = await connection.execute<RowDataPacket[]>(countQuery, params)
+      const [countResult] = await connection.execute<RowDataPacket[]>(scopedCount.sql, scopedCount.params)
       const total = countResult[0].total
       
       // Query untuk data pengguna
-      const dataQuery = `
+      const dataBase = `
         SELECT 
           p.id,
           p.toko_id,
@@ -83,17 +85,11 @@ export class PenggunaService {
         LEFT JOIN toko t ON p.toko_id = t.id
         LEFT JOIN users u ON p.user_id = u.id
         ${whereClause}
-        ORDER BY p.dibuat_pada DESC
-        LIMIT ${Number(limit)} OFFSET ${Number(offset)}
       `
-      
-      const dataParams = [...params]
+      const scopedData = applyScopeToSql(dataBase, params, scope, { tenantColumn: 'u.tenant_id', storeColumn: 'p.toko_id' })
+      const finalSql = `${scopedData.sql} ORDER BY p.dibuat_pada DESC LIMIT ${Number(limit)} OFFSET ${Number(offset)}`
 
-      
-      const [rows] = await connection.execute<RowDataPacket[]>(
-        dataQuery, 
-        dataParams
-      )
+      const [rows] = await connection.execute<RowDataPacket[]>(finalSql, scopedData.params)
       
 
       

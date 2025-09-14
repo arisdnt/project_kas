@@ -6,6 +6,7 @@ import { Request, Response } from 'express'
 import { CreateTransaksiSchema } from '../models/Penjualan'
 import { PenjualanService } from '../services/PenjualanService'
 import { logger } from '@/core/utils/logger'
+import { AccessScope } from '@/core/middleware/accessScope'
 
 export class PenjualanController {
   static async create(req: Request, res: Response) {
@@ -13,8 +14,12 @@ export class PenjualanController {
       if (!req.user) {
         return res.status(401).json({ success: false, message: 'Unauthorized' })
       }
+      const scope = req.accessScope as AccessScope | undefined
+      if (!scope) {
+        return res.status(401).json({ success: false, message: 'Access scope tidak tersedia' })
+      }
       const payload = CreateTransaksiSchema.parse(req.body)
-      const result = await PenjualanService.createTransaksi(req.user.id, req.user.tenantId, payload)
+      const result = await PenjualanService.createTransaksi(req.user, scope, payload)
       return res.status(201).json({ success: true, data: result, message: 'Transaksi dibuat' })
     } catch (error: any) {
       logger.error({ error }, 'Gagal membuat transaksi')
@@ -29,7 +34,11 @@ export class PenjualanController {
         return res.status(401).json({ success: false, message: 'Unauthorized' })
       }
       const id = String(req.params.id)
-      const detail = await PenjualanService.getDetailTransaksi(id, req.user.tenantId)
+      const scope = req.accessScope as AccessScope | undefined
+      if (!scope) {
+        return res.status(401).json({ success: false, message: 'Access scope tidak tersedia' })
+      }
+      const detail = await PenjualanService.getDetailTransaksi(id, scope)
       if (!detail) return res.status(404).json({ success: false, message: 'Transaksi tidak ditemukan' })
       return res.json({ success: true, data: detail })
     } catch (error: any) {
@@ -44,7 +53,11 @@ export class PenjualanController {
         return res.status(401).json({ success: false, message: 'Unauthorized' })
       }
       const id = String(req.params.id)
-      const detail = await PenjualanService.getDetailTransaksi(id, req.user.tenantId)
+      const scope = req.accessScope as AccessScope | undefined
+      if (!scope) {
+        return res.status(401).json({ success: false, message: 'Access scope tidak tersedia' })
+      }
+      const detail = await PenjualanService.getDetailTransaksi(id, scope)
       if (!detail) return res.status(404).json({ success: false, message: 'Transaksi tidak ditemukan' })
       // Format sebagai teks struk (untuk stub). Integrasi printer server bisa ditambahkan di sini.
       const text = PenjualanService.formatStrukText(detail, { nama: 'KasirPro', alamat: '' })

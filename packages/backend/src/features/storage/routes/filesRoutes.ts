@@ -1,11 +1,13 @@
 import { Router } from 'express'
 import { FilesController, singleFileMiddleware } from '../controllers/FilesController'
 import { authenticate, authorize } from '@/features/auth/middleware/authMiddleware'
+import { attachAccessScope } from '@/core/middleware/accessScope'
 import { UserRole } from '@/features/auth/models/User'
 
 const router = Router()
 
 router.use(authenticate)
+router.use(attachAccessScope)
 
 // Upload file umum/produk/dokumen
 router.post('/upload', authorize(UserRole.SUPER_ADMIN, UserRole.ADMIN), singleFileMiddleware, FilesController.upload)

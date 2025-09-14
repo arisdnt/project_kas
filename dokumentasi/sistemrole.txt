@@ -1,0 +1,157 @@
+Sistem Role, Level, Permission, dan Access Scope (POS Multi‑Tenant)
+
+Tujuan Dokumen
+- Menjadi pegangan pasti untuk setiap pengembang saat menambah/merubah fitur terkait autentikasi, otorisasi, dan isolasi data (tenant/toko/role/level).
+- Menstandarkan pola penempatan middleware dan filter data agar kode mudah dirawat dan konsisten.
+
+Istilah & Entitas Utama
+- Tenant: Organisasi/perusahaan pemilik data (tabel: tenants).
+- Toko/Store: Unit operasional di dalam tenant (tabel: toko) — banyak per tenant.
+- Users (akun login): Akun sistem (tabel: users). Satu user bisa dikaitkan ke entitas staff/pengguna di toko.
+- Pengguna (staff): Entitas operasional (tabel: pengguna) yang mengikat user ke peran (peran) dan toko (toko_id).
+- Peran/Role: Profil akses yang memiliki level untuk pembatasan (tabel: peran.level).
+- God user: Akun sistem internal dengan bypass pembatasan (lihat src/core/config/godUser.ts).
+
+Level & Role (Konsep)
+- Level didefinisikan di kode (AccessLevel) dan di data (peran.level). Untuk konsistensi, gunakan semantik berikut:
+  1. GOD          → akses penuh lintas tenant (bypass)
+  2. ADMIN        → akses penuh dalam 1 tenant, lintas toko tenant tsb
+  3. ADMIN_TOKO   → akses penuh pada toko tertentu
+  4. KASIR        → akses transaksi kasir pada toko tertentu, read terbatas
+  5. REVIEWER     → akses read‑only sesuai scope
+  8. SUPER_ADMIN  → dipetakan seperti ADMIN dalam kode (kompatibilitas historis)
+
+- UserRole (enum aplikasi): SUPER_ADMIN, ADMIN, MANAGER, CASHIER. Mapping dilakukan di AuthService berdasarkan nilai level dari peran:
+  - level 1 → SUPER_ADMIN
+  - level 2 atau 8 → ADMIN
+  - level 3 → MANAGER
+  - level 4/5/else → CASHIER
+
+Permissions (String Based)
+- Daftar di src/features/auth/models/User.ts (PERMISSIONS: user:create, product:read, transaction:create, dst).
+- Cek cepat:
+  - Role‑based: authorize(...allowedRoles)
+  - Permission‑based: requirePermission('transaction:create')
+- God user dapat bypass melalui konfigurasi godUser.
+
+Access Scope (Terpusat)
+- Sumber kebenaran untuk isolasi data ada pada middleware accessScope:
+  - File: src/core/middleware/accessScope.ts
+  - Menyediakan:
+    - attachAccessScope(req): mengisi req.accessScope dari req.user + param/query/body (tokoId)
+    - applyScopeToSql(sql, params, scope, opts): menambahkan filter tenant_id/toko_id ke SQL
+    - requireStoreWhenNeeded: memastikan tokoId wajib di level ≥3 (ADMIN_TOKO/KASIR)
+  - Struktur AccessScope:
+    - tenantId: string
+    - storeId?: string (toko_id)
+    - level?: number
+    - role: UserRole
+    - isGod: boolean
+    - enforceTenant: boolean (false untuk God)
+    - enforceStore: boolean (true untuk level ≥3)
+
+Urutan Middleware di Route
+- Selalu minimal:
+  router.use(authenticate)
+  router.use(attachAccessScope)
+  // …opsional: authorize/requirePermission/requireStoreWhenNeeded per endpoint
+
+Contoh Route (Store‑scoped, butuh tokoId)
+  router.get('/inventaris',
+    authorize(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.CASHIER),
+    requireStoreWhenNeeded,               // pastikan ada tokoId untuk level ≥3
+    Controller.getInventarisByToko
+  )
+
+Pola di Service/Repository (Scoped Query)
+- Jangan menulis WHERE tenant_id/toko_id manual tersebar. Gunakan applyScopeToSql.
+
+Contoh SELECT (tenant + toko)
+  const base = 'SELECT id, nama FROM pelanggan'
+  const { sql, params } = applyScopeToSql(base, [], req.accessScope, {
+    tenantColumn: 'tenant_id',
+    storeColumn: 'toko_id',
+  })
+  // tambah filter lain jika perlu, lalu eksekusi sql/params
+
+Contoh SELECT (hanya tenant)
+  const base = 'SELECT * FROM produk p'
+  const scoped = applyScopeToSql(base, [], { ...scope, enforceStore: false }, { tenantColumn: 'p.tenant_id' })
+
+Contoh INSERT/UPDATE/DELETE (tenant‑aware)
+- Saat INSERT data tenant‑scoped: isi kolom tenant_id dari scope. Hindari konstanta hard‑coded.
+- Saat UPDATE/DELETE tambahkan guard tenant_id = ? (dan/atau toko_id = ?) pada WHERE.
+
+  await pool.execute(
+    'UPDATE produk SET nama = ? WHERE id = ? AND tenant_id = ?',
+    [namaBaru, produkId, scope.tenantId]
+  )
+
+God User
+- Konfigurasi: src/core/config/godUser.ts
+  - isGodUser(username) → menandai user sebagai god
+  - hasGodPermission() → daftar permission khusus
+  - GOD_TENANT_ID/GOD_USER_ID → identitas khusus
+- Dampak:
+  - enforceTenant/enforceStore = false → bypass semua pembatasan data
+  - Tetap gunakan middleware agar pencatatan/konvensi seragam
+
+Penempatan & Pola Modul yang Sudah Dikonsolidasikan
+- Produk/Inventaris: routes memakai attachAccessScope; service memakai applyScopeToSql (produk tenant‑scoped; inventaris toko‑scoped).
+- Pelanggan/Pengguna: service sudah memakai scope untuk WHERE.
+- Penjualan:
+  - Create transaksi: wajib storeId (requireStoreWhenNeeded), insert transaksi + item dengan tenant/toko guard; update stok inventaris (stok_tersedia).
+  - Detail transaksi: header & pelanggan & items dengan guard scope.
+- Keuangan (ledger/PL): guard minimal tenant; dapat ditambah toko‑filter bila diperlukan (menggunakan scope.storeId).
+- Stok Opname: routes menggunakan scope; service contoh masih berbasis inventaris (sementara). Gunakan pola scope saat migrasi ke tabel stok_opname final.
+- Promo: routes scoped; implementasi service masih mock (siapkan query DB + scope saat realisasi).
+
+Checklist Tambah Endpoint Baru
+1) Route:
+   - router.use(authenticate)
+   - router.use(attachAccessScope)
+   - Tambahkan authorize/requirePermission sesuai kebutuhan
+   - Jika data bersifat toko‑scoped, tambahkan requireStoreWhenNeeded
+2) Controller:
+   - Ambil req.accessScope untuk diteruskan ke service
+3) Service:
+   - SELECT: applyScopeToSql pada query dasar, set tenantColumn/storeColumn (dengan alias tabel bila ada)
+   - INSERT: set tenant_id (dan toko_id) dari scope
+   - UPDATE/DELETE: tambah guard AND tenant_id = ? [AND toko_id = ?]
+4) Logging: log userId, tenantId, tokoId untuk audit
+5) Uji manual: level/role berbeda (God/Admin/Admin Toko/Kasir)
+
+Konvensi Kolom & Indeks
+- tenant_id (CHAR(36)) pada semua tabel tenant‑scoped; index: idx_*_tenant
+- toko_id (CHAR(36)) pada semua tabel store‑scoped; index: idx_*_toko
+- Pastikan foreign key ke tenants/toko terpasang (ON DELETE CASCADE bila sesuai)
+
+Catatan Konsistensi Level
+- Terdapat data historis level peran berbeda (mis. 1 dan 10 untuk Super Admin). Aplikasi memetakan di AuthService.
+- Rekomendasi: normalkan nilai peran.level di lingkungan produksi agar sesuai AccessLevel.
+
+Contoh Fallback Admin/God untuk tokoId
+- Beberapa controller (mis. Produk) melakukan fallback toko pertama tenant saat scope.enforceStore=false dan tokoId tidak diberikan.
+- Untuk endpoint yang wajib toko eksplisit (mis. create transaksi), gunakan requireStoreWhenNeeded (tanpa fallback).
+
+Keamanan & Praktik Baik
+- Selalu gunakan parameter binding (pool.execute(sql, params)). Hindari interpolasi input langsung ke SQL.
+- Jangan gunakan tenant_id hard‑coded; ambil dari scope.
+- Jalankan lint: npm run lint --workspace=backend sebelum merge.
+
+Troubleshooting
+- “Unauthorized” → cek authenticate di route, atau header Authorization Bearer.
+- “Store ID is required” → tambahkan query/body param tokoId, atau set user.tokoId via entitas pengguna.
+- Data lintas tenant/toko bocor → pastikan service memakai applyScopeToSql dan UPDATE/DELETE memakai guard tenant_id (toko_id bila perlu).
+
+Referensi File Kunci
+- Middleware scope: src/core/middleware/accessScope.ts
+- Auth: src/features/auth/middleware/*.ts, src/features/auth/services/AuthService.ts, src/core/config/godUser.ts
+- Contoh implementasi scoped:
+  - Produk/Inventaris: src/features/produk/**
+  - Pelanggan: src/features/pelanggan/**
+  - Penjualan: src/features/penjualan/**
+  - Keuangan: src/features/keuangan/**
+
+Dengan mengikuti pedoman ini, seluruh isolasi akses berdasarkan peran/level, tenant, dan toko akan konsisten, terpusat, dan mudah dirawat.
+
