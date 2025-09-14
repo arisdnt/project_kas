@@ -49,68 +49,70 @@ export function LoginPage() {
       {/* Kolom Kiri - Identitas Toko */}
       <div className="hidden lg:flex lg:w-3/4 bg-gradient-to-br from-blue-600 to-blue-800 relative overflow-hidden bg-cover bg-center bg-no-repeat" style={{backgroundImage: 'url(/bglogin-fixed.jpg)'}}>
         <div className="absolute inset-0 bg-black/30" />
+        <div className="absolute inset-0 bg-blue-900/50" />
         <div className="relative z-10 flex flex-col justify-center px-12 py-16 text-white">
           <div className="max-w-md">
-            {/* Logo dan Nama Toko */}
-            <div className="flex items-center space-x-3 mb-8">
-              <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center backdrop-blur-sm">
-                <Store className="w-6 h-6 text-white" />
+            {/* Satu Card untuk semua konten identitas toko */}
+            <div className="bg-black/30 backdrop-blur-sm rounded-xl p-8">
+              {/* Logo dan Nama Toko */}
+              <div className="flex items-center space-x-3 mb-6">
+                <div className="w-12 h-12 bg-yellow-400 rounded-xl flex items-center justify-center backdrop-blur-sm">
+                  <Store className="w-6 h-6 text-blue-900" />
+                </div>
+                <div>
+                  <h1 className="text-2xl font-bold">{config.infoToko.nama}</h1>
+                  <p className="text-blue-100 text-sm">Point of Sale System</p>
+                </div>
               </div>
-              <div>
-                <h1 className="text-2xl font-bold">{config.infoToko.nama}</h1>
-                <p className="text-blue-100 text-sm">Point of Sale System</p>
-              </div>
-            </div>
 
-            {/* Informasi Toko */}
-            <div className="space-y-4 mb-8">
-              <div className="flex items-start space-x-3">
-                <MapPin className="w-5 h-5 text-blue-200 mt-0.5 flex-shrink-0" />
+              {/* Informasi Toko */}
+              <div className="flex items-start space-x-3 mb-6">
+                <MapPin className="w-5 h-5 text-red-400 mt-0.5 flex-shrink-0" />
                 <div>
                   <p className="text-sm font-medium">Alamat Toko</p>
                   <p className="text-blue-100 text-sm">{config.infoToko.alamat}</p>
                 </div>
               </div>
-            </div>
 
-            {/* Welcome Lines */}
-            {config.ui?.login?.welcomeLines?.length && (
-              <div className="space-y-2 mb-8">
-                {config.ui.login.welcomeLines.map((line, idx) => (
-                  <p key={idx} className="text-blue-100 text-sm leading-relaxed">
-                    {line}
-                  </p>
-                ))}
-              </div>
-            )}
+              {/* Welcome Lines */}
+              {config.ui?.login?.welcomeLines?.length && (
+                <div className="space-y-2 mb-6">
+                  {config.ui.login.welcomeLines.map((line, idx) => (
+                    <p key={idx} className="text-blue-100 text-sm leading-relaxed">
+                      {line}
+                    </p>
+                  ))}
+                </div>
+              )}
 
-            {/* Features */}
-            <div className="grid grid-cols-1 gap-4">
-              <div className="flex items-center space-x-3">
-                <div className="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center">
-                  <Shield className="w-4 h-4 text-white" />
+              {/* Features */}
+              <div className="grid grid-cols-1 gap-4">
+                <div className="flex items-center space-x-3">
+                  <div className="w-8 h-8 bg-green-500 rounded-lg flex items-center justify-center">
+                    <Shield className="w-4 h-4 text-white" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium">Keamanan Terjamin</p>
+                    <p className="text-blue-200 text-xs">Data terenkripsi dan aman</p>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-sm font-medium">Keamanan Terjamin</p>
-                  <p className="text-blue-200 text-xs">Data terenkripsi dan aman</p>
+                <div className="flex items-center space-x-3">
+                  <div className="w-8 h-8 bg-purple-500 rounded-lg flex items-center justify-center">
+                    <Users className="w-4 h-4 text-white" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium">Multi-User</p>
+                    <p className="text-blue-200 text-xs">Akses untuk berbagai peran</p>
+                  </div>
                 </div>
-              </div>
-              <div className="flex items-center space-x-3">
-                <div className="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center">
-                  <Users className="w-4 h-4 text-white" />
-                </div>
-                <div>
-                  <p className="text-sm font-medium">Multi-User</p>
-                  <p className="text-blue-200 text-xs">Akses untuk berbagai peran</p>
-                </div>
-              </div>
-              <div className="flex items-center space-x-3">
-                <div className="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center">
-                  <TrendingUp className="w-4 h-4 text-white" />
-                </div>
-                <div>
-                  <p className="text-sm font-medium">Real-time Analytics</p>
-                  <p className="text-blue-200 text-xs">Laporan penjualan langsung</p>
+                <div className="flex items-center space-x-3">
+                  <div className="w-8 h-8 bg-orange-500 rounded-lg flex items-center justify-center">
+                    <TrendingUp className="w-4 h-4 text-white" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium">Real-time Analytics</p>
+                    <p className="text-blue-200 text-xs">Laporan penjualan langsung</p>
+                  </div>
                 </div>
               </div>
             </div>
@@ -123,7 +125,7 @@ export function LoginPage() {
       </div>
 
       {/* Kolom Kanan - Form Login */}
-       <div className="flex-1 lg:w-1/4 flex items-center justify-center px-6 py-12 relative">
+       <div className="flex-1 lg:w-1/4 flex items-center justify-center px-6 py-12 relative bg-white">
         <div className="w-full max-w-md relative z-10">
           <div className="space-y-6">
              <div className="space-y-2 text-center">
