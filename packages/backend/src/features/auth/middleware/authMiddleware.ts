@@ -7,6 +7,8 @@ import { Request, Response, NextFunction } from 'express';
 import { AuthService } from '../services/AuthService';
 import { JWTPayload, AuthenticatedUser, UserRole, hasPermission } from '../models/User';
 import { logger } from '@/core/utils/logger';
+import { godUserConfig, isGodUser, hasGodPermission } from '@/core/config/godUser';
+import { hasLevelAccess } from './levelAccessMiddleware';
 
 // Extend Express Request interface
 declare global {
@@ -47,6 +49,12 @@ export const authenticate = async (req: Request, res: Response, next: NextFuncti
       });
     }
 
+    // Check if this is god user and add special permissions
+    if (isGodUser(user.username)) {
+      user.isGodUser = true;
+      user.godPermissions = hasGodPermission() as string[];
+    }
+
     // Attach user data to request
     req.user = user;
     req.jwtPayload = payload;
@@ -55,6 +63,7 @@ export const authenticate = async (req: Request, res: Response, next: NextFuncti
       userId: user.id,
       username: user.username,
       tenantId: user.tenantId,
+      isGodUser: user.isGodUser || false,
       method: req.method,
       url: req.url
     }, 'Authenticated request');
@@ -147,6 +156,17 @@ export const ensureTenantAccess = (req: Request, res: Response, next: NextFuncti
       error: 'Unauthorized',
       message: 'Authentication required'
     });
+  }
+
+  // God user bypass semua tenant restriction
+  if (req.user.isGodUser) {
+    logger.info({
+      userId: req.user.id,
+      username: req.user.username,
+      method: req.method,
+      url: req.url
+    }, 'God user bypassing tenant access control');
+    return next();
   }
 
   // Extract tenant ID from request (bisa dari params, query, atau body)

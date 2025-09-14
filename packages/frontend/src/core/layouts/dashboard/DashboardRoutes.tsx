@@ -18,6 +18,7 @@ import { PromoPage } from '@/features/promo/pages/PromoPage';
 import { FileManagerPage } from '@/features/storage/pages/FileManagerPage';
 import { LaporanPenjualanPage } from '@/features/laporan/penjualan/pages/LaporanPenjualanPage';
 import { LaporanStokPage } from '@/features/laporan/stok/pages/LaporanStokPage';
+import { KeuanganPage } from '@/features/laporan/keuangan/pages/KeuanganPage';
 import { PengaturanPage } from '@/features/pengaturan/pages/PengaturanPage';
 import { PengaturanTokoPage } from '@/features/pengaturan/toko/PengaturanTokoPage';
 import { TenanPage } from '@/features/tenan/pages/TenanPage';
@@ -47,6 +48,7 @@ export function DashboardRoutes() {
       <Route path="/berkas" element={<FileManagerPage />} />
       <Route path="/laporan/penjualan" element={<LaporanPenjualanPage />} />
       <Route path="/laporan/stok" element={<LaporanStokPage />} />
+      <Route path="/laporan/keuangan" element={<KeuanganPage />} />
       <Route
         path="/laporan/harian"
         element={<PlaceholderPage title="Laporan Harian" description="Ringkasan aktivitas harian, transaksi, dan performa toko." />}

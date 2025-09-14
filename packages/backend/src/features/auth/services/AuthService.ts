@@ -59,7 +59,7 @@ export class AuthService {
   }
 
   /**
-   * Login user
+   * Login user dengan informasi level dan toko
    */
   static async login(loginData: LoginRequest): Promise<{
     user: AuthenticatedUser;
@@ -69,11 +69,13 @@ export class AuthService {
     const connection = await pool.getConnection();
     
     try {
-      // Query user berdasarkan username dari tabel users dengan UUID
+      // Query user berdasarkan username dari tabel users dengan join ke pengguna, peran
       const [rows] = await connection.execute<RowDataPacket[]>(
-        `SELECT u.id, u.tenant_id, u.username, u.email, u.password_hash as password, 
-                u.nama_lengkap as full_name, u.status, u.last_login, u.is_super_admin
+        `SELECT u.id, u.username, u.password_hash as password, u.tenant_id, u.nama_lengkap as nama, u.status, u.is_super_admin,
+                pr.nama as nama_peran, pr.level, pr.deskripsi as deskripsi_peran
          FROM users u
+         LEFT JOIN pengguna p ON u.id = p.user_id
+         LEFT JOIN peran pr ON p.peran_id = pr.id
          WHERE u.username = ? AND u.status = 'aktif'`,
         [loginData.username]
       );
@@ -97,27 +99,44 @@ export class AuthService {
 
       // Update last login
       await connection.execute(
-        'UPDATE users SET last_login = NOW() WHERE id = ?',
+        'UPDATE users SET last_login = NOW(), diperbarui_pada = NOW() WHERE id = ?',
         [user.id]
       );
 
-      // Map role dari database ke enum
+      // Map role berdasarkan level peran
       let mappedRole: UserRole;
-      if (user.is_super_admin === 1) {
-        mappedRole = UserRole.SUPER_ADMIN;
-      } else {
-        // Default role untuk user biasa adalah ADMIN
-        mappedRole = UserRole.ADMIN;
+      let level: number;
+      
+      // Gunakan level dari tabel peran atau default ke level 5
+      level = user.level || 5;
+      
+      switch (level) {
+        case 1:
+          mappedRole = UserRole.SUPER_ADMIN;
+          break;
+        case 2:
+        case 8: // Admin level dari tabel peran
+          mappedRole = UserRole.ADMIN;
+          break;
+        case 3:
+          mappedRole = UserRole.MANAGER;
+          break;
+        case 4:
+        case 5:
+        default:
+          mappedRole = UserRole.CASHIER;
       }
 
       // Prepare user data
       const authenticatedUser: AuthenticatedUser = {
         id: user.id,
         tenantId: user.tenant_id,
+        tokoId: undefined, // Tidak ada toko_id di tabel users
         username: user.username,
-        email: user.email || '',
-        fullName: user.full_name || user.username,
+        email: '', // Email tidak ada di tabel pengguna saat ini
+        fullName: user.nama || user.username,
         role: mappedRole,
+        level: level,
         status: user.status === 'aktif' ? UserStatus.ACTIVE : UserStatus.INACTIVE
       };
 
@@ -125,8 +144,10 @@ export class AuthService {
       const jwtPayload: JWTPayload = {
         userId: user.id,
         tenantId: user.tenant_id,
+        tokoId: undefined,
         username: user.username,
-        role: mappedRole
+        role: mappedRole,
+        level: level
       };
 
       const accessToken = this.generateToken(jwtPayload);
@@ -227,16 +248,19 @@ export class AuthService {
   }
 
   /**
-   * Get user by ID
+   * Get user by ID dengan informasi level dan toko
    */
   static async getUserById(userId: string, tenantId: string): Promise<AuthenticatedUser | null> {
     const connection = await pool.getConnection();
     
     try {
       const [rows] = await connection.execute<RowDataPacket[]>(
-        `SELECT u.id, u.tenant_id, u.username, u.email, 
-                u.nama_lengkap as full_name, u.status, u.is_super_admin
+        `SELECT u.id, u.tenant_id, u.username, u.nama_lengkap as nama, u.status,
+                u.is_super_admin, u.email, u.telepon, u.avatar_url,
+                p.nama as nama_peran, p.level
          FROM users u
+         LEFT JOIN pengguna pg ON u.id = pg.user_id
+         LEFT JOIN peran p ON pg.peran_id = p.id
          WHERE u.id = ? AND u.tenant_id = ? AND u.status = 'aktif'`,
         [userId, tenantId]
       );
@@ -247,22 +271,39 @@ export class AuthService {
 
       const user = rows[0];
 
-      // Map role dari database ke enum
+      // Map role berdasarkan level peran
       let mappedRole: UserRole;
-      if (user.is_super_admin === 1) {
-        mappedRole = UserRole.SUPER_ADMIN;
-      } else {
-        // Default role untuk user biasa adalah ADMIN
-        mappedRole = UserRole.ADMIN;
+      let level: number;
+      
+      // Gunakan level dari tabel peran atau default ke level 5
+      level = user.level || 5;
+      
+      switch (level) {
+        case 1:
+          mappedRole = UserRole.SUPER_ADMIN;
+          break;
+        case 2:
+        case 8: // Admin level dari tabel peran
+          mappedRole = UserRole.ADMIN;
+          break;
+        case 3:
+          mappedRole = UserRole.MANAGER;
+          break;
+        case 4:
+        case 5:
+        default:
+          mappedRole = UserRole.CASHIER;
       }
 
       return {
         id: user.id,
         tenantId: user.tenant_id,
+        tokoId: undefined, // Tidak ada toko_id di tabel users
         username: user.username,
         email: user.email || '',
-        fullName: user.full_name || user.username,
+        fullName: user.nama || user.username,
         role: mappedRole,
+        level: level,
         status: user.status === 'aktif' ? UserStatus.ACTIVE : UserStatus.INACTIVE
       };
 

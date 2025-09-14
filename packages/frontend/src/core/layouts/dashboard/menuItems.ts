@@ -58,6 +58,7 @@ export const transaksiItems: MenuItem[] = [
 export const laporanItems: MenuItem[] = [
   { name: 'Laporan Penjualan', href: '/dashboard/laporan/penjualan', icon: BarChart3 },
   { name: 'Laporan Stok', href: '/dashboard/laporan/stok', icon: PieChart },
+  { name: 'Arus Kas & Laba Rugi', href: '/dashboard/laporan/keuangan', icon: FileText },
   { name: 'Laporan Harian', href: '/dashboard/laporan/harian', icon: Calendar },
 ];
 
@@ -76,4 +77,3 @@ export const singleMenuItems: MenuItem[] = [
   { name: 'Monitoring', href: '/dashboard/monitoring/status-sistem', icon: Activity },
   { name: 'Berkas', href: '/dashboard/berkas', icon: FolderOpen },
 ];
-

@@ -1,14 +1,23 @@
-import { Calculator, Maximize } from 'lucide-react';
+import { Calculator, Maximize, RefreshCw } from 'lucide-react';
 
 type Props = {
   isFullscreen: boolean;
   onToggleFullscreen: () => void;
   onOpenCalculator: () => void;
+  onRefresh: () => void;
 };
 
-export function ActionIcons({ isFullscreen, onToggleFullscreen, onOpenCalculator }: Props) {
+export function ActionIcons({ isFullscreen, onToggleFullscreen, onOpenCalculator, onRefresh }: Props) {
   return (
     <>
+      <button
+        onClick={onRefresh}
+        className="hidden md:flex p-2 text-blue-500 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors"
+        title="Refresh Data"
+      >
+        <RefreshCw className="h-5 w-5" />
+      </button>
+
       <button
         onClick={onToggleFullscreen}
         className="hidden md:flex p-2 text-blue-500 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors"
@@ -33,4 +42,3 @@ export function ActionIcons({ isFullscreen, onToggleFullscreen, onOpenCalculator
     </>
   );
 }
-

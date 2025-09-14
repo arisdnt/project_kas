@@ -9,7 +9,6 @@ export interface UserProfileData extends RowDataPacket {
   telepon?: string
   foto_profil?: string
   is_active: boolean
-  is_super_admin: boolean
   created_at: Date
   updated_at: Date
   // Data dari tabel pengguna
@@ -45,7 +44,6 @@ export class ProfileModel {
         u.telepon,
         u.avatar_url as foto_profil,
         u.status as is_active,
-        u.is_super_admin,
         u.dibuat_pada as created_at,
         u.diperbarui_pada as updated_at,
         p.id as pengguna_id,

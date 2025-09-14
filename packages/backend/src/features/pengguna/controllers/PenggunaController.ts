@@ -22,7 +22,12 @@ export class PenggunaController {
     try {
       // Validasi query parameters
       const query = PenggunaQuerySchema.parse(req.query)
-      const tenantId = req.user?.tenantId
+      let tenantId = req.user?.tenantId
+      
+      // God user dapat mengakses semua tenant atau tenant spesifik
+      if (req.user?.isGodUser && req.query.tenantId) {
+        tenantId = req.query.tenantId as string
+      }
       
       if (!tenantId) {
         return res.status(401).json({
@@ -75,7 +80,12 @@ export class PenggunaController {
   static async getPenggunaById(req: Request, res: Response) {
     try {
       const id = parseInt(req.params.id)
-      const tenantId = req.user?.tenantId
+      let tenantId = req.user?.tenantId
+      
+      // God user dapat mengakses pengguna dari tenant manapun
+      if (req.user?.isGodUser && req.query.tenantId) {
+        tenantId = req.query.tenantId as string
+      }
       
       if (!tenantId) {
         return res.status(401).json({
@@ -133,7 +143,12 @@ export class PenggunaController {
     try {
       // Validasi request body
       const data = CreatePenggunaSchema.parse(req.body)
-      const tenantId = req.user?.tenantId
+      let tenantId = req.user?.tenantId
+      
+      // God user dapat membuat pengguna di tenant manapun
+      if (req.user?.isGodUser && req.body.tenantId) {
+        tenantId = req.body.tenantId
+      }
       
       if (!tenantId) {
         return res.status(401).json({

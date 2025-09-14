@@ -3,11 +3,16 @@ import { persist } from 'zustand/middleware'
 import { config } from '@/core/config'
 
 type User = {
-  id: number
+  // kompatibel: backend pakai UUID string, lama mungkin number
+  id: string | number
   username: string
-  nama: string
-  peran: string
   email?: string
+  // format backend (baru)
+  fullName?: string
+  role?: string
+  // format lama (lokal)
+  nama?: string
+  peran?: string
 }
 
 type LoginResponse = {

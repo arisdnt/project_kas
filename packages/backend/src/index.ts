@@ -113,6 +113,7 @@ import monitoringRoutes from '@/features/monitoring/routes/monitoringRoutes';
 import { MonitoringService } from '@/features/monitoring/services/MonitoringService';
 import filesRoutes from '@/features/storage/routes/filesRoutes';
 import { dokumenRoutes } from '@/features/storage/routes/dokumenRoutes';
+import keuanganRoutes from '@/features/keuangan/routes/keuanganRoutes';
 import { fileTypesRoutes } from '@/features/storage/routes/fileTypesRoutes';
 import { stokOpnameRoutes } from '@/features/stok-opname/routes/stokOpnameRoutes';
 import profileRoutes from '@/features/profile/routes/profileRoutes';
@@ -136,6 +137,7 @@ app.use('/api/pengguna', penggunaRoutes);
 app.use('/api/files', uploadRateLimiter as any, filesRoutes);
 app.use('/api/dokumen', uploadRateLimiter as any, dokumenRoutes);
 app.use('/api/file-types', fileTypesRoutes);
+app.use('/api/laporan/keuangan', keuanganRoutes);
 
 app.get('/api', (req, res) => {
   res.json({

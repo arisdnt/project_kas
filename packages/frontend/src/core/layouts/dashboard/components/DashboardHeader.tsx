@@ -21,6 +21,7 @@ type Props = {
   onOpenCalculator: () => void;
   isMobileMenuOpen: boolean;
   onToggleMobileMenu: () => void;
+  onRefresh: () => void;
 };
 
 export function DashboardHeader({
@@ -32,6 +33,7 @@ export function DashboardHeader({
   onOpenCalculator,
   isMobileMenuOpen,
   onToggleMobileMenu,
+  onRefresh,
 }: Props) {
   return (
     <div className="w-full px-2 sm:px-4 lg:px-6">
@@ -41,7 +43,7 @@ export function DashboardHeader({
           <NavDesktop pathname={pathname} />
         </div>
         <div className="flex items-center justify-end space-x-2 sm:space-x-3 flex-shrink-0">
-          <ActionIcons isFullscreen={isFullscreen} onToggleFullscreen={onToggleFullscreen} onOpenCalculator={onOpenCalculator} />
+          <ActionIcons isFullscreen={isFullscreen} onToggleFullscreen={onToggleFullscreen} onOpenCalculator={onOpenCalculator} onRefresh={onRefresh} />
           <ProfileDropdown user={user} onLogout={onLogout} />
           <MobileMenuButton open={isMobileMenuOpen} onToggle={onToggleMobileMenu} />
         </div>
@@ -50,4 +52,3 @@ export function DashboardHeader({
     </div>
   );
 }
-

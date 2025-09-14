@@ -27,6 +27,8 @@ export function DesktopDropdownLaporan({ pathname }: { pathname: string }) {
                   return 'text-purple-600';
                 case 'Laporan Harian':
                   return 'text-blue-600';
+                case 'Arus Kas & Laba Rugi':
+                  return 'text-green-600';
                 default:
                   return 'text-gray-500';
               }
@@ -48,4 +50,3 @@ export function DesktopDropdownLaporan({ pathname }: { pathname: string }) {
     </DropdownMenu.Root>
   );
 }
-

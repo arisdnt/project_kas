@@ -78,21 +78,27 @@ export type ChangePasswordRequest = z.infer<typeof ChangePasswordSchema>;
 export interface JWTPayload {
   userId: string; // pengguna.uuid
   tenantId: string; // toko.uuid
+  tokoId?: string; // ID toko tempat user bekerja
   username: string;
   role: UserRole;
+  level?: number; // Level akses berdasarkan peran (1-5)
   iat?: number;
   exp?: number;
 }
 
-// Interface untuk authenticated request
+// Interface untuk authenticated user
 export interface AuthenticatedUser {
   id: string; // pengguna.uuid
   tenantId: string; // toko.uuid
+  tokoId?: string; // ID toko tempat user bekerja
   username: string;
   email: string;
   fullName: string;
   role: UserRole;
+  level?: number; // Level akses berdasarkan peran (1-5)
   status: UserStatus;
+  isGodUser?: boolean; // Flag untuk god user
+  godPermissions?: string[]; // Permissions khusus god user
 }
 
 // Permissions mapping

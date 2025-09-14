@@ -18,6 +18,15 @@ export function DashboardLayout() {
 
   const handleLogout = () => logout();
   const toggleMobileMenu = () => setIsMobileMenuOpen((v) => !v);
+  
+  const handleManualRefresh = () => {
+    try {
+      // Broadcast refresh event for components that listen
+      window.dispatchEvent(new CustomEvent('app:refresh'));
+    } catch {}
+    // Fallback full reload
+    window.location.reload();
+  };
 
   return (
     <div className="min-h-screen bg-white flex flex-col">
@@ -29,6 +38,7 @@ export function DashboardLayout() {
           isFullscreen={isFullscreen}
           onToggleFullscreen={toggleFullscreen}
           onOpenCalculator={openCalculator}
+          onRefresh={handleManualRefresh}
           isMobileMenuOpen={isMobileMenuOpen}
           onToggleMobileMenu={toggleMobileMenu}
         />
@@ -62,4 +72,3 @@ export function DashboardLayout() {
     </div>
   );
 }
-

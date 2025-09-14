@@ -94,6 +94,24 @@ export function StatusBar() {
   const hardwareConcurrency = navigator.hardwareConcurrency;
   const platform = navigator.platform;
 
+  const getRoleLabel = (raw?: string) => {
+    if (!raw) return '—';
+    const v = raw.trim().toLowerCase();
+    if (v === 'super_admin' || v === 'super admin') return 'Super Admin';
+    if (v === 'admin') return 'Admin';
+    if (v === 'cashier' || v === 'kasir') return 'Kasir';
+    if (v === 'manager' || v === 'manajer') return 'Manajer';
+    // fallback: title-case by separators
+    return v
+      .replace(/[_-]+/g, ' ')
+      .split(' ')
+      .map((w) => (w ? w[0].toUpperCase() + w.slice(1) : ''))
+      .join(' ');
+  };
+
+  const displayName = user?.fullName || user?.nama || user?.username || '—';
+  const displayRole = getRoleLabel(user?.role || user?.peran);
+
   return (
     <div className="w-full bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/80 border-t border-gray-200 text-xs fixed bottom-0 left-0 right-0 z-40 shadow-sm">
       <div className="w-full px-1 sm:px-2 lg:px-3 py-1">
@@ -168,7 +186,7 @@ export function StatusBar() {
           <div className="col-span-6 sm:col-span-4 md:col-span-3 lg:col-span-2 xl:col-span-1 flex items-center gap-1 min-w-0">
             <User className="h-3 w-3 text-purple-500" />
             <span className="truncate">
-              <span className="text-purple-600">User:</span> {user?.fullName || user?.username || '—'}
+              <span className="text-purple-600">User:</span> {displayName}
             </span>
           </div>
 
@@ -176,7 +194,7 @@ export function StatusBar() {
           <div className="col-span-6 sm:col-span-4 md:col-span-3 lg:col-span-2 xl:col-span-1 flex items-center gap-1 min-w-0">
             <Shield className="h-3 w-3 text-teal-500" />
             <span className="truncate">
-              <span className="text-teal-600">Role:</span> {user?.role || '—'}
+              <span className="text-teal-600">Role:</span> {displayRole}
             </span>
           </div>
 
