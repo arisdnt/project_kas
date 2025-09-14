@@ -10,6 +10,8 @@ type User = {
   // format backend (baru)
   fullName?: string
   role?: string
+  tokoId?: string // ID toko dari backend
+  tenantId?: string // ID tenant dari backend
   // format lama (lokal)
   nama?: string
   peran?: string

@@ -4,8 +4,9 @@ import { SalesOverviewChart, CategorySalesChart } from '@/features/dashboard/com
 import { RecentTransactionsTable } from '@/features/dashboard/components/RecentTransactionsTable';
 import { TopProductsTable } from '@/features/dashboard/components/TopProductsTable';
 import { DollarSign, ShoppingCart, Users, Package } from 'lucide-react';
-import { DashboardService, KPIData, TransaksiTerbaru, ProdukTerlaris } from '@/features/dashboard/services/dashboardService';
+import { DashboardService, KPIData, TransaksiTerbaru, ProdukTerlaris, FilterPeriode } from '@/features/dashboard/services/dashboardService';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/core/components/ui/select';
+import { useAuthStore } from '@/core/store/authStore';
 
 export function DashboardPage() {
   // State untuk data dashboard
@@ -15,17 +16,27 @@ export function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState<'bulan_berjalan' | 'tahun_berjalan' | '6_bulan' | '3_bulan' | 'semua'>('bulan_berjalan');
+  
+  // Get tokoId from auth store
+  const { user } = useAuthStore();
 
   // Fungsi untuk memuat data dashboard
   const loadDashboardData = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-
-      const filterData = {
-        tipeFilter: filter,
-        limit: 10
-      };
+     // Pastikan user sudah login dan memiliki tokoId
+     if (!user?.tokoId) {
+       setError('Data toko tidak tersedia. Silakan login ulang.');
+       return;
+     }
+     
+     setLoading(true);
+     setError(null);
+     
+     try {
+       const filterData: FilterPeriode = {
+         tipeFilter: filter,
+         limit: 10,
+         storeId: user.tokoId // ID toko dari auth store
+       };
 
       // Ambil data KPI, transaksi terbaru, dan produk terlaris secara paralel
       const [kpiResponse, transaksiResponse, produkResponse] = await Promise.all([
@@ -45,10 +56,12 @@ export function DashboardPage() {
     }
   };
 
-  // Load data saat komponen mount dan filter berubah
+  // Load data saat komponen mount, filter berubah, atau user berubah
   useEffect(() => {
-    loadDashboardData();
-  }, [filter]);
+    if (user?.tokoId) {
+      loadDashboardData();
+    }
+  }, [filter, user?.tokoId]);
 
   // Format currency untuk tampilan
   const formatCurrency = (amount: number): string => {
@@ -62,45 +75,45 @@ export function DashboardPage() {
   // Konversi data KPI ke format yang dibutuhkan komponen
   const kpis = kpiData ? [
     { 
-      title: 'Pendapatan Hari Ini', 
-      value: formatCurrency(kpiData.pendapatanHariIni.value), 
-      helper: 's.d. sekarang', 
-      delta: { 
-        value: `${kpiData.pendapatanHariIni.pertumbuhan > 0 ? '+' : ''}${kpiData.pendapatanHariIni.pertumbuhan.toFixed(1)}%`, 
-        trend: kpiData.pendapatanHariIni.pertumbuhan >= 0 ? 'up' as const : 'down' as const 
-      }, 
-      icon: <DollarSign className="h-5 w-5" /> 
-    },
-    { 
-      title: 'Transaksi', 
-      value: kpiData.transaksiHariIni.value.toString(), 
-      helper: '24 jam terakhir', 
-      delta: { 
-        value: `${kpiData.transaksiHariIni.pertumbuhan > 0 ? '+' : ''}${kpiData.transaksiHariIni.pertumbuhan.toFixed(1)}%`, 
-        trend: kpiData.transaksiHariIni.pertumbuhan >= 0 ? 'up' as const : 'down' as const 
-      }, 
-      icon: <ShoppingCart className="h-5 w-5" /> 
-    },
-    { 
-      title: 'Produk Terjual', 
-      value: kpiData.produkTerjualHariIni.value.toString(), 
-      helper: '24 jam terakhir', 
-      delta: { 
-        value: `${kpiData.produkTerjualHariIni.pertumbuhan > 0 ? '+' : ''}${kpiData.produkTerjualHariIni.pertumbuhan.toFixed(1)}%`, 
-        trend: kpiData.produkTerjualHariIni.pertumbuhan >= 0 ? 'up' as const : 'down' as const 
-      }, 
-      icon: <Package className="h-5 w-5" /> 
-    },
-    { 
-      title: 'Pelanggan Aktif', 
-      value: kpiData.pelangganAktifBulanIni.value.toString(), 
-      helper: 'bulan ini', 
-      delta: { 
-        value: `${kpiData.pelangganAktifBulanIni.pertumbuhan > 0 ? '+' : ''}${kpiData.pelangganAktifBulanIni.pertumbuhan.toFixed(1)}%`, 
-        trend: kpiData.pelangganAktifBulanIni.pertumbuhan >= 0 ? 'up' as const : 'down' as const 
-      }, 
-      icon: <Users className="h-5 w-5" /> 
-    },
+       title: 'Pendapatan Hari Ini', 
+       value: formatCurrency(kpiData?.pendapatanHariIni || 0), 
+       helper: 's.d. sekarang', 
+       delta: { 
+         value: `${(kpiData?.pertumbuhanPendapatan || 0) > 0 ? '+' : ''}${(kpiData?.pertumbuhanPendapatan || 0).toFixed(1)}%`, 
+         trend: (kpiData?.pertumbuhanPendapatan || 0) >= 0 ? 'up' as const : 'down' as const 
+       }, 
+       icon: <DollarSign className="h-5 w-5" /> 
+     },
+     { 
+       title: 'Transaksi', 
+       value: (kpiData?.transaksiHariIni || 0).toString(), 
+       helper: '24 jam terakhir', 
+       delta: { 
+         value: `${(kpiData?.pertumbuhanTransaksi || 0) > 0 ? '+' : ''}${(kpiData?.pertumbuhanTransaksi || 0).toFixed(1)}%`, 
+         trend: (kpiData?.pertumbuhanTransaksi || 0) >= 0 ? 'up' as const : 'down' as const 
+       }, 
+       icon: <ShoppingCart className="h-5 w-5" /> 
+     },
+     { 
+       title: 'Produk Terjual', 
+       value: (kpiData?.produkTerjualHariIni || 0).toString(), 
+       helper: '24 jam terakhir', 
+       delta: { 
+         value: `${(kpiData?.pertumbuhanProduk || 0) > 0 ? '+' : ''}${(kpiData?.pertumbuhanProduk || 0).toFixed(1)}%`, 
+         trend: (kpiData?.pertumbuhanProduk || 0) >= 0 ? 'up' as const : 'down' as const 
+       }, 
+       icon: <Package className="h-5 w-5" /> 
+     },
+     { 
+       title: 'Pelanggan Aktif', 
+       value: (kpiData?.pelangganAktifBulanIni || 0).toString(), 
+       helper: 'bulan ini', 
+       delta: { 
+         value: `${(kpiData?.pertumbuhanPelanggan || 0) > 0 ? '+' : ''}${(kpiData?.pertumbuhanPelanggan || 0).toFixed(1)}%`, 
+         trend: (kpiData?.pertumbuhanPelanggan || 0) >= 0 ? 'up' as const : 'down' as const 
+       }, 
+       icon: <Users className="h-5 w-5" /> 
+     },
   ] : [];
 
   if (loading) {

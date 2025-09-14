@@ -3,7 +3,7 @@ import api from '@/core/lib/api';
  * Interface untuk filter periode dashboard
  */
 export interface FilterPeriode {
-  tipeFilter: 'hari_ini' | 'minggu_ini' | 'bulan_ini' | 'tahun_ini' | 'custom' | 'semua';
+  tipeFilter: 'hari_ini' | 'minggu_ini' | 'bulan_ini' | 'tahun_ini' | 'custom' | 'semua' | 'bulan_berjalan' | 'tahun_berjalan' | '6_bulan' | '3_bulan';
   tanggalMulai?: string; // format: YYYY-MM-DD
   tanggalSelesai?: string; // format: YYYY-MM-DD
   limit?: number;
@@ -14,22 +14,14 @@ export interface FilterPeriode {
  * Interface untuk data KPI dashboard
  */
 export interface KPIData {
-  pendapatanHariIni: {
-    value: number;
-    pertumbuhan: number;
-  };
-  transaksiHariIni: {
-    value: number;
-    pertumbuhan: number;
-  };
-  produkTerjualHariIni: {
-    value: number;
-    pertumbuhan: number;
-  };
-  pelangganAktifBulanIni: {
-    value: number;
-    pertumbuhan: number;
-  };
+  pendapatanHariIni: number;
+  transaksiHariIni: number;
+  produkTerjualHariIni: number;
+  pelangganAktifBulanIni: number;
+  pertumbuhanPendapatan: number;
+  pertumbuhanTransaksi: number;
+  pertumbuhanProduk: number;
+  pertumbuhanPelanggan: number;
 }
 
 /**
@@ -51,10 +43,10 @@ export interface TransaksiTerbaru {
 export interface ProdukTerlaris {
   id: string;
   nama: string;
+  kategori: string;
   totalTerjual: number;
   pendapatan: number;
-  kategori?: string;
-  hargaJual: number;
+  stokTersisa: number;
 }
 
 /**
@@ -88,6 +80,10 @@ export class DashboardService {
     const params = new URLSearchParams();
     
     params.append('tipeFilter', filter.tipeFilter);
+    
+    if (filter.storeId) {
+      params.append('storeId', filter.storeId);
+    }
     
     if (filter.tanggalMulai) {
       params.append('tanggalMulai', filter.tanggalMulai);
@@ -252,8 +248,12 @@ export class DashboardService {
       'minggu_ini': 'Minggu Ini',
       'bulan_ini': 'Bulan Ini',
       'tahun_ini': 'Tahun Ini',
-      'custom': 'Rentang Custom',
-      'semua': 'Seluruh Waktu'
+      'custom': 'Custom',
+      'semua': 'Semua Data',
+      'bulan_berjalan': 'Bulan Berjalan',
+      'tahun_berjalan': 'Tahun Berjalan',
+      '6_bulan': '6 Bulan Terakhir',
+      '3_bulan': '3 Bulan Terakhir'
     };
     
     return labels[tipeFilter] || 'Tidak Diketahui';
