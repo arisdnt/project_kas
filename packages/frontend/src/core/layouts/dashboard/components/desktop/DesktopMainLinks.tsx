@@ -4,7 +4,9 @@ import { mainMenuItems } from '@/core/layouts/dashboard/menuItems';
 export function DesktopMainLinks({ pathname }: { pathname: string }) {
   return (
     <>
-      {mainMenuItems.map((item) => {
+      {mainMenuItems
+        .filter((item) => item.name === 'Dashboard')
+        .map((item) => {
         const Icon = item.icon;
         const isActive = pathname === item.href;
         return (
@@ -25,4 +27,3 @@ export function DesktopMainLinks({ pathname }: { pathname: string }) {
     </>
   );
 }
-

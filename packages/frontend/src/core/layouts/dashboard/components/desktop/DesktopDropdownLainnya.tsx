@@ -1,9 +1,11 @@
 import { Link } from 'react-router-dom';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
-import { ChevronDown, ChevronRight, Settings } from 'lucide-react';
-import { pengaturanItems } from '@/core/layouts/dashboard/menuItems';
+import { ChevronDown, ChevronRight, Settings, FileText, Wrench } from 'lucide-react';
+import { laporanItems, pengaturanItems, singleMenuItems } from '@/core/layouts/dashboard/menuItems';
 
-export function DesktopDropdownPengaturan({ pathname }: { pathname: string }) {
+type Props = { pathname: string };
+
+export function DesktopDropdownLainnya({ pathname }: Props) {
   type GroupItem = {
     name: string;
     href: string;
@@ -14,7 +16,24 @@ export function DesktopDropdownPengaturan({ pathname }: { pathname: string }) {
 
   const groups: GroupDef[] = [
     {
-      label: 'Umum',
+      label: 'Laporan',
+      items: [
+        {
+          name: 'Laporan Penjualan',
+          href: '/dashboard/laporan/penjualan',
+          description: 'Ringkasan omzet, item terlaris, dan kanal.',
+          submenu: [
+            { name: 'Ringkasan', href: '/dashboard/laporan/penjualan?view=summary' },
+            { name: 'Detail Item', href: '/dashboard/laporan/penjualan?view=item' },
+          ],
+        },
+        { name: 'Laporan Stok', href: '/dashboard/laporan/stok', description: 'Nilai persediaan dan pergerakan.' },
+        { name: 'Arus Kas & Laba Rugi', href: '/dashboard/laporan/keuangan', description: 'Arus kas masuk/keluar dan profit.' },
+        { name: 'Laporan Harian', href: '/dashboard/laporan/harian', description: 'Kinerja harian dan rekap.' },
+      ],
+    },
+    {
+      label: 'Pengaturan',
       items: [
         {
           name: 'Pengaturan Umum',
@@ -25,52 +44,44 @@ export function DesktopDropdownPengaturan({ pathname }: { pathname: string }) {
             { name: 'Integrasi', href: '/dashboard/pengaturan?tab=integrasi' },
           ],
         },
-        {
-          name: 'Pajak & Mata Uang',
-          href: '/dashboard/pengaturan/pajak-dan-mata-uang',
-          description: 'Atur PPN, diskon, dan format mata uang.',
-        },
-      ],
-    },
-    {
-      label: 'Organisasi',
-      items: [
+        { name: 'Pajak & Mata Uang', href: '/dashboard/pengaturan/pajak-dan-mata-uang', description: 'Atur PPN, diskon, format.' },
         { name: 'Toko/Tenant', href: '/dashboard/pengaturan/toko', description: 'Profil toko dan cabang.' },
         { name: 'Manajemen Tenan', href: '/dashboard/pengaturan/tenan', description: 'Kelola multi-tenant/gerai.' },
+        { name: 'Pengguna', href: '/dashboard/pengaturan/pengguna', description: 'Kelola akun dan akses.' },
+        { name: 'Peran & Izin', href: '/dashboard/pengaturan/peran', description: 'Definisikan peran dan hak.' },
+        { name: 'Printer & Perangkat', href: '/dashboard/pengaturan/printer', description: 'Koneksi perangkat POS.' },
       ],
     },
     {
-      label: 'Akses',
-      items: [
-        { name: 'Pengguna', href: '/dashboard/pengaturan/pengguna', description: 'Kelola akun dan status akses.' },
-        { name: 'Peran & Izin', href: '/dashboard/pengaturan/peran', description: 'Definisikan peran dan hak akses.' },
-      ],
-    },
-    {
-      label: 'Perangkat',
-      items: [
-        { name: 'Printer & Perangkat', href: '/dashboard/pengaturan/printer', description: 'Koneksi printer, scanner, dll.' },
-      ],
+      label: 'Utilitas',
+      items: singleMenuItems.map((i) => ({
+        name: i.name,
+        href: i.href,
+        description:
+          i.name === 'Promo'
+            ? 'Atur promosi dan diskon.'
+            : i.name === 'Monitoring'
+              ? 'Pantau status sistem.'
+              : 'Kelola berkas dan dokumen.',
+      })),
     },
   ];
 
+  const isAnyActive = [...laporanItems, ...pengaturanItems, ...singleMenuItems].some((i) => pathname === i.href);
+
   return (
     <DropdownMenu.Root>
-      <DropdownMenu.Trigger className={`flex items-center space-x-2 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
-        pengaturanItems.some((i) => pathname === i.href)
-          ? 'bg-blue-50 text-blue-700 border border-blue-200 shadow-sm'
-          : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
-      }`}>
-        <Settings className="h-4 w-4 text-gray-600" />
-        <span>Pengaturan</span>
+      <DropdownMenu.Trigger
+        className={`flex items-center space-x-2 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+          isAnyActive ? 'bg-blue-50 text-blue-700 border border-blue-200 shadow-sm' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+        }`}
+      >
+        <Wrench className="h-4 w-4 text-gray-700" />
+        <span>Lainnya</span>
         <ChevronDown className="h-3 w-3" />
       </DropdownMenu.Trigger>
       <DropdownMenu.Portal>
-        <DropdownMenu.Content
-          align="start"
-          sideOffset={8}
-          className="min-w-[320px] bg-white rounded-md p-2 shadow-xl border border-gray-200 z-50"
-        >
+        <DropdownMenu.Content align="start" sideOffset={8} className="min-w[340px] bg-white rounded-md p-2 shadow-xl border border-gray-200 z-50">
           {groups.map((group, gi) => (
             <div key={group.label}>
               <DropdownMenu.Label className="px-2 py-1.5 text-xs font-semibold text-gray-500">
@@ -78,10 +89,23 @@ export function DesktopDropdownPengaturan({ pathname }: { pathname: string }) {
               </DropdownMenu.Label>
               <div className="mb-1" />
               {group.items.map((gitem) => {
-                const iconFromBase = pengaturanItems.find((i) => i.name === gitem.name)?.icon;
-                const Icon = iconFromBase ?? Settings;
+                const iconFromBase =
+                  (group.label === 'Laporan'
+                    ? laporanItems.find((i) => i.name === gitem.name)?.icon
+                    : group.label === 'Pengaturan'
+                      ? pengaturanItems.find((i) => i.name === gitem.name)?.icon
+                      : undefined) ?? Settings;
+                const Icon = iconFromBase;
                 const getIconColor = (name: string) => {
                   switch (name) {
+                    case 'Laporan Penjualan':
+                      return 'text-indigo-600';
+                    case 'Laporan Stok':
+                      return 'text-purple-600';
+                    case 'Laporan Harian':
+                      return 'text-blue-600';
+                    case 'Arus Kas & Laba Rugi':
+                      return 'text-green-600';
                     case 'Pengaturan Umum':
                       return 'text-gray-600';
                     case 'Toko/Tenant':
@@ -95,6 +119,12 @@ export function DesktopDropdownPengaturan({ pathname }: { pathname: string }) {
                       return 'text-orange-600';
                     case 'Pajak & Mata Uang':
                       return 'text-indigo-600';
+                    case 'Promo':
+                      return 'text-red-500';
+                    case 'Monitoring':
+                      return 'text-cyan-500';
+                    case 'Berkas':
+                      return 'text-gray-500';
                     default:
                       return 'text-gray-500';
                   }
@@ -149,9 +179,7 @@ export function DesktopDropdownPengaturan({ pathname }: { pathname: string }) {
                   </DropdownMenu.Item>
                 );
               })}
-              {gi < groups.length - 1 && (
-                <DropdownMenu.Separator className="my-2 h-px bg-gray-200" />
-              )}
+              {gi < groups.length - 1 && <DropdownMenu.Separator className="my-2 h-px bg-gray-200" />}
             </div>
           ))}
         </DropdownMenu.Content>
@@ -159,3 +187,4 @@ export function DesktopDropdownPengaturan({ pathname }: { pathname: string }) {
     </DropdownMenu.Root>
   );
 }
+
