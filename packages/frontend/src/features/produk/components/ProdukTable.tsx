@@ -11,11 +11,22 @@ type Props = {
 
 export function ProdukTable({ onView, onEdit }: Props) {
   const { items, loading, hasNext, loadNext, loadFirst, deleteProduk } = useProdukStore()
+  const page = useProdukStore((s) => s.page)
+  const search = useProdukStore((s) => s.search)
+  const filters = useProdukStore((s) => s.filters)
   const scrollerRef = useRef<HTMLDivElement | null>(null)
 
   useEffect(() => {
     loadFirst()
   }, [loadFirst])
+
+  // Reset scroll position when a new search/filter starts (page reset to 1)
+  useEffect(() => {
+    if (page === 1) {
+      const el = scrollerRef.current
+      if (el) el.scrollTop = 0
+    }
+  }, [page])
 
   // Infinite scroll handler
   useEffect(() => {
@@ -32,6 +43,20 @@ export function ProdukTable({ onView, onEdit }: Props) {
     return () => el.removeEventListener('scroll', onScroll)
   }, [hasNext, loading, loadNext])
 
+  const displayItems = useMemo(() => {
+    const s = (search || '').trim().toLowerCase()
+    return items.filter((p) => {
+      if (s) {
+        const hay = `${p.nama ?? ''} ${(p.sku ?? '').toString()}`.toLowerCase()
+        if (!hay.includes(s)) return false
+      }
+      if (filters.kategoriId && p.kategori?.id && filters.kategoriId !== p.kategori.id) return false
+      if (filters.brandId && p.brand?.id && filters.brandId !== p.brand.id) return false
+      if (filters.supplierId && p.supplier?.id && filters.supplierId !== p.supplier.id) return false
+      return true
+    })
+  }, [items, search, filters])
+
   const SkeletonRows = useMemo(() => (
     <tbody>
       {Array.from({ length: 8 }).map((_, i) => (
@@ -40,6 +65,7 @@ export function ProdukTable({ onView, onEdit }: Props) {
           <td className="px-4 py-3"><div className="h-3.5 bg-gray-200 rounded w-24" /></td>
           <td className="px-4 py-3"><div className="h-3.5 bg-gray-200 rounded w-28" /></td>
           <td className="px-4 py-3"><div className="h-3.5 bg-gray-200 rounded w-28" /></td>
+          <td className="px-4 py-3"><div className="h-3.5 bg-gray-200 rounded w-32" /></td>
           <td className="px-4 py-3"><div className="h-3.5 bg-gray-200 rounded w-32" /></td>
           <td className="px-4 py-3"><div className="h-3.5 bg-gray-200 rounded w-24" /></td>
           <td className="px-4 py-3"><div className="h-8 bg-gray-200 rounded w-28" /></td>
@@ -67,38 +93,50 @@ export function ProdukTable({ onView, onEdit }: Props) {
                 <th className="px-4 py-3 font-medium">SKU</th>
                 <th className="px-4 py-3 font-medium">Kategori</th>
                 <th className="px-4 py-3 font-medium">Brand</th>
-                <th className="px-4 py-3 font-medium">Supplier</th>
-                <th className="px-4 py-3 font-medium">Harga</th>
+                <th className="px-4 py-3 font-medium">Harga Beli</th>
+                <th className="px-4 py-3 font-medium">Harga Jual</th>
+                <th className="px-4 py-3 font-medium">Margin</th>
                 <th className="px-4 py-3 font-medium">Aksi</th>
               </tr>
             </thead>
             <tbody>
-              {items.map((p) => (
-                <tr key={p.id} className="border-b last:border-0 hover:bg-gray-50/50">
-                  <td className="px-4 py-3">
-                    <div className="font-medium text-gray-900">{p.nama}</div>
-                    <div className="text-xs text-gray-500">Stok: {p.stok ?? 0}</div>
-                  </td>
-                  <td className="px-4 py-3 text-gray-700">{p.sku ?? '-'}</td>
-                  <td className="px-4 py-3 text-gray-700">{p.kategori?.nama ?? '-'}</td>
-                  <td className="px-4 py-3 text-gray-700">{p.brand?.nama ?? '-'}</td>
-                  <td className="px-4 py-3 text-gray-700">{p.supplier?.nama ?? '-'}</td>
-                  <td className="px-4 py-3 text-gray-900">{formatCurrency(p.harga ?? 0)}</td>
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-2">
-                      <Button variant="ghost" size="sm" onClick={() => onView(p)} className="text-blue-600 hover:text-blue-700 hover:bg-blue-50">
-                        <Eye className="h-4 w-4" />
-                      </Button>
-                      <Button variant="ghost" size="sm" onClick={() => onEdit(p)} className="text-amber-600 hover:text-amber-700 hover:bg-amber-50">
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                      <Button variant="ghost" size="sm" onClick={() => onDelete(p)} className="text-red-600 hover:text-red-700 hover:bg-red-50">
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
+              {displayItems.map((p) => {
+                const hargaBeli = p.hargaBeli ?? 0
+                const hargaJual = p.harga ?? 0
+                const selisih = hargaJual - hargaBeli
+                const marginPersen = hargaBeli > 0 ? ((selisih / hargaBeli) * 100) : 0
+                
+                return (
+                  <tr key={p.id} className="border-b last:border-0 hover:bg-gray-50/50">
+                    <td className="px-4 py-3">
+                      <div className="font-medium text-gray-900">{p.nama}</div>
+                      <div className="text-xs text-gray-500">Stok: {p.stok ?? 0}</div>
+                    </td>
+                    <td className="px-4 py-3 text-gray-700">{p.sku ?? '-'}</td>
+                    <td className="px-4 py-3 text-gray-700">{p.kategori?.nama ?? '-'}</td>
+                    <td className="px-4 py-3 text-gray-700">{p.brand?.nama ?? '-'}</td>
+                    <td className="px-4 py-3 text-gray-900">{formatCurrency(hargaBeli)}</td>
+                    <td className="px-4 py-3 text-gray-900">{formatCurrency(hargaJual)}</td>
+                    <td className="px-4 py-3">
+                      <div className="text-gray-900">{formatCurrency(selisih)}</div>
+                      <div className="text-xs text-gray-500">{marginPersen.toFixed(1)}%</div>
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-2">
+                        <Button variant="ghost" size="sm" onClick={() => onView(p)} className="text-blue-600 hover:text-blue-700 hover:bg-blue-50">
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="sm" onClick={() => onEdit(p)} className="text-amber-600 hover:text-amber-700 hover:bg-amber-50">
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="sm" onClick={() => onDelete(p)} className="text-red-600 hover:text-red-700 hover:bg-red-50">
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </td>
+                  </tr>
+                )
+              })}
             </tbody>
 
             {loading && items.length === 0 ? SkeletonRows : null}

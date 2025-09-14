@@ -1,29 +1,29 @@
 import { Link } from 'react-router-dom';
-import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
-import { ChevronDown, ChevronRight, Settings, FileText, Wrench } from 'lucide-react';
+import * as Menubar from '@radix-ui/react-menubar';
+import { ChevronDown, ChevronRight, FileText, Settings, Wrench } from 'lucide-react';
 import { laporanItems, pengaturanItems, singleMenuItems } from '@/core/layouts/dashboard/menuItems';
 
 type Props = { pathname: string };
 
-export function DesktopDropdownLainnya({ pathname }: Props) {
+export function DesktopMenubarLainnya({ pathname }: Props) {
   const isAnyActive = [...laporanItems, ...pengaturanItems, ...singleMenuItems].some((i) => pathname === i.href);
 
   return (
-    <DropdownMenu.Root>
-      <DropdownMenu.Trigger
-        className={`flex items-center space-x-2 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+    <Menubar.Menu>
+      <Menubar.Trigger
+        className={`flex items-center space-x-2 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 outline-none ${
           isAnyActive ? 'bg-blue-50 text-blue-700 border border-blue-200 shadow-sm' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
         }`}
       >
         <Wrench className="h-4 w-4 text-gray-700" />
         <span>Lainnya</span>
         <ChevronDown className="h-3 w-3" />
-      </DropdownMenu.Trigger>
-      <DropdownMenu.Portal>
-        <DropdownMenu.Content align="start" sideOffset={8} className="min-w-[340px] bg-white rounded-md p-2 shadow-xl border border-gray-200 z-50">
+      </Menubar.Trigger>
+      <Menubar.Portal>
+        <Menubar.Content align="start" sideOffset={8} className="min-w-[340px] bg-white rounded-md p-2 shadow-xl border border-gray-200 z-50">
           {/* Submenu: Laporan */}
-          <DropdownMenu.Sub>
-            <DropdownMenu.SubTrigger className="group flex items-start justify-between w-full px-2 py-2 rounded text-sm text-gray-700 hover:bg-gray-100 outline-none">
+          <Menubar.Sub>
+            <Menubar.SubTrigger className="group flex items-start justify-between w-full px-2 py-2 rounded text-sm text-gray-700 hover:bg-gray-100 outline-none">
               <div className="flex items-start gap-2">
                 <FileText className="mt-0.5 h-4 w-4 text-indigo-600" />
                 <div className="flex flex-col text-left">
@@ -32,9 +32,9 @@ export function DesktopDropdownLainnya({ pathname }: Props) {
                 </div>
               </div>
               <ChevronRight className="h-3.5 w-3.5 text-gray-400 group-data-[state=open]:text-gray-600" />
-            </DropdownMenu.SubTrigger>
-            <DropdownMenu.Portal>
-              <DropdownMenu.SubContent side="right" align="start" sideOffset={4} collisionPadding={8} className="min-w-[240px] bg-white rounded-md p-2 shadow-xl border border-gray-200 z-50">
+            </Menubar.SubTrigger>
+            <Menubar.Portal>
+              <Menubar.SubContent side="right" align="start" sideOffset={4} className="min-w-[240px] bg-white rounded-md p-2 shadow-xl border border-gray-200 z-50">
                 {laporanItems.map((item) => {
                   const Icon = item.icon ?? FileText;
                   const color =
@@ -54,26 +54,26 @@ export function DesktopDropdownLainnya({ pathname }: Props) {
                           ? 'Arus kas dan profit.'
                           : 'Kinerja harian.';
                   return (
-                    <DropdownMenu.Item key={item.name} asChild>
-                      <Link to={item.href} className="flex items-start gap-2 px-2 py-2 rounded text-sm text-gray-700 hover:bg-gray-100">
+                    <Menubar.Item key={item.name} asChild>
+                      <Link to={item.href} className="flex items-start gap-2 px-2 py-2 rounded text-sm text-gray-700 hover:bg-gray-100 outline-none">
                         <Icon className={`mt-0.5 h-4 w-4 ${color}`} />
                         <div className="flex flex-col">
                           <span className="font-medium">{item.name}</span>
                           <span className="text-xs text-gray-500">{desc}</span>
                         </div>
                       </Link>
-                    </DropdownMenu.Item>
+                    </Menubar.Item>
                   );
                 })}
-              </DropdownMenu.SubContent>
-            </DropdownMenu.Portal>
-          </DropdownMenu.Sub>
+              </Menubar.SubContent>
+            </Menubar.Portal>
+          </Menubar.Sub>
 
-          <DropdownMenu.Separator className="my-2 h-px bg-gray-200" />
+          <Menubar.Separator className="my-2 h-px bg-gray-200" />
 
           {/* Submenu: Pengaturan */}
-          <DropdownMenu.Sub>
-            <DropdownMenu.SubTrigger className="group flex items-start justify-between w-full px-2 py-2 rounded text-sm text-gray-700 hover:bg-gray-100 outline-none">
+          <Menubar.Sub>
+            <Menubar.SubTrigger className="group flex items-start justify-between w-full px-2 py-2 rounded text-sm text-gray-700 hover:bg-gray-100 outline-none">
               <div className="flex items-start gap-2">
                 <Settings className="mt-0.5 h-4 w-4 text-gray-700" />
                 <div className="flex flex-col text-left">
@@ -82,9 +82,9 @@ export function DesktopDropdownLainnya({ pathname }: Props) {
                 </div>
               </div>
               <ChevronRight className="h-3.5 w-3.5 text-gray-400 group-data-[state=open]:text-gray-600" />
-            </DropdownMenu.SubTrigger>
-            <DropdownMenu.Portal>
-              <DropdownMenu.SubContent side="right" align="start" sideOffset={4} collisionPadding={8} className="min-w-[260px] bg-white rounded-md p-2 shadow-xl border border-gray-200 z-50">
+            </Menubar.SubTrigger>
+            <Menubar.Portal>
+              <Menubar.SubContent side="right" align="start" sideOffset={4} className="min-w-[260px] bg-white rounded-md p-2 shadow-xl border border-gray-200 z-50">
                 {pengaturanItems.map((item) => {
                   const Icon = item.icon ?? Settings;
                   const color =
@@ -114,26 +114,26 @@ export function DesktopDropdownLainnya({ pathname }: Props) {
                                 ? 'Koneksi perangkat.'
                                 : 'Atur pajak & currency.';
                   return (
-                    <DropdownMenu.Item key={item.name} asChild>
-                      <Link to={item.href} className="flex items-start gap-2 px-2 py-2 rounded text-sm text-gray-700 hover:bg-gray-100">
+                    <Menubar.Item key={item.name} asChild>
+                      <Link to={item.href} className="flex items-start gap-2 px-2 py-2 rounded text-sm text-gray-700 hover:bg-gray-100 outline-none">
                         <Icon className={`mt-0.5 h-4 w-4 ${color}`} />
                         <div className="flex flex-col">
                           <span className="font-medium">{item.name}</span>
                           <span className="text-xs text-gray-500">{desc}</span>
                         </div>
                       </Link>
-                    </DropdownMenu.Item>
+                    </Menubar.Item>
                   );
                 })}
-              </DropdownMenu.SubContent>
-            </DropdownMenu.Portal>
-          </DropdownMenu.Sub>
+              </Menubar.SubContent>
+            </Menubar.Portal>
+          </Menubar.Sub>
 
-          <DropdownMenu.Separator className="my-2 h-px bg-gray-200" />
+          <Menubar.Separator className="my-2 h-px bg-gray-200" />
 
           {/* Submenu: Utilitas */}
-          <DropdownMenu.Sub>
-            <DropdownMenu.SubTrigger className="group flex items-start justify-between w-full px-2 py-2 rounded text-sm text-gray-700 hover:bg-gray-100 outline-none">
+          <Menubar.Sub>
+            <Menubar.SubTrigger className="group flex items-start justify-between w-full px-2 py-2 rounded text-sm text-gray-700 hover:bg-gray-100 outline-none">
               <div className="flex items-start gap-2">
                 <Wrench className="mt-0.5 h-4 w-4 text-gray-700" />
                 <div className="flex flex-col text-left">
@@ -142,30 +142,30 @@ export function DesktopDropdownLainnya({ pathname }: Props) {
                 </div>
               </div>
               <ChevronRight className="h-3.5 w-3.5 text-gray-400 group-data-[state=open]:text-gray-600" />
-            </DropdownMenu.SubTrigger>
-            <DropdownMenu.Portal>
-              <DropdownMenu.SubContent side="right" align="start" sideOffset={4} collisionPadding={8} className="min-w-[220px] bg-white rounded-md p-2 shadow-xl border border-gray-200 z-50">
+            </Menubar.SubTrigger>
+            <Menubar.Portal>
+              <Menubar.SubContent side="right" align="start" sideOffset={4} className="min-w-[220px] bg-white rounded-md p-2 shadow-xl border border-gray-200 z-50">
                 {singleMenuItems.map((item) => {
                   const desc = item.name === 'Promo' ? 'Atur promosi & diskon.' : item.name === 'Monitoring' ? 'Pantau status sistem.' : 'Kelola berkas.';
                   const color = item.name === 'Promo' ? 'text-red-500' : item.name === 'Monitoring' ? 'text-cyan-500' : 'text-gray-500';
                   const Icon = item.icon ?? Wrench;
                   return (
-                    <DropdownMenu.Item key={item.name} asChild>
-                      <Link to={item.href} className="flex items-start gap-2 px-2 py-2 rounded text-sm text-gray-700 hover:bg-gray-100">
+                    <Menubar.Item key={item.name} asChild>
+                      <Link to={item.href} className="flex items-start gap-2 px-2 py-2 rounded text-sm text-gray-700 hover:bg-gray-100 outline-none">
                         <Icon className={`mt-0.5 h-4 w-4 ${color}`} />
                         <div className="flex flex-col">
                           <span className="font-medium">{item.name}</span>
                           <span className="text-xs text-gray-500">{desc}</span>
                         </div>
                       </Link>
-                    </DropdownMenu.Item>
+                    </Menubar.Item>
                   );
                 })}
-              </DropdownMenu.SubContent>
-            </DropdownMenu.Portal>
-          </DropdownMenu.Sub>
-        </DropdownMenu.Content>
-      </DropdownMenu.Portal>
-    </DropdownMenu.Root>
+              </Menubar.SubContent>
+            </Menubar.Portal>
+          </Menubar.Sub>
+        </Menubar.Content>
+      </Menubar.Portal>
+    </Menubar.Menu>
   );
 }

@@ -8,11 +8,12 @@ type UIProduk = {
   id: number
   nama: string
   sku?: string
-  kategori?: { id?: number; nama: string }
-  brand?: { id?: number; nama: string }
-  supplier?: { id?: number; nama: string }
+  kategori?: { id?: string; nama: string }
+  brand?: { id?: string; nama: string }
+  supplier?: { id?: string; nama: string }
   harga?: number
   hargaBeli?: number
+  marginPersen?: number
   stok?: number
   dibuatPada?: string
   diperbaruiPada?: string
@@ -46,19 +47,21 @@ function mapProdukDto(p: any): UIProduk {
   return {
     id: p.id,
     nama: p.nama,
-    sku: p.sku ?? undefined,
+    // backend uses `kode` for SKU; keep compatibility with older `sku`
+    sku: p.kode ?? p.sku ?? undefined,
     kategori: p.kategori ? { id: p.kategori.id, nama: p.kategori.nama } : undefined,
     brand: p.brand ? { id: p.brand.id, nama: p.brand.nama } : undefined,
     supplier: p.supplier ? { id: p.supplier.id, nama: p.supplier.nama } : undefined,
-    harga: inv?.harga != null ? Number(inv.harga) : undefined,
-    hargaBeli: inv?.harga_beli != null ? Number(inv.harga_beli) : undefined,
-    stok: inv?.jumlah != null ? Number(inv.jumlah) : undefined,
+    harga: p.harga_jual != null ? Number(p.harga_jual) : (inv?.harga_jual_toko != null ? Number(inv.harga_jual_toko) : undefined),
+    hargaBeli: p.harga_beli != null ? Number(p.harga_beli) : undefined,
+    marginPersen: p.margin_persen != null ? Number(p.margin_persen) : undefined,
+    stok: inv?.stok_tersedia != null ? Number(inv.stok_tersedia) : undefined,
     dibuatPada: p.dibuat_pada || p.dibuatPada,
     diperbaruiPada: p.diperbarui_pada || p.diperbaruiPada,
   }
 }
 
-type Filters = { kategoriId?: number; brandId?: number; supplierId?: number }
+type Filters = { kategoriId?: string; brandId?: string; supplierId?: string }
 
 type ProdukState = {
   items: UIProduk[]
@@ -69,6 +72,8 @@ type ProdukState = {
   error?: string
   search: string
   filters: Filters
+  // Abort controller for in-flight requests (to keep results fresh)
+  currentAbort?: AbortController
 }
 
 type ProdukActions = {
@@ -99,15 +104,28 @@ export const useProdukStore = create<ProdukState & ProdukActions>()(
     setFilters: (f) => set({ filters: f }),
 
     loadFirst: async () => {
-      set({ loading: true, page: 1, error: undefined })
-      await fetchPage(1, set, get)
+      // Abort previous request if any
+      const prev = get().currentAbort
+      if (prev) {
+        try { prev.abort() } catch {}
+      }
+      const ctrl = new AbortController()
+      // Clear items immediately to indicate new search/filter is applied
+      set({ loading: true, page: 1, error: undefined, currentAbort: ctrl, items: [] })
+      await fetchPage(1, set, get, ctrl)
     },
 
     loadNext: async () => {
       const { loading, hasNext, page } = get()
       if (loading || !hasNext) return
-      set({ loading: true })
-      await fetchPage(page + 1, set, get)
+      // Abort previous request if any (we're starting a new page fetch)
+      const prev = get().currentAbort
+      if (prev) {
+        try { prev.abort() } catch {}
+      }
+      const ctrl = new AbortController()
+      set({ loading: true, currentAbort: ctrl })
+      await fetchPage(page + 1, set, get, ctrl)
     },
 
     createProduk: async (data: ProductFormData) => {
@@ -207,11 +225,15 @@ export const useProdukStore = create<ProdukState & ProdukActions>()(
     },
 
     upsertFromRealtime: (p: UIProduk) => {
-      const exists = get().items.find((x) => x.id === p.id)
+      const { items, search, filters } = get()
+      const exists = items.find((x) => x.id === p.id)
       if (exists) {
-        set({ items: get().items.map((x) => (x.id === p.id ? { ...x, ...p } : x)) })
+        set({ items: items.map((x) => (x.id === p.id ? { ...x, ...p } : x)) })
       } else {
-        set({ items: [p, ...get().items] })
+        // Only insert if it matches current search/filters
+        if (matchesSearchFilters(p, search, filters)) {
+          set({ items: [p, ...items] })
+        }
       }
     },
 
@@ -221,23 +243,38 @@ export const useProdukStore = create<ProdukState & ProdukActions>()(
   }))
 )
 
+function matchesSearchFilters(p: UIProduk, search: string, filters: Filters): boolean {
+  // Match search on name or SKU (case-insensitive)
+  const s = (search || '').trim().toLowerCase()
+  if (s) {
+    const hay = `${p.nama ?? ''} ${(p.sku ?? '').toString()}`.toLowerCase()
+    if (!hay.includes(s)) return false
+  }
+  if (filters.kategoriId && p.kategori?.id && filters.kategoriId !== p.kategori.id) return false
+  if (filters.brandId && p.brand?.id && filters.brandId !== p.brand.id) return false
+  if (filters.supplierId && p.supplier?.id && filters.supplierId !== p.supplier.id) return false
+  return true
+}
+
 async function fetchPage(
   page: number,
   set: (partial: Partial<ProdukState>) => void,
   get: () => ProdukState,
+  ctrl?: AbortController,
 ) {
   const { limit, search, filters } = get()
   const params = new URLSearchParams()
   params.set('page', String(page))
   params.set('limit', String(limit))
   if (search) params.set('search', search)
-  if (filters.kategoriId) params.set('kategori', String(filters.kategoriId))
-  if (filters.brandId) params.set('brand', String(filters.brandId))
-  if (filters.supplierId) params.set('supplier', String(filters.supplierId))
+  if (filters.kategoriId) params.set('kategori', filters.kategoriId)
+  if (filters.brandId) params.set('brand', filters.brandId)
+  if (filters.supplierId) params.set('supplier', filters.supplierId)
 
   try {
     const res = await fetch(`${API_BASE}/produk?${params.toString()}`, {
       headers: authHeaders(),
+      signal: ctrl?.signal,
     })
     const js: ProdukListResponse = await res.json()
     if (!res.ok || !js.success) throw new Error(js.message || 'Gagal memuat produk')
@@ -250,9 +287,10 @@ async function fetchPage(
       loading: false,
     })
   } catch (e: any) {
+    // Ignore abort errors; a new request is in-flight
+    if (e?.name === 'AbortError') return
     set({ loading: false, error: e?.message || 'Terjadi kesalahan' })
   }
 }
 
 export type { UIProduk, Filters }
-

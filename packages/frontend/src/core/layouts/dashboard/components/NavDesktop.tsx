@@ -1,7 +1,8 @@
 import { DesktopMainLinks } from '@/core/layouts/dashboard/components/desktop/DesktopMainLinks';
-import { DesktopDropdownMasterData } from '@/core/layouts/dashboard/components/desktop/DesktopDropdownMasterData';
-import { DesktopDropdownOperasional } from '@/core/layouts/dashboard/components/desktop/DesktopDropdownOperasional';
-import { DesktopDropdownLainnya } from '@/core/layouts/dashboard/components/desktop/DesktopDropdownLainnya';
+import * as Menubar from '@radix-ui/react-menubar';
+import { DesktopMenubarOperasional } from '@/core/layouts/dashboard/components/desktop/DesktopMenubarOperasional';
+import { DesktopMenubarData } from '@/core/layouts/dashboard/components/desktop/DesktopMenubarData';
+import { DesktopMenubarLainnya } from '@/core/layouts/dashboard/components/desktop/DesktopMenubarLainnya';
 
 type Props = {
   pathname: string;
@@ -10,13 +11,14 @@ type Props = {
 export function NavDesktop({ pathname }: Props) {
   return (
     <div className="hidden lg:flex lg:items-center">
-      <div className="flex items-center space-x-1">
-        {/* Maksimal 4 menu: Dashboard, Operasional, Data, Lainnya */}
-        <DesktopMainLinks pathname={pathname} />
-        <DesktopDropdownOperasional pathname={pathname} />
-        <DesktopDropdownMasterData pathname={pathname} />
-        <DesktopDropdownLainnya pathname={pathname} />
-      </div>
+      {/* Dashboard tetap link biasa di kiri */}
+      <DesktopMainLinks pathname={pathname} />
+      {/* Menubar untuk multi-level yang robust */}
+      <Menubar.Root className="flex items-center space-x-1 ml-1">
+        <DesktopMenubarOperasional pathname={pathname} />
+        <DesktopMenubarData pathname={pathname} />
+        <DesktopMenubarLainnya pathname={pathname} />
+      </Menubar.Root>
     </div>
   );
 }

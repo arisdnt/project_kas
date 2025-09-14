@@ -40,6 +40,7 @@ export const ProdukSchema = z.object({
   kode: z.string().max(50, 'Kode terlalu panjang').optional(),
   harga_beli: z.number().min(0, 'Harga beli tidak boleh negatif').optional(),
   harga_jual: z.number().min(0, 'Harga jual tidak boleh negatif').optional(),
+  margin_persen: z.number().min(0, 'Margin persen tidak boleh negatif').optional(),
   dibuat_pada: z.date().optional(),
   diperbarui_pada: z.date().optional()
 });

@@ -3,7 +3,7 @@ import { devtools } from 'zustand/middleware'
 import { useAuthStore } from '@/core/store/authStore'
 import { config } from '@/core/config'
 
-type Option = { id: number; nama: string }
+type Option = { id: string; nama: string }
 
 type RefState = {
   kategori: Option[]

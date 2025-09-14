@@ -106,6 +106,7 @@ export function CalculatorModal({ open, onOpenChange, onResult }: CalculatorModa
     }
   }, [open])
 
+  
   const inputNumber = (num: string) => {
     if (waitingForOperand) {
       setDisplay(num)
@@ -214,17 +215,28 @@ export function CalculatorModal({ open, onOpenChange, onResult }: CalculatorModa
   }
 
   return (
-    <Dialog.Root open={open} onOpenChange={onOpenChange}>
+    <Dialog.Root open={open} onOpenChange={onOpenChange} modal={false} defaultOpen={false}>
       <Dialog.Portal>
-        <Dialog.Overlay className="fixed inset-0 bg-black/10 backdrop-blur-sm pointer-events-none" />
         <Dialog.Content 
           ref={modalRef}
-          className="fixed w-full max-w-sm rounded-lg bg-white shadow-xl border pointer-events-auto"
+          className="fixed w-full max-w-sm rounded-lg bg-white shadow-xl border pointer-events-auto z-50"
           style={{
             left: `${position.x}px`,
             top: `${position.y}px`,
             transform: 'none',
             cursor: isDragging ? 'grabbing' : 'default'
+          }}
+          onPointerDownOutside={(e) => {
+            // Prevent closing when clicking outside the modal
+            e.preventDefault()
+          }}
+          onInteractOutside={(e) => {
+            // Prevent closing when interacting outside the modal
+            e.preventDefault()
+          }}
+          onEscapeKeyDown={(e) => {
+            // Allow escape key to close modal
+            onOpenChange(false)
           }}
         >
           <div 
@@ -235,6 +247,9 @@ export function CalculatorModal({ open, onOpenChange, onResult }: CalculatorModa
               <Calculator className="h-5 w-5" />
               Kalkulator
             </Dialog.Title>
+            <Dialog.Description className="sr-only">
+              Kalkulator untuk melakukan perhitungan matematika dasar
+            </Dialog.Description>
             <Dialog.Close asChild>
               <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
                 <X className="h-4 w-4" />

@@ -73,7 +73,7 @@ export function DesktopDropdownOperasional({ pathname }: Props) {
               <ChevronRight className="h-3.5 w-3.5 text-gray-400 group-data-[state=open]:text-gray-600" />
             </DropdownMenu.SubTrigger>
             <DropdownMenu.Portal>
-              <DropdownMenu.SubContent sideOffset={6} alignOffset={-4} className="min-w-[240px] bg-white rounded-md p-2 shadow-xl border border-gray-200 z-50">
+              <DropdownMenu.SubContent side="right" align="start" sideOffset={4} collisionPadding={8} className="min-w-[240px] bg-white rounded-md p-2 shadow-xl border border-gray-200 z-50">
                 {transaksiList.map((item) => {
                   const Icon = iconFor('Transaksi');
                   return (
@@ -107,7 +107,7 @@ export function DesktopDropdownOperasional({ pathname }: Props) {
               <ChevronRight className="h-3.5 w-3.5 text-gray-400 group-data-[state=open]:text-gray-600" />
             </DropdownMenu.SubTrigger>
             <DropdownMenu.Portal>
-              <DropdownMenu.SubContent sideOffset={6} alignOffset={-4} className="min-w-[240px] bg-white rounded-md p-2 shadow-xl border border-gray-200 z-50">
+              <DropdownMenu.SubContent side="right" align="start" sideOffset={4} collisionPadding={8} className="min-w-[240px] bg-white rounded-md p-2 shadow-xl border border-gray-200 z-50">
                 {inventarisList.map((item) => {
                   const Icon = iconFor('Inventaris');
                   return (

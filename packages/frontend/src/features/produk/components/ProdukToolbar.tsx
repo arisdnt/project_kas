@@ -15,28 +15,28 @@ export function ProdukToolbar({ onCreate }: Props) {
   const { setSearch, setFilters, loadFirst } = useProdukStore()
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
   const [query, setQuery] = useState('')
-  const [kategoriId, setKategoriId] = useState<number | undefined>()
-  const [brandId, setBrandId] = useState<number | undefined>()
-  const [supplierId, setSupplierId] = useState<number | undefined>()
+  const [kategoriId, setKategoriId] = useState<string | undefined>()
+  const [brandId, setBrandId] = useState<string | undefined>()
+  const [supplierId, setSupplierId] = useState<string | undefined>()
 
   useEffect(() => {
     loadAll()
   }, [loadAll])
 
-  // Debounced search
+  // Debounced search & filters
   useEffect(() => {
     if (!isAuthenticated) return
     const id = setTimeout(() => {
       setSearch(query)
       setFilters({ kategoriId, brandId, supplierId })
       loadFirst()
-    }, 350)
+    }, 250)
     return () => clearTimeout(id)
   }, [query, kategoriId, brandId, supplierId, setSearch, setFilters, loadFirst, isAuthenticated])
 
-  const kategoriOpts = useMemo(() => [{ id: -1, nama: 'Semua Kategori' }, ...kategori], [kategori])
-  const brandOpts = useMemo(() => [{ id: -1, nama: 'Semua Brand' }, ...brand], [brand])
-  const supplierOpts = useMemo(() => [{ id: -1, nama: 'Semua Supplier' }, ...supplier], [supplier])
+  const kategoriOpts = useMemo(() => [{ id: 'all', nama: 'Semua Kategori' }, ...kategori], [kategori])
+  const brandOpts = useMemo(() => [{ id: 'all', nama: 'Semua Brand' }, ...brand], [brand])
+  const supplierOpts = useMemo(() => [{ id: 'all', nama: 'Semua Supplier' }, ...supplier], [supplier])
 
   return (
     <div className="flex flex-col sm:flex-row items-stretch gap-2 sm:gap-3">
@@ -63,8 +63,8 @@ export function ProdukToolbar({ onCreate }: Props) {
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-3 w-full sm:w-auto">
         <select
           className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-0"
-          value={kategoriId ?? -1}
-          onChange={(e) => setKategoriId(Number(e.target.value) === -1 ? undefined : Number(e.target.value))}
+          value={kategoriId ?? 'all'}
+          onChange={(e) => setKategoriId(e.target.value === 'all' ? undefined : e.target.value)}
         >
           {kategoriOpts.map((o) => (
             <option key={o.id} value={o.id}>
@@ -75,8 +75,8 @@ export function ProdukToolbar({ onCreate }: Props) {
 
         <select
           className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-0"
-          value={brandId ?? -1}
-          onChange={(e) => setBrandId(Number(e.target.value) === -1 ? undefined : Number(e.target.value))}
+          value={brandId ?? 'all'}
+          onChange={(e) => setBrandId(e.target.value === 'all' ? undefined : e.target.value)}
         >
           {brandOpts.map((o) => (
             <option key={o.id} value={o.id}>
@@ -87,8 +87,8 @@ export function ProdukToolbar({ onCreate }: Props) {
 
         <select
           className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-0"
-          value={supplierId ?? -1}
-          onChange={(e) => setSupplierId(Number(e.target.value) === -1 ? undefined : Number(e.target.value))}
+          value={supplierId ?? 'all'}
+          onChange={(e) => setSupplierId(e.target.value === 'all' ? undefined : e.target.value)}
         >
           {supplierOpts.map((o) => (
             <option key={o.id} value={o.id}>

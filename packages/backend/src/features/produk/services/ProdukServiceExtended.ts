@@ -75,6 +75,7 @@ export class ProdukServiceExtended {
       const baseQuery = `
         SELECT
           p.id, p.nama, p.satuan, p.kategori_id, p.brand_id, p.supplier_id,
+          p.harga_beli, p.harga_jual, p.margin_persen,
           p.dibuat_pada, p.diperbarui_pada,
           k.nama as kategori_nama,
           b.nama as brand_nama,
@@ -131,6 +132,9 @@ export class ProdukServiceExtended {
         kategori_id: row.kategori_id,
         brand_id: row.brand_id,
         supplier_id: row.supplier_id,
+        harga_beli: row.harga_beli ? parseFloat(row.harga_beli) : undefined,
+        harga_jual: row.harga_jual ? parseFloat(row.harga_jual) : undefined,
+        margin_persen: row.margin_persen ? parseFloat(row.margin_persen) : undefined,
         dibuat_pada: row.dibuat_pada,
         diperbarui_pada: row.diperbarui_pada,
         kategori: row.kategori_nama ? { id: row.kategori_id, nama: row.kategori_nama } : undefined,
