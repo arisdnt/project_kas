@@ -1,31 +1,42 @@
 /**
- * Controller untuk API Produk dan Inventaris
+ * Controller untuk Master Data (Kategori, Brand, Supplier)
  * Sesuai dengan Blueprint Arsitektur Sistem Point of Sales Real-Time Multi-Tenant (Revisi 4.0)
  */
 
 import { Request, Response } from 'express';
-import { ProdukService } from '../services/ProdukService';
-import { ProdukServiceExtended } from '../services/ProdukServiceExtended';
+import { 
+  getAllKategori,
+  createKategori,
+  updateKategori,
+  deleteKategori,
+  getAllBrand,
+  createBrand,
+  updateBrand,
+  deleteBrand,
+  getAllSupplier,
+  getSupplierById,
+  createSupplier,
+  updateSupplier,
+  deleteSupplier
+} from '../services/modules';
 import { logger } from '@/core/utils/logger';
+import { AccessScope } from '@/core/middleware/accessScope';
 import {
   CreateKategoriSchema,
   UpdateKategoriSchema,
   CreateBrandSchema,
   UpdateBrandSchema,
   CreateSupplierSchema,
-  UpdateSupplierSchema,
-  CreateProdukSchema,
-  UpdateProdukSchema,
-  CreateInventarisSchema,
-  ProdukQuerySchema
+  UpdateSupplierSchema
 } from '../models/Produk';
 
-export class ProdukController {
+export class MasterDataController {
   // ===== KATEGORI ENDPOINTS =====
   
   static async getAllKategori(req: Request, res: Response) {
     try {
-      const kategori = await ProdukService.getAllKategori();
+      const scope = req.accessScope as AccessScope;
+      const kategori = await getAllKategori(scope);
       return res.json({
         success: true,
         data: kategori,
@@ -43,8 +54,8 @@ export class ProdukController {
   static async createKategori(req: Request, res: Response) {
     try {
       const data = CreateKategoriSchema.parse(req.body);
-      const tenantId = req.user?.tenantId || '7f69ce68-9068-11f0-8eff-00155d24a169';
-      const kategori = await ProdukService.createKategori(data, tenantId);
+      const scope = req.accessScope as AccessScope;
+      const kategori = await createKategori(data, scope);
       
       return res.status(201).json({
         success: true,
@@ -73,8 +84,8 @@ export class ProdukController {
     try {
       const id = String(req.params.id);
       const data = UpdateKategoriSchema.parse({ ...req.body, id });
-      
-      const kategori = await ProdukService.updateKategori(data);
+      const scope = req.accessScope as AccessScope;
+      const kategori = await updateKategori(data, scope);
       
       return res.json({
         success: true,
@@ -102,7 +113,8 @@ export class ProdukController {
   static async deleteKategori(req: Request, res: Response) {
     try {
       const id = String(req.params.id);
-      await ProdukService.deleteKategori(id);
+      const scope = req.accessScope as AccessScope;
+      await deleteKategori(id, scope);
       
       return res.json({
         success: true,
@@ -121,7 +133,8 @@ export class ProdukController {
   
   static async getAllBrand(req: Request, res: Response) {
     try {
-      const brand = await ProdukService.getAllBrand();
+      const scope = req.accessScope as AccessScope;
+      const brand = await getAllBrand(scope);
       return res.json({
         success: true,
         data: brand,
@@ -139,8 +152,8 @@ export class ProdukController {
   static async createBrand(req: Request, res: Response) {
     try {
       const data = CreateBrandSchema.parse(req.body);
-      const tenantId = req.user?.tenantId || '7f69ce68-9068-11f0-8eff-00155d24a169';
-      const brand = await ProdukService.createBrand(data, tenantId);
+      const scope = req.accessScope as AccessScope;
+      const brand = await createBrand(data, scope);
       
       return res.status(201).json({
         success: true,
@@ -169,8 +182,8 @@ export class ProdukController {
     try {
       const id = String(req.params.id);
       const data = UpdateBrandSchema.parse({ ...req.body, id });
-      
-      const brand = await ProdukService.updateBrand(data);
+      const scope = req.accessScope as AccessScope;
+      const brand = await updateBrand(data, scope);
       
       return res.json({
         success: true,
@@ -198,7 +211,8 @@ export class ProdukController {
   static async deleteBrand(req: Request, res: Response) {
     try {
       const id = String(req.params.id);
-      await ProdukService.deleteBrand(id);
+      const scope = req.accessScope as AccessScope;
+      await deleteBrand(id, scope);
       
       return res.json({
         success: true,
@@ -217,7 +231,8 @@ export class ProdukController {
   
   static async getAllSupplier(req: Request, res: Response) {
     try {
-      const supplier = await ProdukService.getAllSupplier();
+      const scope = req.accessScope as AccessScope;
+      const supplier = await getAllSupplier(scope);
       return res.json({
         success: true,
         data: supplier,
@@ -232,36 +247,11 @@ export class ProdukController {
     }
   }
 
-  static async getSupplierById(req: Request, res: Response) {
-    try {
-      const id = String(req.params.id);
-      const supplier = await ProdukService.getSupplierById(id);
-      
-      if (!supplier) {
-        return res.status(404).json({
-          success: false,
-          message: 'Supplier tidak ditemukan'
-        });
-      }
-      
-      return res.json({
-        success: true,
-        data: supplier,
-        message: 'Data supplier berhasil diambil'
-      });
-    } catch (error: any) {
-      logger.error({ error }, 'Error in getSupplierById');
-      return res.status(500).json({
-        success: false,
-        message: error.message || 'Terjadi kesalahan server'
-      });
-    }
-  }
-
   static async createSupplier(req: Request, res: Response) {
     try {
       const data = CreateSupplierSchema.parse(req.body);
-      const supplier = await ProdukService.createSupplier(data);
+      const scope = req.accessScope as AccessScope;
+      const supplier = await createSupplier(data, scope);
       
       return res.status(201).json({
         success: true,
@@ -290,8 +280,8 @@ export class ProdukController {
     try {
       const id = String(req.params.id);
       const data = UpdateSupplierSchema.parse({ ...req.body, id });
-      
-      const supplier = await ProdukService.updateSupplier(data);
+      const scope = req.accessScope as AccessScope;
+      const supplier = await updateSupplier(data, scope);
       
       return res.json({
         success: true,
@@ -319,7 +309,8 @@ export class ProdukController {
   static async deleteSupplier(req: Request, res: Response) {
     try {
       const id = String(req.params.id);
-      await ProdukService.deleteSupplier(id);
+      const scope = req.accessScope as AccessScope;
+      await deleteSupplier(id, scope);
       
       return res.json({
         success: true,
@@ -327,6 +318,33 @@ export class ProdukController {
       });
     } catch (error: any) {
       logger.error({ error }, 'Error in deleteSupplier');
+      return res.status(500).json({
+        success: false,
+        message: error.message || 'Terjadi kesalahan server'
+      });
+    }
+  }
+
+  static async getSupplierById(req: Request, res: Response) {
+    try {
+      const id = String(req.params.id);
+      const scope = req.accessScope as AccessScope;
+      const supplier = await getSupplierById(id, scope);
+      
+      if (!supplier) {
+        return res.status(404).json({
+          success: false,
+          message: 'Supplier tidak ditemukan'
+        });
+      }
+      
+      return res.json({
+        success: true,
+        data: supplier,
+        message: 'Data supplier berhasil diambil'
+      });
+    } catch (error: any) {
+      logger.error({ error }, 'Error in getSupplierById');
       return res.status(500).json({
         success: false,
         message: error.message || 'Terjadi kesalahan server'

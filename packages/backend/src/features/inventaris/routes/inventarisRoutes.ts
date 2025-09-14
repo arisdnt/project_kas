@@ -4,7 +4,7 @@
  */
 
 import { Router } from 'express';
-import { ProdukControllerExtended } from '@/features/produk/controllers/ProdukControllerExtended';
+import { ProdukInventarisController } from '@/features/produk/controllers/ProdukInventarisController';
 import { authenticate, authorize } from '@/features/auth/middleware/authMiddleware';
 import { UserRole } from '@/features/auth/models/User';
 import { attachAccessScope, requireStoreWhenNeeded } from '@/core/middleware/accessScope';
@@ -25,7 +25,7 @@ router.use(attachAccessScope);
 router.get('/', 
   authorize(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.CASHIER), 
   requireStoreWhenNeeded,
-  ProdukControllerExtended.getInventarisByToko
+  ProdukInventarisController.getInventarisByToko
 );
 
 /**
@@ -36,7 +36,7 @@ router.get('/',
 router.post('/', 
   authorize(UserRole.SUPER_ADMIN, UserRole.ADMIN), 
   requireStoreWhenNeeded,
-  ProdukControllerExtended.upsertInventaris
+  ProdukInventarisController.upsertInventaris
 );
 
 /**
@@ -47,7 +47,7 @@ router.post('/',
 router.put('/', 
   authorize(UserRole.SUPER_ADMIN, UserRole.ADMIN), 
   requireStoreWhenNeeded,
-  ProdukControllerExtended.upsertInventaris
+  ProdukInventarisController.upsertInventaris
 );
 
 /**
@@ -58,7 +58,7 @@ router.put('/',
 router.put('/:productId/stok', 
   authorize(UserRole.SUPER_ADMIN, UserRole.ADMIN), 
   requireStoreWhenNeeded,
-  ProdukControllerExtended.updateStok
+  ProdukInventarisController.updateStok
 );
 
 /**
@@ -69,7 +69,7 @@ router.put('/:productId/stok',
 router.delete('/:id', 
   authorize(UserRole.SUPER_ADMIN, UserRole.ADMIN), 
   requireStoreWhenNeeded,
-  ProdukControllerExtended.deleteInventaris
+  ProdukInventarisController.deleteInventaris
 );
 
 export default router;

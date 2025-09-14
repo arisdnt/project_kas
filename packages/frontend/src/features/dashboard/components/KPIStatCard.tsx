@@ -12,20 +12,25 @@ interface KPIStatCardProps {
 }
 
 export function KPIStatCard({ title, value, helper, delta, icon }: KPIStatCardProps) {
+  // Warna biru dan kuning muda untuk delta
   const deltaColor = delta?.trend === 'up'
-    ? 'text-emerald-600'
+    ? 'text-blue-600'
     : delta?.trend === 'down'
-      ? 'text-red-600'
+      ? 'text-amber-600'
       : 'text-gray-500';
 
   const deltaBg = delta?.trend === 'up'
-    ? 'bg-emerald-50'
+    ? 'bg-blue-50/80'
     : delta?.trend === 'down'
-      ? 'bg-red-50'
-      : 'bg-gray-50';
+      ? 'bg-amber-50/80'
+      : 'bg-gray-50/80';
+
+  // Warna biru dan kuning muda untuk background card
+  const cardBg = 'bg-gradient-to-br from-blue-50 to-amber-50 backdrop-blur-sm';
+  const borderColor = 'border border-blue-100/60 shadow-sm';
 
   return (
-    <Card className="h-full">
+    <Card className={`h-full ${cardBg} ${borderColor}`}>
       <CardContent className="p-4 sm:p-5">
         <div className="flex items-start justify-between">
           <div>
@@ -36,13 +41,13 @@ export function KPIStatCard({ title, value, helper, delta, icon }: KPIStatCardPr
             )}
           </div>
           {icon && (
-            <div className="p-2.5 rounded-lg bg-blue-50 text-blue-600">
+            <div className="p-2.5 rounded-lg bg-gradient-to-br from-blue-100 to-amber-100 text-blue-600 shadow-sm">
               {icon}
             </div>
           )}
         </div>
         {delta && (
-          <div className={`mt-3 inline-flex items-center gap-2 text-sm px-2 py-1 rounded ${deltaBg} ${deltaColor}`}>
+          <div className={`mt-3 inline-flex items-center gap-2 text-sm px-2 py-1 rounded-full ${deltaBg} ${deltaColor} backdrop-blur-sm`}>
             <span className="font-semibold">{delta.value}</span>
             <span className="text-xs">{delta.trend === 'up' ? 'lebih tinggi' : delta.trend === 'down' ? 'lebih rendah' : 'stabil'}</span>
           </div>

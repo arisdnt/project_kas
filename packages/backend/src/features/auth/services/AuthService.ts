@@ -69,17 +69,16 @@ export class AuthService {
     const connection = await pool.getConnection();
     
     try {
-      // Query user berdasarkan username dari tabel users dengan join ke pengguna, peran
+      // Query untuk mendapatkan user dengan informasi dari tabel users dan peran
       const [rows] = await connection.execute<RowDataPacket[]>(
         `SELECT 
-            u.id, u.username, u.password_hash as password, u.tenant_id, u.nama_lengkap as nama, u.status, u.is_super_admin,
-            p.toko_id,
-            pr.nama as nama_peran, pr.level, pr.deskripsi as deskripsi_peran
-         FROM users u
-         LEFT JOIN pengguna p ON u.id = p.user_id
-         LEFT JOIN peran pr ON p.peran_id = pr.id
-         WHERE u.username = ? AND u.status = 'aktif'`,
-        [loginData.username]
+          u.id, u.tenant_id, u.username, u.email, u.password_hash, u.nama_lengkap, 
+          u.telepon, u.avatar_url, u.peran_id, u.toko_id, u.status, u.last_login,
+          p.level, p.nama as nama_peran
+        FROM users u
+        LEFT JOIN peran p ON u.peran_id = p.id
+        WHERE u.username = ? AND u.tenant_id = ? AND u.status = 'aktif'`,
+        [loginData.username, loginData.tenantId]
       );
 
       if (rows.length === 0) {
@@ -89,7 +88,7 @@ export class AuthService {
       const user = rows[0];
 
       // Verify password
-      const isPasswordValid = await this.verifyPassword(loginData.password, user.password);
+      const isPasswordValid = await this.verifyPassword(loginData.password, user.password_hash);
       if (!isPasswordValid) {
         throw new Error('Invalid username or password');
       }
@@ -105,19 +104,16 @@ export class AuthService {
         [user.id]
       );
 
-      // Map role berdasarkan level peran
+      // Map role berdasarkan level dari tabel peran
       let mappedRole: UserRole;
-      let level: number;
-      
-      // Gunakan level dari tabel peran atau default ke level 5
-      level = user.level || 5;
+      const level = user.level || 5;
       
       switch (level) {
         case 1:
           mappedRole = UserRole.SUPER_ADMIN;
           break;
         case 2:
-        case 8: // Admin level dari tabel peran
+        case 8: // Admin level
           mappedRole = UserRole.ADMIN;
           break;
         case 3:
@@ -135,11 +131,15 @@ export class AuthService {
         tenantId: user.tenant_id,
         tokoId: user.toko_id || undefined,
         username: user.username,
-        email: '', // Email tidak ada di tabel pengguna saat ini
-        fullName: user.nama || user.username,
+        email: user.email || '',
+        namaLengkap: user.nama_lengkap || user.username,
+        telepon: user.telepon,
+        avatarUrl: user.avatar_url,
         role: mappedRole,
         level: level,
-        status: user.status === 'aktif' ? UserStatus.ACTIVE : UserStatus.INACTIVE
+        peranId: user.peran_id,
+        status: user.status === 'aktif' ? UserStatus.ACTIVE : UserStatus.INACTIVE,
+        isSuperAdmin: level === 1 // Super admin jika level 1
       };
 
       // Generate tokens
@@ -149,7 +149,8 @@ export class AuthService {
         tokoId: user.toko_id || undefined,
         username: user.username,
         role: mappedRole,
-        level: level
+        level: level,
+        peranId: user.peran_id
       };
 
       const accessToken = this.generateToken(jwtPayload);
@@ -192,29 +193,34 @@ export class AuthService {
       }
 
       // Hash password
-      const hashedPassword = await this.hashPassword(userData.password);
+      const hashedPassword = await this.hashPassword(userData.password_hash);
 
       // Generate UUID for new user
       const userId = require('crypto').randomUUID();
 
       // Insert user
       const [result] = await connection.execute<ResultSetHeader>(
-        `INSERT INTO users (id, tenant_id, username, email, password_hash, full_name, role, status, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, 'aktif', NOW(), NOW())`,
+        `INSERT INTO users (id, tenant_id, username, email, password_hash, nama_lengkap, telepon, avatar_url, peran_id, toko_id, level, status, is_super_admin, dibuat_pada, diperbarui_pada)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'aktif', ?, NOW(), NOW())`,
         [
           userId,
-          userData.tenantId,
+          userData.tenant_id,
           userData.username,
           userData.email,
           hashedPassword,
-          userData.fullName,
-          userData.role
+          userData.nama_lengkap,
+          userData.telepon || null,
+          userData.avatar_url || null,
+          userData.peran_id,
+          userData.toko_id || null,
+          userData.level,
+          userData.is_super_admin || false
         ]
       );
 
       // Get created user
       const [newUser] = await connection.execute<RowDataPacket[]>(
-        `SELECT id, tenant_id, username, email, full_name, role, status, created_at, updated_at
+        `SELECT id, tenant_id, username, email, password_hash, nama_lengkap, telepon, avatar_url, peran_id, toko_id, level, status, is_super_admin, dibuat_pada, diperbarui_pada
          FROM users WHERE id = ?`,
         [userId]
       );
@@ -224,21 +230,26 @@ export class AuthService {
       logger.info({
         userId: result.insertId,
         username: userData.username,
-        tenantId: userData.tenantId
+        tenantId: userData.tenant_id
       }, 'User created successfully');
 
       return {
         id: newUser[0].id,
-        tenantId: newUser[0].tenant_id,
+        tenant_id: newUser[0].tenant_id,
         username: newUser[0].username,
         email: newUser[0].email,
-        password: '', // Don't return password
-        fullName: newUser[0].full_name,
-        role: newUser[0].role as UserRole,
+        password_hash: '', // Don't return password
+        nama_lengkap: newUser[0].nama_lengkap,
+        telepon: newUser[0].telepon,
+        avatar_url: newUser[0].avatar_url,
+        peran_id: newUser[0].peran_id,
+        toko_id: newUser[0].toko_id,
+        level: newUser[0].level,
         status: newUser[0].status === 'aktif' ? UserStatus.ACTIVE : UserStatus.INACTIVE,
-        lastLogin: null,
-        createdAt: newUser[0].created_at,
-        updatedAt: newUser[0].updated_at
+        is_super_admin: newUser[0].is_super_admin,
+        last_login: null,
+        dibuat_pada: newUser[0].dibuat_pada,
+        diperbarui_pada: newUser[0].diperbarui_pada
       };
 
     } catch (error) {
@@ -257,13 +268,11 @@ export class AuthService {
     
     try {
       const [rows] = await connection.execute<RowDataPacket[]>(
-        `SELECT u.id, u.tenant_id, u.username, u.nama_lengkap as nama, u.status,
-                u.is_super_admin, u.email, u.telepon, u.avatar_url,
-                pg.toko_id,
-                p.nama as nama_peran, p.level
+        `SELECT u.id, u.tenant_id, u.username, u.email, u.nama_lengkap, u.telepon, 
+                u.avatar_url, u.peran_id, u.toko_id, u.status,
+                p.level, p.nama as nama_peran
          FROM users u
-         LEFT JOIN pengguna pg ON u.id = pg.user_id
-         LEFT JOIN peran p ON pg.peran_id = p.id
+         LEFT JOIN peran p ON u.peran_id = p.id
          WHERE u.id = ? AND u.tenant_id = ? AND u.status = 'aktif'`,
         [userId, tenantId]
       );
@@ -274,12 +283,9 @@ export class AuthService {
 
       const user = rows[0];
 
-      // Map role berdasarkan level peran
+      // Map role berdasarkan level dari tabel peran
       let mappedRole: UserRole;
-      let level: number;
-      
-      // Gunakan level dari tabel peran atau default ke level 5
-      level = user.level || 5;
+      const level = user.level || 5;
       
       switch (level) {
         case 1:
@@ -304,10 +310,14 @@ export class AuthService {
         tokoId: user.toko_id || undefined,
         username: user.username,
         email: user.email || '',
-        fullName: user.nama || user.username,
+        namaLengkap: user.nama_lengkap || user.username,
+        telepon: user.telepon,
+        avatarUrl: user.avatar_url,
         role: mappedRole,
         level: level,
-        status: user.status === 'aktif' ? UserStatus.ACTIVE : UserStatus.INACTIVE
+        peranId: user.peran_id,
+        status: user.status === 'aktif' ? UserStatus.ACTIVE : UserStatus.INACTIVE,
+        isSuperAdmin: level === 1 // Super admin jika level 1
       };
 
     } finally {

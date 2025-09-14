@@ -56,6 +56,7 @@ export interface KonfigurasiAplikasi {
   readonly pajak: KonfigurasiPajak;
   readonly zonaWaktu: string; // e.g., 'Asia/Jakarta'
   readonly printer: KonfigurasiPrinter;
+  readonly tenantId: string; // ID tenant untuk multi-tenancy
   readonly fileTypes?: {
     readonly images: readonly {
       readonly mimeType: string;

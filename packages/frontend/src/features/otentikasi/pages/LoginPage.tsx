@@ -10,12 +10,14 @@ import { Label } from '@/core/components/ui/label';
 interface LoginForm {
   username: string;
   password: string;
+  tenantId: string;
 }
 
 export function LoginPage() {
   const [form, setForm] = useState<LoginForm>({
     username: '',
-    password: ''
+    password: '',
+    tenantId: config.tenantId || 'default-tenant'
   });
   const [error, setError] = useState<string>('');
   const { login, isLoading } = useAuthStore();
@@ -30,7 +32,7 @@ export function LoginPage() {
     }
 
     try {
-      await login(form.username, form.password);
+      await login(form.username, form.password, form.tenantId);
     } catch (err: any) {
       setError(err.message || 'Login gagal');
     }

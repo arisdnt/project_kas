@@ -20,41 +20,45 @@ export enum UserStatus {
   SUSPENDED = 'suspended'
 }
 
-// Schema validasi untuk User
+// Schema validasi untuk User - disesuaikan dengan struktur tabel users
 export const UserSchema = z.object({
   id: z.string().uuid(),
-  tenantId: z.string().uuid(),
+  tenant_id: z.string().uuid(),
   username: z.string().min(3).max(50),
   email: z.string().email(),
-  password: z.string().min(8),
-  fullName: z.string().min(2).max(100),
-  role: z.nativeEnum(UserRole),
+  password_hash: z.string().min(8),
+  nama_lengkap: z.string().min(2).max(100),
+  telepon: z.string().max(20).optional(),
+  avatar_url: z.string().optional(),
+  peran_id: z.string().uuid(),
+  toko_id: z.string().uuid().optional(),
+  level: z.number().int().min(1).max(8),
   status: z.nativeEnum(UserStatus).default(UserStatus.ACTIVE),
-  lastLogin: z.date().nullable().optional(),
-  createdAt: z.date(),
-  updatedAt: z.date()
+  is_super_admin: z.boolean().default(false),
+  last_login: z.date().nullable().optional(),
+  dibuat_pada: z.date(),
+  diperbarui_pada: z.date()
 });
 
 // Schema untuk create user (tanpa id, timestamps)
 export const CreateUserSchema = UserSchema.omit({
   id: true,
-  createdAt: true,
-  updatedAt: true,
-  lastLogin: true
+  dibuat_pada: true,
+  diperbarui_pada: true,
+  last_login: true
 });
 
 // Schema untuk update user
 export const UpdateUserSchema = CreateUserSchema.partial().omit({
-  tenantId: true,
-  password: true
+  tenant_id: true,
+  password_hash: true
 });
 
 // Schema untuk login
 export const LoginSchema = z.object({
   username: z.string().min(1, 'Username is required'),
   password: z.string().min(1, 'Password is required'),
-  // Accept UUID tenantId after migration; keep optional
-  tenantId: z.string().uuid().optional()
+  tenantId: z.string().uuid('Valid tenant ID is required')
 });
 
 // Schema untuk change password
@@ -76,27 +80,32 @@ export type ChangePasswordRequest = z.infer<typeof ChangePasswordSchema>;
 
 // Interface untuk JWT payload
 export interface JWTPayload {
-  userId: string; // pengguna.uuid
-  tenantId: string; // toko.uuid
-  tokoId?: string; // ID toko tempat user bekerja
-  username: string;
-  role: UserRole;
-  level?: number; // Level akses berdasarkan peran (1-5)
+  userId: string; // users.id
+  tenantId: string; // users.tenant_id
+  tokoId?: string; // users.toko_id
+  username: string; // users.username
+  role: UserRole; // mapped dari users.level
+  level?: number; // users.level (1-8)
+  peranId?: string; // users.peran_id
   iat?: number;
   exp?: number;
 }
 
 // Interface untuk authenticated user
 export interface AuthenticatedUser {
-  id: string; // pengguna.uuid
-  tenantId: string; // toko.uuid
-  tokoId?: string; // ID toko tempat user bekerja
-  username: string;
-  email: string;
-  fullName: string;
-  role: UserRole;
-  level?: number; // Level akses berdasarkan peran (1-5)
-  status: UserStatus;
+  id: string; // users.id
+  tenantId: string; // users.tenant_id
+  tokoId?: string; // users.toko_id
+  username: string; // users.username
+  email: string; // users.email
+  namaLengkap: string; // users.nama_lengkap
+  telepon?: string; // users.telepon
+  avatarUrl?: string; // users.avatar_url
+  role: UserRole; // mapped dari users.level
+  level?: number; // users.level (1-8)
+  peranId?: string; // users.peran_id
+  status: UserStatus; // users.status
+  isSuperAdmin?: boolean; // users.is_super_admin
   isGodUser?: boolean; // Flag untuk god user
   godPermissions?: string[]; // Permissions khusus god user
 }

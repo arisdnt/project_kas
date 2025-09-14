@@ -24,6 +24,7 @@ const baseConfig = {
     termasukDalamHarga: true,
   },
   zonaWaktu: 'Asia/Jakarta',
+  tenantId: '7f69ce68-9068-11f0-8eff-00155d24a169', // ID tenant default (Default Tenant)
   printer: {
     nama: 'EPSON-TM-T82',
     tipe: 'network',

@@ -7,12 +7,18 @@ type User = {
   id: string | number
   username: string
   email?: string
-  // format backend (baru)
-  fullName?: string
+  // format backend (baru) - sesuai dengan AuthenticatedUser interface
+  namaLengkap?: string
+  telepon?: string
+  avatarUrl?: string
   role?: string
+  peranId?: string
   tokoId?: string // ID toko dari backend
   tenantId?: string // ID tenant dari backend
-  // format lama (lokal)
+  level?: number
+  isSuperAdmin?: boolean
+  // format lama (lokal) - untuk kompatibilitas
+  fullName?: string
   nama?: string
   peran?: string
 }
@@ -36,7 +42,7 @@ type AuthState = {
 }
 
 type AuthActions = {
-  login: (username: string, password: string) => Promise<void>
+  login: (username: string, password: string, tenantId: string) => Promise<void>
   logout: () => void
   setUser: (user: User) => void
   setToken: (token: string) => void
@@ -53,7 +59,7 @@ export const useAuthStore = create<AuthStore>()(
       refreshToken: null,
       isLoading: false,
       
-      login: async (username: string, password: string) => {
+      login: async (username: string, password: string, tenantId: string) => {
         set({ isLoading: true })
         
         try {
@@ -62,7 +68,7 @@ export const useAuthStore = create<AuthStore>()(
             headers: {
               'Content-Type': 'application/json',
             },
-            body: JSON.stringify({ username, password }),
+            body: JSON.stringify({ username, password, tenantId }),
           })
           
           const data: LoginResponse = await response.json()

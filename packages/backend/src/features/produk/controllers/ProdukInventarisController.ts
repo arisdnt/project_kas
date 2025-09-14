@@ -1,10 +1,9 @@
 /**
- * Extended Controller untuk API Produk dan Inventaris
+ * Controller untuk Produk dan Inventaris
  * Sesuai dengan Blueprint Arsitektur Sistem Point of Sales Real-Time Multi-Tenant (Revisi 4.0)
  */
 
 import { Request, Response } from 'express';
-import { ProdukServiceExtended } from '../services/ProdukServiceExtended';
 import { logger } from '@/core/utils/logger';
 import pool from '@/core/database/connection';
 import { RowDataPacket } from 'mysql2';
@@ -16,9 +15,22 @@ import {
   ProdukQuerySchema
 } from '../models/Produk';
 
-export class ProdukControllerExtended {
+// Import modul-modul produk
+import { getAllProduk } from '../services/modules/produk/getAllProduk';
+import { getProdukById } from '../services/modules/produk/getProdukById';
+import { createProduk } from '../services/modules/produk/createProduk';
+import { updateProduk } from '../services/modules/produk/updateProduk';
+import { deleteProduk } from '../services/modules/produk/deleteProduk';
+
+// Import modul-modul inventaris
+import { getInventarisByToko } from '../services/modules/inventaris/getInventarisByToko';
+import { upsertInventaris } from '../services/modules/inventaris/upsertInventaris';
+import { updateStok } from '../services/modules/inventaris/updateStok';
+import { deleteInventaris } from '../services/modules/inventaris/deleteInventaris';
+
+export class ProdukInventarisController {
   /**
-   * Helper function to get store ID from tenant ID
+   * Helper function untuk mendapatkan store ID dari tenant ID
    */
   private static async getStoreIdFromTenant(tenantId: string): Promise<string | null> {
     try {
@@ -32,6 +44,7 @@ export class ProdukControllerExtended {
       return null;
     }
   }
+
   // ===== PRODUK ENDPOINTS =====
   
   static async getAllProduk(req: Request, res: Response) {
@@ -39,19 +52,22 @@ export class ProdukControllerExtended {
       // Validasi query parameters
       const query = ProdukQuerySchema.parse(req.query);
       const scope = req.accessScope as AccessScope | undefined;
+      
       if (!scope) {
         return res.status(401).json({
           success: false,
           message: 'Access scope tidak tersedia'
         });
       }
+
       // Tentukan storeId: gunakan scope.storeId jika ada; fallback untuk admin/god
       let effectiveScope = scope;
       if (!scope.storeId && !scope.enforceStore) {
-        const fallback = await ProdukControllerExtended.getStoreIdFromTenant(scope.tenantId);
+        const fallback = await ProdukInventarisController.getStoreIdFromTenant(scope.tenantId);
         if (fallback) effectiveScope = { ...scope, storeId: fallback };
       }
-      const result = await ProdukServiceExtended.getAllProduk(query, effectiveScope);
+      
+      const result = await getAllProduk(query, effectiveScope);
       
       return res.json({
         success: true,
@@ -87,18 +103,21 @@ export class ProdukControllerExtended {
     try {
       const id = String(req.params.id);
       const scope = req.accessScope as AccessScope | undefined;
+      
       if (!scope) {
         return res.status(401).json({
           success: false,
           message: 'Access scope tidak tersedia'
         });
       }
+      
       let effectiveScope = scope;
       if (!scope.storeId && !scope.enforceStore) {
-        const fallback = await ProdukControllerExtended.getStoreIdFromTenant(scope.tenantId);
+        const fallback = await ProdukInventarisController.getStoreIdFromTenant(scope.tenantId);
         if (fallback) effectiveScope = { ...scope, storeId: fallback };
       }
-      const produk = await ProdukServiceExtended.getProdukById(id, effectiveScope);
+      
+      const produk = await getProdukById(id, effectiveScope);
       
       if (!produk) {
         return res.status(404).json({
@@ -125,10 +144,15 @@ export class ProdukControllerExtended {
     try {
       const data = CreateProdukSchema.parse(req.body);
       const scope = req.accessScope as AccessScope | undefined;
+      
       if (!scope) {
-        return res.status(401).json({ success: false, message: 'Access scope tidak tersedia' });
+        return res.status(401).json({ 
+          success: false, 
+          message: 'Access scope tidak tersedia' 
+        });
       }
-      const produk = await ProdukServiceExtended.createProduk(data, scope);
+      
+      const produk = await createProduk(data, scope);
       
       return res.status(201).json({
         success: true,
@@ -156,13 +180,17 @@ export class ProdukControllerExtended {
   static async updateProduk(req: Request, res: Response) {
     try {
       const id = String(req.params.id);
-      
       const data = UpdateProdukSchema.parse({ ...req.body, id });
       const scope = req.accessScope as AccessScope | undefined;
+      
       if (!scope) {
-        return res.status(401).json({ success: false, message: 'Access scope tidak tersedia' });
+        return res.status(401).json({ 
+          success: false, 
+          message: 'Access scope tidak tersedia' 
+        });
       }
-      const produk = await ProdukServiceExtended.updateProduk(data, scope);
+      
+      const produk = await updateProduk(data, scope);
       
       return res.json({
         success: true,
@@ -191,10 +219,15 @@ export class ProdukControllerExtended {
     try {
       const id = String(req.params.id);
       const scope = req.accessScope as AccessScope | undefined;
+      
       if (!scope) {
-        return res.status(401).json({ success: false, message: 'Access scope tidak tersedia' });
+        return res.status(401).json({ 
+          success: false, 
+          message: 'Access scope tidak tersedia' 
+        });
       }
-      await ProdukServiceExtended.deleteProduk(id, scope);
+      
+      await deleteProduk(id, scope);
       
       return res.json({
         success: true,
@@ -213,23 +246,24 @@ export class ProdukControllerExtended {
   
   static async getInventarisByToko(req: Request, res: Response) {
     try {
+      const page = parseInt(String(req.query.page)) || 1;
+      const limit = parseInt(String(req.query.limit)) || 10;
       const scope = req.accessScope as AccessScope | undefined;
+      
       if (!scope) {
         return res.status(401).json({
           success: false,
           message: 'Access scope tidak tersedia'
         });
       }
-      // Untuk admin/god, fallback toko jika tidak ada storeId dalam scope
+      
       let effectiveScope = scope;
       if (!scope.storeId && !scope.enforceStore) {
-        const fallback = await ProdukControllerExtended.getStoreIdFromTenant(scope.tenantId);
+        const fallback = await ProdukInventarisController.getStoreIdFromTenant(scope.tenantId);
         if (fallback) effectiveScope = { ...scope, storeId: fallback };
       }
-      const page = parseInt(req.query.page as string) || 1;
-      const limit = parseInt(req.query.limit as string) || 10;
       
-      const result = await ProdukServiceExtended.getInventarisByToko(effectiveScope, page, limit);
+      const result = await getInventarisByToko(effectiveScope, page, limit);
       
       return res.json({
         success: true,
@@ -238,7 +272,8 @@ export class ProdukControllerExtended {
           page,
           limit,
           total: result.total,
-          totalPages: result.totalPages
+          totalPages: result.totalPages,
+          hasNextPage: page < result.totalPages
         },
         message: 'Data inventaris berhasil diambil'
       });
@@ -253,32 +288,22 @@ export class ProdukControllerExtended {
 
   static async upsertInventaris(req: Request, res: Response) {
     try {
+      const data = CreateInventarisSchema.parse(req.body);
       const scope = req.accessScope as AccessScope | undefined;
+      
       if (!scope) {
         return res.status(401).json({
           success: false,
           message: 'Access scope tidak tersedia'
         });
       }
-      const storeId = scope.storeId;
-      if (!storeId && scope.enforceStore) {
-        return res.status(400).json({ success: false, message: 'tokoId diperlukan' });
-      }
-      const effectiveStoreId = storeId || (await ProdukControllerExtended.getStoreIdFromTenant(scope.tenantId));
-      if (!effectiveStoreId) {
-        return res.status(404).json({ success: false, message: 'Toko tidak ditemukan untuk tenant ini' });
-      }
-      const data = CreateInventarisSchema.parse({
-        ...req.body,
-        id_toko: effectiveStoreId
-      });
       
-      const inventaris = await ProdukServiceExtended.upsertInventaris(data, scope);
+      const inventaris = await upsertInventaris(data, scope);
       
       return res.json({
         success: true,
         data: inventaris,
-        message: 'Inventaris berhasil disimpan'
+        message: 'Inventaris berhasil diperbarui'
       });
     } catch (error: any) {
       logger.error({ error }, 'Error in upsertInventaris');
@@ -301,26 +326,21 @@ export class ProdukControllerExtended {
   static async updateStok(req: Request, res: Response) {
     try {
       const productId = String(req.params.productId);
-      const { jumlah } = req.body;
-      
-      if (typeof jumlah !== 'number' || jumlah < 0) {
-        return res.status(400).json({
-          success: false,
-          message: 'Parameter tidak valid'
-        });
-      }
-      
+      const { stok } = req.body;
       const scope = req.accessScope as AccessScope | undefined;
+      
       if (!scope) {
         return res.status(401).json({
           success: false,
           message: 'Access scope tidak tersedia'
         });
       }
-      await ProdukServiceExtended.updateStok(scope, productId, jumlah);
+      
+      const inventaris = await updateStok(scope, productId, stok);
       
       return res.json({
         success: true,
+        data: inventaris,
         message: 'Stok berhasil diperbarui'
       });
     } catch (error: any) {
@@ -334,24 +354,17 @@ export class ProdukControllerExtended {
 
   static async deleteInventaris(req: Request, res: Response) {
     try {
-      const { productId } = req.params;
-      
-      if (!productId) {
-        return res.status(400).json({
-          success: false,
-          message: 'Product ID is required'
-        });
-      }
-      
+      const productId = String(req.params.productId);
       const scope = req.accessScope as AccessScope | undefined;
+      
       if (!scope) {
         return res.status(401).json({
           success: false,
           message: 'Access scope tidak tersedia'
         });
       }
-      logger.info({ storeId: scope.storeId, productId }, 'Attempting to delete inventaris');
-      await ProdukServiceExtended.deleteInventaris(scope, productId);
+      
+      await deleteInventaris(scope, productId);
       
       return res.json({
         success: true,

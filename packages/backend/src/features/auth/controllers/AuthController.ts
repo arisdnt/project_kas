@@ -75,7 +75,7 @@ export class AuthController {
       const user = await AuthService.createUser(userData);
       
       // Remove password from response
-      const { password, ...userResponse } = user;
+      const { password_hash, ...userResponse } = user;
       
       return res.status(201).json({
         success: true,
