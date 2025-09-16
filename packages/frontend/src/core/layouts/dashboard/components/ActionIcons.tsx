@@ -1,4 +1,5 @@
 import { Calculator, Maximize, RefreshCw } from 'lucide-react';
+import { useState } from 'react';
 
 type Props = {
   isFullscreen: boolean;
@@ -8,14 +9,26 @@ type Props = {
 };
 
 export function ActionIcons({ isFullscreen, onToggleFullscreen, onOpenCalculator, onRefresh }: Props) {
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    onRefresh();
+
+    // Reset animation after a short delay
+    setTimeout(() => {
+      setIsRefreshing(false);
+    }, 1000);
+  };
   return (
     <>
       <button
-        onClick={onRefresh}
-        className="hidden md:flex p-2 text-blue-500 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors"
+        onClick={handleRefresh}
+        disabled={isRefreshing}
+        className="hidden md:flex p-2 text-blue-500 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors disabled:opacity-50"
         title="Refresh Data"
       >
-        <RefreshCw className="h-5 w-5" />
+        <RefreshCw className={`h-5 w-5 transition-transform ${isRefreshing ? 'animate-spin' : ''}`} />
       </button>
 
       <button

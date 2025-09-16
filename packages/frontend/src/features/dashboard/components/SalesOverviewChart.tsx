@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import * as Tabs from '@radix-ui/react-tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/core/components/ui/card';
 import {
@@ -13,25 +13,17 @@ import {
   BarChart,
   Bar,
 } from 'recharts';
+import { DashboardService, FilterPeriode, BackendCategoryPerformance } from '@/features/dashboard/services/dashboardService';
+import { useAuthStore } from '@/core/store/authStore';
 
 type RangeKey = '7h' | '30h';
 
-const sampleData: Record<RangeKey, { label: string; revenue: number; transactions: number }[]> = {
-  '7h': [
-    { label: 'Sen', revenue: 3500000, transactions: 48 },
-    { label: 'Sel', revenue: 4200000, transactions: 54 },
-    { label: 'Rab', revenue: 3900000, transactions: 51 },
-    { label: 'Kam', revenue: 4700000, transactions: 62 },
-    { label: 'Jum', revenue: 5200000, transactions: 71 },
-    { label: 'Sab', revenue: 6100000, transactions: 80 },
-    { label: 'Min', revenue: 4400000, transactions: 57 },
-  ],
-  '30h': Array.from({ length: 30 }).map((_, i) => ({
-    label: `${i + 1}`,
-    revenue: Math.round(3000000 + Math.random() * 4000000),
-    transactions: Math.round(40 + Math.random() * 50),
-  })),
-};
+interface ChartData {
+  label: string;
+  revenue: number;
+  transactions: number;
+  date?: string;
+}
 
 interface SalesOverviewChartProps {
   title?: string;
@@ -39,7 +31,76 @@ interface SalesOverviewChartProps {
 
 export function SalesOverviewChart({ title = 'Ringkasan Penjualan' }: SalesOverviewChartProps) {
   const [range, setRange] = useState<RangeKey>('7h');
-  const data = sampleData[range];
+  const [chartData, setChartData] = useState<Record<RangeKey, ChartData[]>>({
+    '7h': [],
+    '30h': []
+  });
+  const [loading, setLoading] = useState(true);
+  const { user } = useAuthStore();
+
+  useEffect(() => {
+    const loadChartData = async () => {
+      if (!user?.tokoId) return;
+
+      try {
+        setLoading(true);
+
+        // Load data for both ranges
+        const [sevenDayData, thirtyDayData] = await Promise.all([
+          DashboardService.getChartPenjualan({
+            tipeFilter: 'minggu_ini',
+            storeId: user.tokoId
+          }),
+          DashboardService.getChartPenjualan({
+            tipeFilter: 'bulan_berjalan',
+            storeId: user.tokoId
+          })
+        ]);
+
+        setChartData({
+          '7h': sevenDayData || [],
+          '30h': thirtyDayData || []
+        });
+      } catch (error) {
+        console.error('Error loading chart data:', error);
+        // Fallback to empty data
+        setChartData({ '7h': [], '30h': [] });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadChartData();
+  }, [user?.tokoId]);
+
+  const data = chartData[range];
+
+  if (loading) {
+    return (
+      <Card className="h-full">
+        <CardHeader className="pb-4">
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-base sm:text-lg">{title}</CardTitle>
+            <Tabs.Root value={range} onValueChange={(v) => setRange(v as RangeKey)}>
+              <Tabs.List className="inline-flex gap-1 rounded-md bg-gray-100 p-1">
+                <Tabs.Trigger value="7h" className={`px-2.5 py-1.5 text-xs font-medium rounded ${range === '7h' ? 'bg-white shadow text-gray-900' : 'text-gray-600'}`}>
+                  7 Hari
+                </Tabs.Trigger>
+                <Tabs.Trigger value="30h" className={`px-2.5 py-1.5 text-xs font-medium rounded ${range === '30h' ? 'bg-white shadow text-gray-900' : 'text-gray-600'}`}>
+                  30 Hari
+                </Tabs.Trigger>
+              </Tabs.List>
+            </Tabs.Root>
+          </div>
+        </CardHeader>
+        <CardContent className="pt-0">
+          <div className="h-72 flex items-center justify-center">
+            <div className="text-gray-500">Memuat data penjualan...</div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card className="h-full">
@@ -75,26 +136,81 @@ export function SalesOverviewChart({ title = 'Ringkasan Penjualan' }: SalesOverv
         <div className="mt-4 grid grid-cols-2 gap-3">
           <div className="text-sm text-gray-600">
             <div className="font-semibold text-gray-900">Total Pendapatan</div>
-            <div className="mt-0.5">Rp{data.reduce((acc, d) => acc + d.revenue, 0).toLocaleString('id-ID')}</div>
+            <div className="mt-0.5">
+              {data.length > 0 ?
+                `Rp${data.reduce((acc, d) => acc + d.revenue, 0).toLocaleString('id-ID')}` :
+                'Rp0'
+              }
+            </div>
           </div>
           <div className="text-sm text-gray-600">
             <div className="font-semibold text-gray-900">Total Transaksi</div>
-            <div className="mt-0.5">{data.reduce((acc, d) => acc + d.transactions, 0)}</div>
+            <div className="mt-0.5">
+              {data.length > 0 ?
+                data.reduce((acc, d) => acc + d.transactions, 0) :
+                0
+              }
+            </div>
           </div>
         </div>
+        {data.length === 0 && !loading && (
+          <div className="text-center text-gray-500 mt-4">
+            Tidak ada data penjualan untuk periode ini
+          </div>
+        )}
       </CardContent>
     </Card>
   );
 }
 
 export function CategorySalesChart() {
-  const data = [
-    { category: 'Makanan', value: 420 },
-    { category: 'Minuman', value: 310 },
-    { category: 'Kebutuhan Rumah', value: 190 },
-    { category: 'Perawatan', value: 140 },
-    { category: 'Lainnya', value: 75 },
-  ];
+  const [categoryData, setCategoryData] = useState<{ category: string; value: number }[]>([]);
+  const [loading, setLoading] = useState(true);
+  const { user } = useAuthStore();
+
+  useEffect(() => {
+    const loadCategoryData = async () => {
+      if (!user?.tokoId) return;
+
+      try {
+        setLoading(true);
+        const data = await DashboardService.getCategoryPerformance({
+          tipeFilter: 'bulan_berjalan',
+          storeId: user.tokoId
+        });
+
+        const formattedData = data.map(item => ({
+          category: item.category_name,
+          value: item.quantity_sold
+        }));
+
+        setCategoryData(formattedData);
+      } catch (error) {
+        console.error('Error loading category data:', error);
+        // Fallback to empty data
+        setCategoryData([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadCategoryData();
+  }, [user?.tokoId]);
+
+  if (loading) {
+    return (
+      <Card className="h-full">
+        <CardHeader className="pb-4">
+          <CardTitle className="text-base sm:text-lg">Penjualan per Kategori</CardTitle>
+        </CardHeader>
+        <CardContent className="pt-0">
+          <div className="h-72 flex items-center justify-center">
+            <div className="text-gray-500">Memuat data kategori...</div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card className="h-full">
@@ -104,7 +220,7 @@ export function CategorySalesChart() {
       <CardContent className="pt-0">
         <div className="h-72">
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={data} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
+            <BarChart data={categoryData} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="category" tick={{ fontSize: 12 }} />
               <YAxis tick={{ fontSize: 12 }} />
@@ -113,6 +229,11 @@ export function CategorySalesChart() {
             </BarChart>
           </ResponsiveContainer>
         </div>
+        {categoryData.length === 0 && !loading && (
+          <div className="text-center text-gray-500 mt-4">
+            Tidak ada data kategori untuk periode ini
+          </div>
+        )}
       </CardContent>
     </Card>
   );

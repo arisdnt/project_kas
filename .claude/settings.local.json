@@ -18,7 +18,8 @@
       "mcp__mysql__mysql_query",
       "Bash(find:*)",
       "Bash(timeout:*)",
-      "Bash(rm:*)"
+      "Bash(rm:*)",
+      "Bash(grep:*)"
     ],
     "deny": [],
     "ask": []

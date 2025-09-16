@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect } from 'react'
+import { useMemo, useState, useEffect, useCallback } from 'react'
 import { PackagePlus } from 'lucide-react'
 import { ProdukToolbar } from '@/features/produk/components/ProdukToolbar'
 import { ProdukTable } from '@/features/produk/components/ProdukTable'
@@ -8,6 +8,7 @@ import { ProductEditSidebar, ProductFormData } from '@/core/components/ui/produc
 import { Button } from '@/core/components/ui/button'
 import { useProdukRealtime } from '@/features/produk/hooks/useProdukRealtime'
 import { useToast } from '@/core/hooks/use-toast'
+import { useDataRefresh } from '@/core/hooks/useDataRefresh'
 
 export function ProdukPage() {
   const { createProduk, updateProduk, loadMasterData } = useProdukStore()
@@ -15,6 +16,14 @@ export function ProdukPage() {
 
   // Realtime subscription (no-ops if server doesn't emit yet)
   useProdukRealtime()
+
+  // Refresh handler untuk navbar refresh button
+  const handleRefresh = useCallback(async () => {
+    await loadMasterData()
+  }, [loadMasterData])
+
+  // Hook untuk menangani refresh data
+  useDataRefresh(handleRefresh)
 
   // Load master data on component mount
   useEffect(() => {

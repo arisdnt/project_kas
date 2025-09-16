@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { KPIStatCard } from '@/features/dashboard/components/KPIStatCard';
 import { SalesOverviewChart, CategorySalesChart } from '@/features/dashboard/components/SalesOverviewChart';
 import { RecentTransactionsTable } from '@/features/dashboard/components/RecentTransactionsTable';
@@ -7,6 +7,7 @@ import { DollarSign, ShoppingCart, Users, Package } from 'lucide-react';
 import { DashboardService, KPIData, TransaksiTerbaru, ProdukTerlaris, FilterPeriode } from '@/features/dashboard/services/dashboardService';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/core/components/ui/select';
 import { useAuthStore } from '@/core/store/authStore';
+import { useDataRefresh } from '@/core/hooks/useDataRefresh';
 
 export function DashboardPage() {
   // State untuk data dashboard
@@ -21,16 +22,16 @@ export function DashboardPage() {
   const { user } = useAuthStore();
 
   // Fungsi untuk memuat data dashboard
-  const loadDashboardData = async () => {
+  const loadDashboardData = useCallback(async () => {
      // Pastikan user sudah login dan memiliki tokoId
      if (!user?.tokoId) {
        setError('Data toko tidak tersedia. Silakan login ulang.');
        return;
      }
-     
+
      setLoading(true);
      setError(null);
-     
+
      try {
        const filterData: FilterPeriode = {
          tipeFilter: filter,
@@ -54,14 +55,17 @@ export function DashboardPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [filter, user?.tokoId]);
+
+  // Hook untuk menangani refresh data
+  useDataRefresh(loadDashboardData);
 
   // Load data saat komponen mount, filter berubah, atau user berubah
   useEffect(() => {
     if (user?.tokoId) {
       loadDashboardData();
     }
-  }, [filter, user?.tokoId]);
+  }, [loadDashboardData, user?.tokoId]);
 
   // Format currency untuk tampilan
   const formatCurrency = (amount: number): string => {
@@ -175,8 +179,8 @@ export function DashboardPage() {
 
       {/* Tables */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4">
-          <RecentTransactionsTable data={transaksiTerbaru} />
-          <TopProductsTable data={produkTerlaris} />
+          <RecentTransactionsTable data={transaksiTerbaru} loading={loading} />
+          <TopProductsTable data={produkTerlaris} loading={loading} />
         </div>
     </div>
   );

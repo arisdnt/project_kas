@@ -20,12 +20,8 @@ export function DashboardLayout() {
   const toggleMobileMenu = () => setIsMobileMenuOpen((v) => !v);
   
   const handleManualRefresh = () => {
-    try {
-      // Broadcast refresh event for components that listen
-      window.dispatchEvent(new CustomEvent('app:refresh'));
-    } catch {}
-    // Fallback full reload
-    window.location.reload();
+    // Broadcast refresh event for components that listen
+    window.dispatchEvent(new CustomEvent('app:refresh'));
   };
 
   return (

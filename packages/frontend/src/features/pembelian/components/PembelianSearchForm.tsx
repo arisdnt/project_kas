@@ -98,7 +98,8 @@ export function PembelianSearchForm({ onLoaded }: Props) {
             value={q}
             onChange={(e) => setQ(e.target.value)}
             onKeyDown={handleKeyDown}
-            onBlur={() => ref.current?.focus()}
+            // HAPUS refocus otomatis agar user bisa klik menu lain
+            // onBlur sebelumnya memaksa fokus kembali sehingga dropdown/ menu lain tidak bisa dipilih
             placeholder="Pindai barcode atau cari produk (nama / SKU)"
             className="pl-9"
           />

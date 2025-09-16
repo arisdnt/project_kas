@@ -101,12 +101,17 @@ export class DashboardAnalyticsService {
         break;
     }
 
+    // NOTE (only_full_group_by): Ekspresi DATE_FORMAT(tanggal, ...) tidak diperbolehkan tanpa agregat
+    // karena kolom 'tanggal' tidak termasuk GROUP BY. Untuk kompatibilitas dengan mode
+    // ONLY_FULL_GROUP_BY, gunakan nilai agregat deterministik (MIN(tanggal)) untuk label.
+    // Hal ini valid karena seluruh baris dalam grup punya periode yang sama sehingga MIN(tanggal)
+    // mewakili tanggal pertama grup.
     const sql = `
       SELECT
-        ${dateGrouping} as period,
-        DATE_FORMAT(tanggal, '${dateFormat}') as label,
-        COUNT(*) as transaction_count,
-        COALESCE(SUM(total), 0) as total_sales
+        ${dateGrouping} AS period,
+        DATE_FORMAT(MIN(tanggal), '${dateFormat}') AS label,
+        COUNT(*) AS transaction_count,
+        COALESCE(SUM(total), 0) AS total_sales
       FROM transaksi_penjualan
       WHERE status = 'completed' AND DATE(tanggal) BETWEEN ? AND ?
     `;
@@ -116,7 +121,8 @@ export class DashboardAnalyticsService {
       storeColumn: 'toko_id'
     });
 
-    const finalSql = `${scopedQuery.sql} GROUP BY ${dateGrouping} ORDER BY period ASC`;
+  // Gunakan alias 'period' dalam GROUP BY untuk konsistensi (MySQL 8 mendukung)
+  const finalSql = `${scopedQuery.sql} GROUP BY period ORDER BY period ASC`;
     const [rows] = await pool.execute<RowDataPacket[]>(finalSql, scopedQuery.params);
 
     return rows.map(row => ({

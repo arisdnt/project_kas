@@ -1,4 +1,16 @@
 import api from '@/core/lib/api';
+
+// NOTE: Tipe generik sederhana untuk tangkap pola response backend
+// Backend relatif konsisten mengembalikan { success, data, message }
+// Komentar dalam Bahasa Indonesia sesuai pedoman repo.
+interface ApiResponse<T = any> {
+  success: boolean;
+  data: T;
+  message?: string;
+  // Beberapa endpoint penjualan kadang mengemas ulang di data.data
+  [key: string]: any; // fallback fleksibel
+}
+
 /**
  * Interface untuk filter periode dashboard
  */
@@ -8,6 +20,16 @@ export interface FilterPeriode {
   tanggalSelesai?: string; // format: YYYY-MM-DD
   limit?: number;
   storeId?: string; // ID toko yang dipilih
+}
+
+/**
+ * Interface untuk backend API filter
+ */
+export interface BackendFilter {
+  start_date: string;
+  end_date: string;
+  limit?: number;
+  group_by?: 'day' | 'week' | 'month' | 'year';
 }
 
 /**
@@ -22,6 +44,27 @@ export interface KPIData {
   pertumbuhanTransaksi: number;
   pertumbuhanProduk: number;
   pertumbuhanPelanggan: number;
+}
+
+/**
+ * Interface untuk backend KPI response
+ */
+export interface BackendKPIResponse {
+  sales: {
+    total_transactions: number;
+    total_sales: number;
+    average_order_value: number;
+    unique_customers: number;
+  };
+  products: {
+    total_products: number;
+    active_products: number;
+    total_categories: number;
+  };
+  inventory: {
+    total_stock: number;
+    low_stock_items: number;
+  };
 }
 
 /**
@@ -50,6 +93,39 @@ export interface ProdukTerlaris {
 }
 
 /**
+ * Interface untuk backend top products response
+ */
+export interface BackendTopProduct {
+  product_id: string;
+  product_name: string;
+  product_code: string;
+  quantity_sold: number;
+  revenue: number;
+  order_count: number;
+}
+
+/**
+ * Interface untuk backend sales chart data
+ */
+export interface BackendSalesChartData {
+  date: string;
+  label: string;
+  transaction_count: number;
+  total_sales: number;
+}
+
+/**
+ * Interface untuk backend category performance
+ */
+export interface BackendCategoryPerformance {
+  category_id: string;
+  category_name: string;
+  product_count: number;
+  quantity_sold: number;
+  revenue: number;
+}
+
+/**
  * Interface untuk response API dashboard
  */
 export interface DashboardResponse<T> {
@@ -71,33 +147,91 @@ export interface DashboardLengkap {
  * Service untuk mengelola data dashboard
  */
 export class DashboardService {
+  // IMPORTANT: baseUrl ApiClient sudah mengandung '/api'
+  // Jadi di sini JANGAN ulangi '/api' agar tidak terjadi double prefix '/api/api'
   private static readonly BASE_URL = '/dashboard';
 
   /**
-   * Membuat query string dari filter periode
+   * Konversi filter frontend ke format backend
    */
-  private static buildQueryString(filter: FilterPeriode): string {
+  private static convertFilterToBackend(filter: FilterPeriode): BackendFilter {
+    const now = new Date();
+    let startDate: Date;
+    let endDate = new Date(now);
+
+    switch (filter.tipeFilter) {
+      case 'hari_ini':
+        startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        break;
+      case 'minggu_ini':
+        const dayOfWeek = now.getDay();
+        startDate = new Date(now.getTime() - (dayOfWeek * 24 * 60 * 60 * 1000));
+        startDate.setHours(0, 0, 0, 0);
+        break;
+      case 'bulan_ini':
+      case 'bulan_berjalan':
+        startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+        break;
+      case 'tahun_ini':
+      case 'tahun_berjalan':
+        startDate = new Date(now.getFullYear(), 0, 1);
+        break;
+      case '3_bulan':
+        startDate = new Date(now.getTime() - (90 * 24 * 60 * 60 * 1000));
+        break;
+      case '6_bulan':
+        startDate = new Date(now.getTime() - (180 * 24 * 60 * 60 * 1000));
+        break;
+      case 'custom':
+        startDate = filter.tanggalMulai ? new Date(filter.tanggalMulai) : new Date(now.getTime() - (30 * 24 * 60 * 60 * 1000));
+        endDate = filter.tanggalSelesai ? new Date(filter.tanggalSelesai) : now;
+        break;
+      default: // 'semua'
+        startDate = new Date(now.getTime() - (365 * 24 * 60 * 60 * 1000)); // 1 year ago
+        break;
+    }
+
+    return {
+      start_date: startDate.toISOString().split('T')[0],
+      end_date: endDate.toISOString().split('T')[0],
+      limit: filter.limit
+    };
+  }
+
+  /**
+   * Membuat query string dari filter periode untuk backend API
+   */
+  private static buildBackendQueryString(filter: BackendFilter): string {
     const params = new URLSearchParams();
-    
-    params.append('tipeFilter', filter.tipeFilter);
-    
-    if (filter.storeId) {
-      params.append('storeId', filter.storeId);
-    }
-    
-    if (filter.tanggalMulai) {
-      params.append('tanggalMulai', filter.tanggalMulai);
-    }
-    
-    if (filter.tanggalSelesai) {
-      params.append('tanggalSelesai', filter.tanggalSelesai);
-    }
-    
+
+    params.append('start_date', filter.start_date);
+    params.append('end_date', filter.end_date);
+
     if (filter.limit) {
       params.append('limit', filter.limit.toString());
     }
-    
+
+    if (filter.group_by) {
+      params.append('group_by', filter.group_by);
+    }
+
     return params.toString();
+  }
+
+  /**
+   * Mengkonversi backend KPI response ke format frontend
+   */
+  private static convertBackendKPIToFrontend(backendData: BackendKPIResponse): KPIData {
+    return {
+      pendapatanHariIni: backendData.sales.total_sales,
+      transaksiHariIni: backendData.sales.total_transactions,
+      produkTerjualHariIni: backendData.products.active_products,
+      pelangganAktifBulanIni: backendData.sales.unique_customers,
+      pertumbuhanPendapatan: 0, // Backend tidak menyediakan data perbandingan, set 0
+      pertumbuhanTransaksi: 0,
+      pertumbuhanProduk: 0,
+      pertumbuhanPelanggan: 0
+    };
   }
 
   /**
@@ -105,35 +239,123 @@ export class DashboardService {
    */
   static async getKPI(filter: FilterPeriode = { tipeFilter: 'semua' }): Promise<KPIData> {
     try {
-      const queryString = this.buildQueryString(filter);
-      const response = await api.get<DashboardResponse<KPIData>>(
-        `${this.BASE_URL}/kpi?${queryString}`
+      const backendFilter = this.convertFilterToBackend(filter);
+      const queryString = this.buildBackendQueryString(backendFilter);
+      const response = await api.get<ApiResponse<BackendKPIResponse>>(
+        `${this.BASE_URL}/kpis/overview?${queryString}`
       );
-      
-      return response.data;
+
+      // Handle API response format
+      if (response.success && response.data) {
+        return this.convertBackendKPIToFrontend(response.data);
+      } else {
+        throw new Error(response.message || 'Failed to fetch KPI data');
+      }
     } catch (error) {
       console.error('Error fetching KPI data:', error);
-      throw error;
+      // Return default values instead of throwing
+      return {
+        pendapatanHariIni: 0,
+        transaksiHariIni: 0,
+        produkTerjualHariIni: 0,
+        pelangganAktifBulanIni: 0,
+        pertumbuhanPendapatan: 0,
+        pertumbuhanTransaksi: 0,
+        pertumbuhanProduk: 0,
+        pertumbuhanPelanggan: 0
+      };
     }
   }
 
   /**
-   * Mendapatkan transaksi terbaru
+   * Mendapatkan transaksi terbaru dari API penjualan
    */
   static async getTransaksiTerbaru(
     filter: FilterPeriode = { tipeFilter: 'semua', limit: 10 }
   ): Promise<TransaksiTerbaru[]> {
     try {
-      const queryString = this.buildQueryString(filter);
-      const response = await api.get<DashboardResponse<TransaksiTerbaru[]>>(
-        `${this.BASE_URL}/transaksi-terbaru?${queryString}`
-      );
-      
-      return response.data;
+      const backendFilter = this.convertFilterToBackend(filter);
+
+      // Menggunakan endpoint penjualan dengan parameter untuk mendapatkan data terbaru
+      const params = new URLSearchParams({
+        limit: (filter.limit || 10).toString(),
+        sort: 'tanggal',
+        order: 'desc',
+        start_date: backendFilter.start_date,
+        end_date: backendFilter.end_date
+      });
+
+  // NOTE: Jangan tambahkan prefix /api lagi karena ApiClient sudah menambahkan /api di baseUrl
+  const response = await api.get<ApiResponse<any>>(`/penjualan?${params.toString()}`);
+
+      if ((response as ApiResponse).success && (response as ApiResponse).data) {
+        const resp = response as ApiResponse;
+        // Beberapa endpoint mengembalikan { data: { data: [...] } } atau { data: [...] }
+        const raw = Array.isArray(resp.data) ? resp.data : (resp.data?.data || []);
+        return this.convertBackendTransactionsToFrontend(raw);
+      } else {
+        console.warn('No transaction data available');
+        return [];
+      }
     } catch (error) {
       console.error('Error fetching recent transactions:', error);
-      throw error;
+      return [];
     }
+  }
+
+  /**
+   * Convert backend transaction format to frontend format
+   */
+  private static convertBackendTransactionsToFrontend(backendTransactions: any[]): TransaksiTerbaru[] {
+    return backendTransactions.map(txn => ({
+      id: txn.id,
+      nomorTransaksi: txn.nomor_transaksi || txn.id,
+      tanggal: txn.tanggal || txn.created_at,
+      total: txn.total || 0,
+      status: this.convertTransactionStatus(txn.status),
+      metodeBayar: this.convertPaymentMethod(txn.metode_bayar),
+      namaPelanggan: txn.nama_pelanggan || txn.pelanggan?.nama
+    }));
+  }
+
+  /**
+   * Convert backend transaction status to frontend format
+   */
+  private static convertTransactionStatus(status: string): string {
+    const statusMap: Record<string, string> = {
+      'completed': 'selesai',
+      'cancelled': 'batal',
+      'refunded': 'refund',
+      'pending': 'pending'
+    };
+    return statusMap[status] || status;
+  }
+
+  /**
+   * Convert backend payment method to frontend format
+   */
+  private static convertPaymentMethod(method: string): string {
+    const methodMap: Record<string, string> = {
+      'cash': 'tunai',
+      'card': 'kartu',
+      'qris': 'qris',
+      'transfer': 'transfer'
+    };
+    return methodMap[method] || method;
+  }
+
+  /**
+   * Mengkonversi backend top products ke format frontend
+   */
+  private static convertBackendTopProductsToFrontend(backendProducts: BackendTopProduct[]): ProdukTerlaris[] {
+    return backendProducts.map(product => ({
+      id: product.product_id,
+      nama: product.product_name,
+      kategori: 'Belum dikategorikan', // Backend tidak mengirim kategori di top products
+      totalTerjual: product.quantity_sold,
+      pendapatan: product.revenue,
+      stokTersisa: 0 // Backend tidak mengirim stok tersisa di top products
+    }));
   }
 
   /**
@@ -143,15 +365,20 @@ export class DashboardService {
     filter: FilterPeriode = { tipeFilter: 'semua', limit: 10 }
   ): Promise<ProdukTerlaris[]> {
     try {
-      const queryString = this.buildQueryString(filter);
-      const response = await api.get<DashboardResponse<ProdukTerlaris[]>>(
-        `${this.BASE_URL}/produk-terlaris?${queryString}`
+      const backendFilter = this.convertFilterToBackend(filter);
+      const queryString = this.buildBackendQueryString(backendFilter);
+      const response = await api.get<ApiResponse<BackendTopProduct[]>>(
+        `${this.BASE_URL}/analytics/top-products?${queryString}`
       );
-      
-      return response.data;
+
+      if (response.success && (response as ApiResponse<BackendTopProduct[]>).data) {
+        return this.convertBackendTopProductsToFrontend((response as ApiResponse<BackendTopProduct[]>).data);
+      } else {
+        throw new Error(response.message || 'Failed to fetch top products');
+      }
     } catch (error) {
       console.error('Error fetching top products:', error);
-      throw error;
+      return [];
     }
   }
 
@@ -175,22 +402,93 @@ export class DashboardService {
   }
 
   /**
-   * Mendapatkan data chart penjualan
+   * Mendapatkan data chart penjualan dari backend API baru
+   */
+  static async getSalesChartData(
+    filter: FilterPeriode = { tipeFilter: 'semua' }
+  ): Promise<BackendSalesChartData[]> {
+    try {
+      const backendFilter = {
+        ...this.convertFilterToBackend(filter),
+        group_by: this.getGroupByFromFilter(filter) as 'day' | 'week' | 'month' | 'year'
+      };
+      const queryString = this.buildBackendQueryString(backendFilter);
+      const response = await api.get<ApiResponse<BackendSalesChartData[]>>(
+        `${this.BASE_URL}/analytics/sales-chart?${queryString}`
+      );
+
+      if (response.success && (response as ApiResponse<BackendSalesChartData[]>).data) {
+        return (response as ApiResponse<BackendSalesChartData[]>).data;
+      } else {
+        throw new Error(response.message || 'Failed to fetch sales chart data');
+      }
+    } catch (error) {
+      console.error('Error fetching sales chart data:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Mendapatkan data performa kategori
+   */
+  static async getCategoryPerformance(
+    filter: FilterPeriode = { tipeFilter: 'semua' }
+  ): Promise<BackendCategoryPerformance[]> {
+    try {
+      const backendFilter = this.convertFilterToBackend(filter);
+      const queryString = this.buildBackendQueryString(backendFilter);
+      const response = await api.get<ApiResponse<BackendCategoryPerformance[]>>(
+        `${this.BASE_URL}/analytics/category-performance?${queryString}`
+      );
+
+      if (response.success && (response as ApiResponse<BackendCategoryPerformance[]>).data) {
+        return (response as ApiResponse<BackendCategoryPerformance[]>).data;
+      } else {
+        throw new Error(response.message || 'Failed to fetch category performance data');
+      }
+    } catch (error) {
+      console.error('Error fetching category performance data:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Mendapatkan group_by berdasarkan tipe filter
+   */
+  private static getGroupByFromFilter(filter: FilterPeriode): string {
+    switch (filter.tipeFilter) {
+      case 'hari_ini':
+      case 'minggu_ini':
+        return 'day';
+      case 'bulan_ini':
+      case 'bulan_berjalan':
+      case '3_bulan':
+        return 'week';
+      case '6_bulan':
+      case 'tahun_ini':
+      case 'tahun_berjalan':
+        return 'month';
+      default:
+        return 'month';
+    }
+  }
+
+  /**
+   * Mendapatkan data chart penjualan (compatibility method)
    */
   static async getChartPenjualan(
     filter: FilterPeriode = { tipeFilter: 'semua' }
   ): Promise<any> {
     try {
-      const queryString = this.buildQueryString(filter);
-      const response = await api.get<DashboardResponse<any>>(
-        `${this.BASE_URL}/chart-penjualan?${queryString}`
-      );
-      
-      if (!response.data.success) {
-        throw new Error(response.data.message || 'Gagal mengambil data chart penjualan');
-      }
-      
-      return response.data.data;
+      const chartData = await this.getSalesChartData(filter);
+
+      // Convert to format expected by frontend components
+      return chartData.map(item => ({
+        label: item.label,
+        revenue: item.total_sales,
+        transactions: item.transaction_count,
+        date: item.date
+      }));
     } catch (error) {
       console.error('Error fetching sales chart data:', error);
       throw error;
@@ -267,5 +565,13 @@ export class DashboardService {
     const endDate = new Date(tanggalSelesai);
     
     return startDate <= endDate && startDate <= new Date();
+  }
+
+  /**
+   * Membangun query string sederhana dari FilterPeriode (fallback lama untuk endpoint lengkap)
+   */
+  private static buildQueryString(filter: FilterPeriode): string {
+    const backendFilter = this.convertFilterToBackend(filter);
+    return this.buildBackendQueryString(backendFilter);
   }
 }

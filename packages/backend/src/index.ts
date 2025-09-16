@@ -130,6 +130,9 @@ import detailUserRoutes from '@/features/profilsaya/routes/profilsayaRoutes';
 import pengaturansayaRoutes from '@/features/pengaturansaya/routes/userRoutes';
 import tenantsayaRoutes from '@/features/tenantsaya/routes/tenantRoutes';
 import tokoSayaRoutes from '@/features/tokosaya/routes/tokoRoutes';
+import kasirRoutes from '@/features/kasir/routes/kasirRoutes';
+import { KasirController } from '@/features/kasir/controllers/KasirController';
+import { KasirSocketService } from '@/features/kasir/services/KasirSocketService';
 
 // Note: Monitoring service not implemented yet
 
@@ -157,6 +160,7 @@ app.use('/api/profilsaya', detailUserRoutes);
 app.use('/api/pengaturansaya', pengaturansayaRoutes);
 app.use('/api/tenantsaya', tenantsayaRoutes);
 app.use('/api/tokosaya', tokoSayaRoutes);
+app.use('/api/kasir', kasirRoutes);
 
 app.get('/api', (req, res) => {
   res.json({
@@ -176,14 +180,37 @@ app.get(['/dashboard', '/dashboard/*', '/'], (req, res) => {
   res.sendFile(path.join(frontendDistPath, 'index.html'));
 });
 
+// Initialize Kasir Socket Service untuk real-time features
+KasirSocketService.initialize(io);
+
+// Set Socket.IO instance di KasirController untuk real-time events
+KasirController.setSocketIO(io);
+
 // Socket.IO connection handling
 io.on('connection', (socket) => {
   logger.info(`Socket connected: ${socket.id}`);
 
-  // Note: Monitoring service not implemented yet
+  // Basic socket events
+  socket.on('ping', () => {
+    socket.emit('pong', { timestamp: new Date().toISOString() });
+  });
 
-  socket.on('disconnect', () => {
-    logger.info(`Socket disconnected: ${socket.id}`);
+  // Join tenant room untuk tenant-wide notifications
+  socket.on('join_tenant', (data: { tenant_id: string }) => {
+    const tenantRoom = `tenant_${data.tenant_id}`;
+    socket.join(tenantRoom);
+    logger.info(`Socket ${socket.id} joined tenant room: ${tenantRoom}`);
+  });
+
+  // Leave tenant room
+  socket.on('leave_tenant', (data: { tenant_id: string }) => {
+    const tenantRoom = `tenant_${data.tenant_id}`;
+    socket.leave(tenantRoom);
+    logger.info(`Socket ${socket.id} left tenant room: ${tenantRoom}`);
+  });
+
+  socket.on('disconnect', (reason) => {
+    logger.info(`Socket disconnected: ${socket.id}, reason: ${reason}`);
   });
 });
 

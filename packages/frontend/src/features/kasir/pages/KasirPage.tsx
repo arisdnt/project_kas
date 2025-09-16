@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useCallback } from 'react'
 import { Card, CardContent } from '@/core/components/ui/card'
 import { CartTable } from '@/features/kasir/components/CartTable'
 import { ProductSearchForm } from '@/features/kasir/components/ProductSearchForm'
@@ -7,6 +7,7 @@ import { useKasirStore } from '@/features/kasir/store/kasirStore'
 import { useProdukStore } from '@/features/produk/store/produkStore'
 import { useAuthStore } from '@/core/store/authStore'
 import { Barcode } from 'lucide-react'
+import { useDataRefresh } from '@/core/hooks/useDataRefresh'
 
 export function KasirPage() {
   const containerRef = useRef<HTMLDivElement>(null)
@@ -16,6 +17,14 @@ export function KasirPage() {
   const produkLoading = useProdukStore((s) => s.loading)
   const produkItems = useProdukStore((s) => s.items)
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
+
+  // Refresh handler untuk navbar refresh button
+  const handleRefresh = useCallback(async () => {
+    await loadFirst()
+  }, [loadFirst])
+
+  // Hook untuk menangani refresh data
+  useDataRefresh(handleRefresh)
 
   useEffect(() => {
     // Load produk minimal untuk kebutuhan pencarian lokal (nama/SKU)
