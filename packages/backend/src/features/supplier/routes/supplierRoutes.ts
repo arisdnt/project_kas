@@ -5,42 +5,45 @@
 
 import { Router } from 'express';
 import { SupplierController } from '../controllers/SupplierController';
+import { authenticate, requirePermission } from '@/features/auth/middleware/authMiddleware';
 import { attachAccessScope } from '@/core/middleware/accessScope';
+import { PERMISSIONS } from '@/features/auth/models/User';
 
 const router = Router();
 
-// Apply access scope to all routes
+// Apply common middleware
+router.use(authenticate);
 router.use(attachAccessScope);
 
 // Search and retrieval routes
-router.get('/search', SupplierController.searchSuppliers);
-router.get('/active', SupplierController.getActiveSuppliers);
-router.get('/performance/report', SupplierController.getPerformanceReport);
-router.get('/performance/top', SupplierController.getTopSuppliers);
-router.get('/attention', SupplierController.getSuppliersNeedingAttention);
+router.get('/search', requirePermission(PERMISSIONS.PRODUCT_READ), SupplierController.searchSuppliers);
+router.get('/active', requirePermission(PERMISSIONS.PRODUCT_READ), SupplierController.getActiveSuppliers);
+router.get('/performance/report', requirePermission(PERMISSIONS.REPORT_READ), SupplierController.getPerformanceReport);
+router.get('/performance/top', requirePermission(PERMISSIONS.REPORT_READ), SupplierController.getTopSuppliers);
+router.get('/attention', requirePermission(PERMISSIONS.PRODUCT_READ), SupplierController.getSuppliersNeedingAttention);
 
 // Individual supplier routes
-router.get('/:id', SupplierController.findSupplierById);
-router.get('/:id/profile', SupplierController.getSupplierWithFullProfile);
-router.get('/:id/stats', SupplierController.getSupplierStats);
-router.get('/:id/history', SupplierController.getPurchaseHistory);
-router.get('/:id/products', SupplierController.getSupplierProducts);
-router.get('/:id/contacts', SupplierController.getContactLogs);
-router.get('/:id/payment-terms', SupplierController.getPaymentTerms);
+router.get('/:id', requirePermission(PERMISSIONS.PRODUCT_READ), SupplierController.findSupplierById);
+router.get('/:id/profile', requirePermission(PERMISSIONS.PRODUCT_READ), SupplierController.getSupplierWithFullProfile);
+router.get('/:id/stats', requirePermission(PERMISSIONS.PRODUCT_READ), SupplierController.getSupplierStats);
+router.get('/:id/history', requirePermission(PERMISSIONS.PRODUCT_READ), SupplierController.getPurchaseHistory);
+router.get('/:id/products', requirePermission(PERMISSIONS.PRODUCT_READ), SupplierController.getSupplierProducts);
+router.get('/:id/contacts', requirePermission(PERMISSIONS.PRODUCT_READ), SupplierController.getContactLogs);
+router.get('/:id/payment-terms', requirePermission(PERMISSIONS.PRODUCT_READ), SupplierController.getPaymentTerms);
 
 // Creation and modification routes
-router.post('/', SupplierController.createSupplier);
-router.put('/:id', SupplierController.updateSupplier);
-router.delete('/:id', SupplierController.deleteSupplier);
+router.post('/', requirePermission(PERMISSIONS.PRODUCT_CREATE), SupplierController.createSupplier);
+router.put('/:id', requirePermission(PERMISSIONS.PRODUCT_UPDATE), SupplierController.updateSupplier);
+router.delete('/:id', requirePermission(PERMISSIONS.PRODUCT_DELETE), SupplierController.deleteSupplier);
 
 // Bulk operations
-router.post('/bulk', SupplierController.bulkSupplierAction);
-router.post('/import', SupplierController.importSuppliers);
+router.post('/bulk', requirePermission(PERMISSIONS.PRODUCT_UPDATE), SupplierController.bulkSupplierAction);
+router.post('/import', requirePermission(PERMISSIONS.PRODUCT_CREATE), SupplierController.importSuppliers);
 
 // Supplier management operations
-router.post('/:id/rate', SupplierController.rateSupplier);
-router.post('/:id/follow-up', SupplierController.scheduleFollowUp);
-router.post('/payment-terms', SupplierController.createPaymentTerms);
-router.post('/contact-log', SupplierController.logContact);
+router.post('/:id/rate', requirePermission(PERMISSIONS.PRODUCT_UPDATE), SupplierController.rateSupplier);
+router.post('/:id/follow-up', requirePermission(PERMISSIONS.PRODUCT_UPDATE), SupplierController.scheduleFollowUp);
+router.post('/payment-terms', requirePermission(PERMISSIONS.PRODUCT_CREATE), SupplierController.createPaymentTerms);
+router.post('/contact-log', requirePermission(PERMISSIONS.PRODUCT_CREATE), SupplierController.logContact);
 
 export default router;

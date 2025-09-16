@@ -139,20 +139,33 @@ export class MasterDataService {
   }
 
   // Brand operations
+  // Brand operations
   static async getBrands(scope: AccessScope) {
-    const sql = `
-      SELECT id, nama, deskripsi, logo_url, website, status
+    let sql = `
+      SELECT id, tenant_id, toko_id, nama, deskripsi, logo_url, website, status, dibuat_pada, diperbarui_pada
       FROM brand
       WHERE status = 'aktif'
-      ORDER BY nama ASC
     `;
+    let params: any[] = [];
 
-    const scopedQuery = applyScopeToSql(sql, [], scope, {
-      tenantColumn: 'tenant_id',
-      storeColumn: 'toko_id'
-    });
+    // Tambahkan filter tenant jika diperlukan
+    if (scope.enforceTenant) {
+      sql += ` AND tenant_id = ?`;
+      params.push(scope.tenantId);
+    }
 
-    const [rows] = await pool.execute<RowDataPacket[]>(scopedQuery.sql, scopedQuery.params);
+    // Tambahkan filter toko jika diperlukan
+    if (scope.enforceStore && scope.storeId) {
+      sql += ` AND toko_id = ?`;
+      params.push(scope.storeId);
+    }
+
+    sql += ` ORDER BY nama ASC`;
+
+    console.log('Generated SQL for brands:', sql);
+    console.log('SQL Params for brands:', params);
+
+    const [rows] = await pool.execute<RowDataPacket[]>(sql, params);
     return rows as any[];
   }
 
@@ -248,19 +261,31 @@ export class MasterDataService {
 
   // Supplier operations
   static async getSuppliers(scope: AccessScope) {
-    const sql = `
-      SELECT id, nama, kontak_person, telepon, email, status
+    let sql = `
+      SELECT id, tenant_id, toko_id, nama, kontak_person, telepon, email, alamat, status, dibuat_pada, diperbarui_pada
       FROM supplier
       WHERE status = 'aktif'
-      ORDER BY nama ASC
     `;
+    let params: any[] = [];
 
-    const scopedQuery = applyScopeToSql(sql, [], scope, {
-      tenantColumn: 'tenant_id',
-      storeColumn: 'toko_id'
-    });
+    // Tambahkan filter tenant jika diperlukan
+    if (scope.enforceTenant) {
+      sql += ` AND tenant_id = ?`;
+      params.push(scope.tenantId);
+    }
 
-    const [rows] = await pool.execute<RowDataPacket[]>(scopedQuery.sql, scopedQuery.params);
+    // Tambahkan filter toko jika diperlukan
+    if (scope.enforceStore && scope.storeId) {
+      sql += ` AND toko_id = ?`;
+      params.push(scope.storeId);
+    }
+
+    sql += ` ORDER BY nama ASC`;
+
+    console.log('Generated SQL for suppliers:', sql);
+    console.log('SQL Params for suppliers:', params);
+
+    const [rows] = await pool.execute<RowDataPacket[]>(sql, params);
     return rows as any[];
   }
 

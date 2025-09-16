@@ -87,11 +87,12 @@ export class TransaksiQueryService {
         tp.diskon_nominal, tp.pajak_persen, tp.pajak_nominal, tp.total,
         tp.bayar, tp.kembalian, tp.metode_bayar, tp.status, tp.catatan,
         p.nama as pelanggan_nama, p.telepon as pelanggan_telepon,
-        u.nama_lengkap as kasir_nama,
+        du.nama_lengkap as kasir_nama,
         t.nama as toko_nama
       FROM transaksi_penjualan tp
       LEFT JOIN pelanggan p ON tp.pelanggan_id = p.id
-      LEFT JOIN users u ON tp.pengguna_id = u.id
+      LEFT JOIN users ON tp.pengguna_id = users.id
+      LEFT JOIN detail_user du ON users.id = du.user_id
       LEFT JOIN toko t ON tp.toko_id = t.id
       ${baseWhere}
     `;
@@ -117,11 +118,12 @@ export class TransaksiQueryService {
       SELECT
         tp.*,
         p.nama as pelanggan_nama, p.email as pelanggan_email, p.telepon as pelanggan_telepon,
-        u.nama_lengkap as kasir_nama,
+        du.nama_lengkap as kasir_nama,
         t.nama as toko_nama, t.alamat as toko_alamat
       FROM transaksi_penjualan tp
       LEFT JOIN pelanggan p ON tp.pelanggan_id = p.id
-      LEFT JOIN users u ON tp.pengguna_id = u.id
+      LEFT JOIN users ON tp.pengguna_id = users.id
+      LEFT JOIN detail_user du ON users.id = du.user_id
       LEFT JOIN toko t ON tp.toko_id = t.id
       WHERE tp.id = ?
     `;

@@ -72,8 +72,8 @@ export class SupplierQueryService {
     const total = countRows[0].total;
 
     // Get paginated results
-    const finalSql = `${scopedQuery.sql} ORDER BY s.nama ASC LIMIT ? OFFSET ?`;
-    const finalParams = [...scopedQuery.params, Number(query.limit), offset];
+    const finalSql = `${scopedQuery.sql} ORDER BY s.nama ASC LIMIT ${Number(query.limit)} OFFSET ${offset}`;
+    const finalParams = [...scopedQuery.params];
 
     const [rows] = await pool.execute<RowDataPacket[]>(finalSql, finalParams);
 

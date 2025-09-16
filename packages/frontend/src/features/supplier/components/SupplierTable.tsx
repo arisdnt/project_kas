@@ -39,6 +39,7 @@ export function SupplierTable({ onView, onEdit }: Props) {
           <td className="px-4 py-3"><div className="h-3.5 bg-gray-200 rounded w-32" /></td>
           <td className="px-4 py-3"><div className="h-3.5 bg-gray-200 rounded w-48" /></td>
           <td className="px-4 py-3"><div className="h-3.5 bg-gray-200 rounded w-32" /></td>
+          <td className="px-4 py-3"><div className="h-5 bg-gray-200 rounded w-16" /></td>
           <td className="px-4 py-3"><div className="h-6 bg-gray-200 rounded w-28" /></td>
         </tr>
       ))}
@@ -61,6 +62,7 @@ export function SupplierTable({ onView, onEdit }: Props) {
                 <th className="px-4 py-3 font-medium">Kontak</th>
                 <th className="px-4 py-3 font-medium">Email</th>
                 <th className="px-4 py-3 font-medium">Telepon</th>
+                <th className="px-4 py-3 font-medium">Status</th>
                 <th className="px-4 py-3 font-medium">Aksi</th>
               </tr>
             </thead>
@@ -74,6 +76,17 @@ export function SupplierTable({ onView, onEdit }: Props) {
                   <td className="px-4 py-3 text-gray-700">{s.kontak_person || '-'}</td>
                   <td className="px-4 py-3 text-gray-700">{s.email || '-'}</td>
                   <td className="px-4 py-3 text-gray-700">{s.telepon || '-'}</td>
+                  <td className="px-4 py-3">
+                    {s.status && (
+                      <span className={`px-2 py-1 rounded text-xs font-medium ${
+                        s.status === 'aktif' ? 'bg-green-100 text-green-800' :
+                        s.status === 'nonaktif' ? 'bg-gray-100 text-gray-800' :
+                        'bg-red-100 text-red-800'
+                      }`}>
+                        {s.status.charAt(0).toUpperCase() + s.status.slice(1)}
+                      </span>
+                    )}
+                  </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2">
                       <Button variant="ghost" size="sm" onClick={() => onView(s)} className="text-blue-600 hover:text-blue-700 hover:bg-blue-50">

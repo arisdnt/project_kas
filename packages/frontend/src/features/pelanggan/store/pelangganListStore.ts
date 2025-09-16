@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import { devtools } from 'zustand/middleware'
 import { useAuthStore } from '@/core/store/authStore'
-import { UIPelanggan } from '@/features/pelanggan/store/pelangganStore'
+import { UIPelanggan } from '@/features/pelanggan/types/pelanggan'
 import { config } from '@/core/config'
 
 type PelangganListState = {

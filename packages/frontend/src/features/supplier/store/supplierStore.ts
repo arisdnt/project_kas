@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { devtools } from 'zustand/middleware'
-import { UISupplier } from '@/features/supplier/types/supplier'
+import { UISupplier, SupplierStats, SupplierPurchaseHistory, SupplierProduct } from '@/features/supplier/types/supplier'
 import { useAuthStore } from '@/core/store/authStore'
 import { config } from '@/core/config'
 
@@ -8,22 +8,30 @@ type SupplierState = {
   items: UISupplier[]
   page: number
   limit: number
+  totalPages: number
+  total: number
   hasNext: boolean
   loading: boolean
   error?: string
   search: string
+  statusFilter?: 'aktif' | 'nonaktif' | 'blacklist'
 }
 
 type SupplierActions = {
   setSearch: (v: string) => void
+  setStatusFilter: (status?: 'aktif' | 'nonaktif' | 'blacklist') => void
   loadFirst: () => Promise<void>
   loadNext: () => Promise<void>
   createSupplier: (data: Partial<UISupplier> & { nama: string }) => Promise<void>
-  updateSupplier: (id: number, data: Partial<UISupplier> & { nama: string }) => Promise<void>
-  deleteSupplier: (id: number) => Promise<void>
+  updateSupplier: (id: string, data: Partial<UISupplier> & { nama: string }) => Promise<void>
+  deleteSupplier: (id: string) => Promise<void>
+  getSupplierStats: (id: string) => Promise<SupplierStats>
+  getSupplierHistory: (id: string, limit?: number) => Promise<SupplierPurchaseHistory[]>
+  getSupplierProducts: (id: string) => Promise<SupplierProduct[]>
+  getActiveSuppliers: () => Promise<UISupplier[]>
 }
 
-const API_BASE = `${config.api.url}:${config.api.port}/api/produk/supplier`
+const API_BASE = `${config.api.url}:${config.api.port}/api/supplier`
 
 const authHeaders = () => {
   const token = useAuthStore.getState().token
@@ -34,11 +42,11 @@ const authHeaders = () => {
 }
 
 function mapResponseData(js: any): { suppliers: UISupplier[]; total?: number; totalPages?: number } {
-  if (js?.data?.suppliers) {
-    return { suppliers: js.data.suppliers as UISupplier[], total: js.data.total, totalPages: js.data.totalPages }
-  }
   if (Array.isArray(js?.data)) {
     return { suppliers: js.data as UISupplier[] }
+  }
+  if (js?.data?.suppliers) {
+    return { suppliers: js.data.suppliers as UISupplier[], total: js.data.total, totalPages: js.data.totalPages }
   }
   return { suppliers: [] }
 }
@@ -48,29 +56,76 @@ export const useSupplierStore = create<SupplierState & SupplierActions>()(
     items: [],
     page: 1,
     limit: 25,
+    totalPages: 1,
+    total: 0,
     hasNext: false,
     loading: false,
     search: '',
 
     setSearch: (v) => set({ search: v }),
+    setStatusFilter: (status) => set({ statusFilter: status }),
 
     loadFirst: async () => {
       set({ loading: true, error: undefined, page: 1 })
       try {
-        const res = await fetch(`${API_BASE}`, { headers: authHeaders() })
+        const { search, statusFilter, limit } = get()
+        const params = new URLSearchParams({
+          page: '1',
+          limit: limit.toString(),
+          ...(search && { search }),
+          ...(statusFilter && { status: statusFilter })
+        })
+
+        const res = await fetch(`${API_BASE}/search?${params}`, { headers: authHeaders() })
         const js = await res.json()
         if (!res.ok || !js.success) throw new Error(js.message || 'Gagal memuat supplier')
-        const { suppliers, totalPages } = mapResponseData(js)
-        const filtered = suppliers.filter((s) => s.nama.toLowerCase().includes(get().search.trim().toLowerCase()))
-        set({ items: filtered, page: 1, hasNext: (totalPages ?? 1) > 1, loading: false })
+
+        const { suppliers } = mapResponseData(js)
+        const pagination = js.pagination || {}
+
+        set({
+          items: suppliers,
+          page: 1,
+          total: pagination.total || 0,
+          totalPages: pagination.totalPages || 1,
+          hasNext: (pagination.totalPages || 1) > 1,
+          loading: false
+        })
       } catch (e: any) {
         set({ loading: false, error: e?.message || 'Terjadi kesalahan' })
       }
     },
 
     loadNext: async () => {
-      // Backend belum expose pagination via query di controller; graceful no-op
-      set({ hasNext: false })
+      const { page, totalPages, loading, hasNext } = get()
+      if (loading || !hasNext || page >= totalPages) return
+
+      set({ loading: true })
+      try {
+        const { search, statusFilter, limit } = get()
+        const params = new URLSearchParams({
+          page: (page + 1).toString(),
+          limit: limit.toString(),
+          ...(search && { search }),
+          ...(statusFilter && { status: statusFilter })
+        })
+
+        const res = await fetch(`${API_BASE}/search?${params}`, { headers: authHeaders() })
+        const js = await res.json()
+        if (!res.ok || !js.success) throw new Error(js.message || 'Gagal memuat supplier')
+
+        const { suppliers } = mapResponseData(js)
+        const pagination = js.pagination || {}
+
+        set({
+          items: [...get().items, ...suppliers],
+          page: page + 1,
+          hasNext: (page + 1) < (pagination.totalPages || 1),
+          loading: false
+        })
+      } catch (e: any) {
+        set({ loading: false, error: e?.message || 'Terjadi kesalahan' })
+      }
     },
 
     createSupplier: async (data) => {
@@ -89,7 +144,7 @@ export const useSupplierStore = create<SupplierState & SupplierActions>()(
       const res = await fetch(`${API_BASE}/${id}`, {
         method: 'PUT',
         headers: authHeaders(),
-        body: JSON.stringify({ ...data, id }),
+        body: JSON.stringify(data),
       })
       const js = await res.json()
       if (!res.ok || !js.success) throw new Error(js.message || 'Gagal mengupdate supplier')
@@ -101,6 +156,35 @@ export const useSupplierStore = create<SupplierState & SupplierActions>()(
       const js = await res.json()
       if (!res.ok || !js.success) throw new Error(js.message || 'Gagal menghapus supplier')
       set({ items: get().items.filter((s) => s.id !== id) })
+    },
+
+    getSupplierStats: async (id) => {
+      const res = await fetch(`${API_BASE}/${id}/stats`, { headers: authHeaders() })
+      const js = await res.json()
+      if (!res.ok || !js.success) throw new Error(js.message || 'Gagal memuat statistik supplier')
+      return js.data as SupplierStats
+    },
+
+    getSupplierHistory: async (id, limit = 50) => {
+      const params = new URLSearchParams({ limit: limit.toString() })
+      const res = await fetch(`${API_BASE}/${id}/history?${params}`, { headers: authHeaders() })
+      const js = await res.json()
+      if (!res.ok || !js.success) throw new Error(js.message || 'Gagal memuat riwayat pembelian')
+      return js.data as SupplierPurchaseHistory[]
+    },
+
+    getSupplierProducts: async (id) => {
+      const res = await fetch(`${API_BASE}/${id}/products`, { headers: authHeaders() })
+      const js = await res.json()
+      if (!res.ok || !js.success) throw new Error(js.message || 'Gagal memuat produk supplier')
+      return js.data as SupplierProduct[]
+    },
+
+    getActiveSuppliers: async () => {
+      const res = await fetch(`${API_BASE}/active`, { headers: authHeaders() })
+      const js = await res.json()
+      if (!res.ok || !js.success) throw new Error(js.message || 'Gagal memuat supplier aktif')
+      return js.data as UISupplier[]
     },
   }))
 )

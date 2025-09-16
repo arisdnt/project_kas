@@ -2,7 +2,7 @@ import { Filters } from '../types'
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/core/components/ui/select'
 import { Input } from '@/core/components/ui/input'
 import { Button } from '@/core/components/ui/button'
-import { Calendar, Download, Printer } from 'lucide-react'
+import { Calendar, Download, Printer, RefreshCw } from 'lucide-react'
 import { useMemo } from 'react'
 
 type Props = {
@@ -11,9 +11,11 @@ type Props = {
   onChange: (patch: Partial<Filters>) => void
   onExport: () => void
   onPrint: () => void
+  onRefresh?: () => void
+  loading?: boolean
 }
 
-export function MovementFilterBar({ filters, cashiers, onChange, onExport, onPrint }: Props) {
+export function MovementFilterBar({ filters, cashiers, onChange, onExport, onPrint, onRefresh, loading }: Props) {
   const showCustom = filters.range === 'custom'
   const dateLabel = useMemo(() => {
     if (filters.range === 'custom' && filters.from && filters.to) return `${filters.from} s/d ${filters.to}`
@@ -87,6 +89,17 @@ export function MovementFilterBar({ filters, cashiers, onChange, onExport, onPri
       <div className="flex items-center justify-between">
         <div className="text-xs text-gray-500">Pergerakan barang berdasarkan transaksi penjualan</div>
         <div className="flex items-center gap-2">
+          {onRefresh && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onRefresh}
+              disabled={loading}
+            >
+              <RefreshCw className={`h-4 w-4 mr-1 ${loading ? 'animate-spin' : ''}`}/>
+              Refresh
+            </Button>
+          )}
           <Button variant="outline" size="sm" onClick={onExport}><Download className="h-4 w-4 mr-1"/>Export CSV</Button>
           <Button size="sm" onClick={onPrint}><Printer className="h-4 w-4 mr-1"/>Cetak</Button>
         </div>
