@@ -1,94 +1,52 @@
-import { Router } from 'express';
-import { KpiController } from '../controllers/KpiController';
-import { TransaksiController } from '../controllers/TransaksiController';
-import { ProdukController } from '../controllers/ProdukController';
-import { DashboardLengkapController } from '../controllers/DashboardLengkapController';
-import { ChartController } from '../controllers/ChartController';
-import { authenticate } from '@/features/auth/middleware/authMiddleware';
-import { attachAccessScope } from '@/core/middleware/accessScope';
-
 /**
- * Router untuk endpoint dashboard
+ * Dashboard Routes
+ * Dashboard analytics and KPI routes with proper authentication
  */
+
+import { Router } from 'express';
+import { authenticate, requirePermission } from '@/features/auth/middleware/authMiddleware';
+import { attachAccessScope } from '@/core/middleware/accessScope';
+import { PERMISSIONS } from '@/features/auth/models/User';
+import { DashboardController } from '../controllers/DashboardController';
+
 const router = Router();
 
-/**
- * Middleware yang diterapkan ke semua route dashboard:
- * 1. authenticate - Memastikan user sudah login
- * 2. attachAccessScope - Memvalidasi akses tenant dan toko
- */
+// Apply common middleware
 router.use(authenticate);
 router.use(attachAccessScope);
 
-/**
- * GET /api/dashboard/kpi
- * Mendapatkan data KPI dashboard
- * 
- * Query Parameters:
- * - tipeFilter: 'bulan_berjalan' | 'tahun_berjalan' | '6_bulan' | '3_bulan' | 'custom' | 'semua'
- * - tanggalMulai: string (format: YYYY-MM-DD) - untuk tipeFilter 'custom'
- * - tanggalSelesai: string (format: YYYY-MM-DD) - untuk tipeFilter 'custom'
- */
-router.get('/kpi', KpiController.getKPI);
+// Overview KPIs
+router.get('/kpis/overview',
+  requirePermission(PERMISSIONS.REPORT_READ),
+  DashboardController.getOverviewKPIs
+);
 
-/**
- * GET /api/dashboard/transaksi-terbaru
- * Mendapatkan daftar transaksi terbaru
- * 
- * Query Parameters:
- * - tipeFilter: 'bulan_berjalan' | 'tahun_berjalan' | '6_bulan' | '3_bulan' | 'custom' | 'semua'
- * - tanggalMulai: string (format: YYYY-MM-DD) - untuk tipeFilter 'custom'
- * - tanggalSelesai: string (format: YYYY-MM-DD) - untuk tipeFilter 'custom'
- * - limit: number (1-50, default: 10)
- */
-router.get('/transaksi-terbaru', TransaksiController.getTransaksiTerbaru);
+// Sales analytics
+router.get('/analytics/sales-chart',
+  requirePermission(PERMISSIONS.REPORT_READ),
+  DashboardController.getSalesChart
+);
 
-/**
- * GET /api/dashboard/produk-terlaris
- * Mendapatkan daftar produk terlaris
- * 
- * Query Parameters:
- * - tipeFilter: 'bulan_berjalan' | 'tahun_berjalan' | '6_bulan' | '3_bulan' | 'custom' | 'semua'
- * - tanggalMulai: string (format: YYYY-MM-DD) - untuk tipeFilter 'custom'
- * - tanggalSelesai: string (format: YYYY-MM-DD) - untuk tipeFilter 'custom'
- * - limit: number (1-50, default: 10)
- */
-router.get('/produk-terlaris', ProdukController.getProdukTerlaris);
+// Top performers
+router.get('/analytics/top-products',
+  requirePermission(PERMISSIONS.REPORT_READ),
+  DashboardController.getTopProducts
+);
 
-/**
- * GET /api/dashboard/lengkap
- * Mendapatkan semua data dashboard (KPI + transaksi terbaru + produk terlaris)
- * 
- * Query Parameters:
- * - tipeFilter: 'bulan_berjalan' | 'tahun_berjalan' | '6_bulan' | '3_bulan' | 'custom' | 'semua'
- * - tanggalMulai: string (format: YYYY-MM-DD) - untuk tipeFilter 'custom'
- * - tanggalSelesai: string (format: YYYY-MM-DD) - untuk tipeFilter 'custom'
- * - limit: number (1-50, default: 10) - untuk transaksi dan produk
- */
-router.get('/lengkap', DashboardLengkapController.getDashboardLengkap);
+router.get('/analytics/top-customers',
+  requirePermission(PERMISSIONS.REPORT_READ),
+  DashboardController.getTopCustomers
+);
 
-/**
- * GET /api/dashboard/chart-penjualan
- * Mendapatkan data chart penjualan untuk visualisasi
- * 
- * Query Parameters:
- * - tipeFilter: 'bulan_berjalan' | 'tahun_berjalan' | '6_bulan' | '3_bulan' | 'custom' | 'semua'
- * - tanggalMulai: string (format: YYYY-MM-DD) - untuk tipeFilter 'custom'
- * - tanggalSelesai: string (format: YYYY-MM-DD) - untuk tipeFilter 'custom'
- */
-router.get('/chart-penjualan', ChartController.getChartPenjualan);
+// Distribution analytics
+router.get('/analytics/payment-methods',
+  requirePermission(PERMISSIONS.REPORT_READ),
+  DashboardController.getPaymentMethodDistribution
+);
 
-/**
- * GET /api/dashboard/health
- * Health check endpoint untuk dashboard API
- */
-router.get('/health', (req, res) => {
-  res.json({
-    success: true,
-    message: 'Dashboard API berjalan dengan baik',
-    timestamp: new Date().toISOString(),
-    version: '1.0.0'
-  });
-});
+router.get('/analytics/category-performance',
+  requirePermission(PERMISSIONS.REPORT_READ),
+  DashboardController.getCategoryPerformance
+);
 
 export default router;

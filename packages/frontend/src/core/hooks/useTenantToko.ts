@@ -20,7 +20,7 @@ export function useTenantToko() {
         return
       }
       try {
-        const res = await fetch(`${config.api.url}:${config.api.port}/api/profile`, {
+        const res = await fetch(`${config.api.url}:${config.api.port}/api/profile/me`, {
           headers: { Authorization: `Bearer ${token}` },
         })
         if (!res.ok) throw new Error('Failed')

@@ -3,6 +3,7 @@ import { devtools } from 'zustand/middleware'
 import { ProductFormData } from '@/core/components/ui/product-edit-sidebar'
 import { useAuthStore } from '@/core/store/authStore'
 import { config } from '@/core/config'
+import { masterDataService, Category, Brand, Supplier } from '../services/masterDataService'
 
 type UIProduk = {
   id: number
@@ -74,6 +75,11 @@ type ProdukState = {
   filters: Filters
   // Abort controller for in-flight requests (to keep results fresh)
   currentAbort?: AbortController
+  // Master data
+  categories: Category[]
+  brands: Brand[]
+  suppliers: Supplier[]
+  masterDataLoading: boolean
 }
 
 type ProdukActions = {
@@ -87,6 +93,11 @@ type ProdukActions = {
   deleteProduk: (id: number) => Promise<void>
   upsertFromRealtime: (p: UIProduk) => void
   removeFromRealtime: (id: number) => void
+  // Master data actions
+  loadMasterData: () => Promise<void>
+  getDefaultCategoryId: () => string
+  getDefaultBrandId: () => string
+  getDefaultSupplierId: () => string
 }
 
 export const useProdukStore = create<ProdukState & ProdukActions>()(
@@ -98,6 +109,10 @@ export const useProdukStore = create<ProdukState & ProdukActions>()(
     loading: false,
     search: '',
     filters: {},
+    categories: [],
+    brands: [],
+    suppliers: [],
+    masterDataLoading: false,
 
     reset: () => set({ items: [], page: 1, hasNext: true, error: undefined }),
     setSearch: (v) => set({ search: v }),
@@ -129,75 +144,78 @@ export const useProdukStore = create<ProdukState & ProdukActions>()(
     },
 
     createProduk: async (data: ProductFormData) => {
-      // 1) Create produk
-      const res = await fetch(`${API_BASE}/produk`, {
+      // Create produk with proper API schema
+      const res = await fetch(`${API_BASE}`, {
         method: 'POST',
         headers: authHeaders(),
         body: JSON.stringify({
           nama: data.nama,
+          kode: data.kode,
           deskripsi: data.deskripsi || undefined,
-          sku: data.kode,
+          satuan: data.satuan || 'pcs',
+          harga_beli: Number(data.hargaBeli) || 0,
+          harga_jual: Number(data.hargaJual) || 0,
+          stok_minimum: 0,
+          // Use actual master data IDs
+          kategori_id: get().getDefaultCategoryId(),
+          brand_id: get().getDefaultBrandId(),
+          supplier_id: get().getDefaultSupplierId(),
+          is_aktif: 1,
+          is_dijual_online: false,
+          pajak_persen: 0,
+          margin_persen: 0,
+          berat: 0
         }),
       })
       const js = await res.json()
       if (!res.ok || !js.success) throw new Error(js.message || 'Gagal membuat produk')
       const created = js.data
 
-      // 2) Upsert inventaris (harga/stok)
-      await fetch(`${API_BASE}/inventaris`, {
-        method: 'POST',
-        headers: authHeaders(),
-        body: JSON.stringify({
-          id_produk: created.id,
-          jumlah: Number(data.stok) || 0,
-          harga: Number(data.hargaJual) || 0,
-          harga_beli: Number(data.hargaBeli) || undefined,
-        }),
-      })
+      // Update stock if provided
+      if (data.stok && data.stok > 0) {
+        await fetch(`${API_BASE}/${created.id}/inventory`, {
+          method: 'POST',
+          headers: authHeaders(),
+          body: JSON.stringify({
+            jumlah: Number(data.stok)
+          }),
+        })
+      }
 
-      // 3) Optimistically prepend to list
-      const ui = mapProdukDto({
-        ...created,
-        inventaris: [
-          {
-            id_produk: created.id,
-            jumlah: Number(data.stok) || 0,
-            harga: Number(data.hargaJual) || 0,
-            harga_beli: Number(data.hargaBeli) || undefined,
-          },
-        ],
-      })
+      // Optimistically prepend to list
+      const ui = mapProdukDto(created)
       set({ items: [ui, ...get().items] })
     },
 
     updateProduk: async (id: number, data: ProductFormData) => {
-      // 1) Update produk
-      const res = await fetch(`${API_BASE}/produk/${id}`, {
+      // Update produk with proper API schema
+      const res = await fetch(`${API_BASE}/${id}`, {
         method: 'PUT',
         headers: authHeaders(),
         body: JSON.stringify({
-          id,
           nama: data.nama,
+          kode: data.kode,
           deskripsi: data.deskripsi || undefined,
-          sku: data.kode,
+          satuan: data.satuan || 'pcs',
+          harga_beli: Number(data.hargaBeli) || 0,
+          harga_jual: Number(data.hargaJual) || 0
         }),
       })
       const js = await res.json()
       if (!res.ok || !js.success) throw new Error(js.message || 'Gagal mengupdate produk')
 
-      // 2) Upsert inventaris
-      await fetch(`${API_BASE}/inventaris`, {
-        method: 'POST',
-        headers: authHeaders(),
-        body: JSON.stringify({
-          id_produk: id,
-          jumlah: Number(data.stok) || 0,
-          harga: Number(data.hargaJual) || 0,
-          harga_beli: Number(data.hargaBeli) || undefined,
-        }),
-      })
+      // Update stock if provided
+      if (data.stok !== undefined) {
+        await fetch(`${API_BASE}/${id}/inventory`, {
+          method: 'PUT',
+          headers: authHeaders(),
+          body: JSON.stringify({
+            jumlah: Number(data.stok)
+          }),
+        })
+      }
 
-      // 3) Update list locally
+      // Update list locally
       set({
         items: get().items.map((it) =>
           it.id === id
@@ -215,7 +233,7 @@ export const useProdukStore = create<ProdukState & ProdukActions>()(
     },
 
     deleteProduk: async (id: number) => {
-      const res = await fetch(`${API_BASE}/produk/${id}`, {
+      const res = await fetch(`${API_BASE}/${id}`, {
         method: 'DELETE',
         headers: authHeaders(),
       })
@@ -239,6 +257,37 @@ export const useProdukStore = create<ProdukState & ProdukActions>()(
 
     removeFromRealtime: (id: number) => {
       set({ items: get().items.filter((x) => x.id !== id) })
+    },
+
+    // Master data functions
+    loadMasterData: async () => {
+      set({ masterDataLoading: true })
+      try {
+        const [categories, brands, suppliers] = await Promise.all([
+          masterDataService.getCategories(),
+          masterDataService.getBrands(),
+          masterDataService.getSuppliers()
+        ])
+        set({ categories, brands, suppliers, masterDataLoading: false })
+      } catch (error: any) {
+        console.error('Error loading master data:', error)
+        set({ masterDataLoading: false })
+      }
+    },
+
+    getDefaultCategoryId: () => {
+      const { categories } = get()
+      return categories.length > 0 ? categories[0].id : '00000000-0000-0000-0000-000000000001'
+    },
+
+    getDefaultBrandId: () => {
+      const { brands } = get()
+      return brands.length > 0 ? brands[0].id : '00000000-0000-0000-0000-000000000001'
+    },
+
+    getDefaultSupplierId: () => {
+      const { suppliers } = get()
+      return suppliers.length > 0 ? suppliers[0].id : '00000000-0000-0000-0000-000000000001'
     },
   }))
 )
@@ -267,12 +316,12 @@ async function fetchPage(
   params.set('page', String(page))
   params.set('limit', String(limit))
   if (search) params.set('search', search)
-  if (filters.kategoriId) params.set('kategori', filters.kategoriId)
-  if (filters.brandId) params.set('brand', filters.brandId)
-  if (filters.supplierId) params.set('supplier', filters.supplierId)
+  if (filters.kategoriId) params.set('kategori_id', filters.kategoriId)
+  if (filters.brandId) params.set('brand_id', filters.brandId)
+  if (filters.supplierId) params.set('supplier_id', filters.supplierId)
 
   try {
-    const res = await fetch(`${API_BASE}/produk?${params.toString()}`, {
+    const res = await fetch(`${API_BASE}?${params.toString()}`, {
       headers: authHeaders(),
       signal: ctrl?.signal,
     })

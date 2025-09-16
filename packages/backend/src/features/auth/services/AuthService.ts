@@ -72,8 +72,8 @@ export class AuthService {
       // Query untuk mendapatkan user dengan informasi dari tabel users dan peran
       const [rows] = await connection.execute<RowDataPacket[]>(
         `SELECT 
-          u.id, u.tenant_id, u.username, u.email, u.password_hash, u.nama_lengkap, 
-          u.telepon, u.avatar_url, u.peran_id, u.toko_id, u.status, u.last_login,
+          u.id, u.tenant_id, u.username, u.password_hash, 
+          u.peran_id, u.toko_id, u.status, u.last_login,
           p.level, p.nama as nama_peran
         FROM users u
         LEFT JOIN peran p ON u.peran_id = p.id
@@ -131,14 +131,14 @@ export class AuthService {
         tenantId: user.tenant_id,
         tokoId: user.toko_id || undefined,
         username: user.username,
-        email: user.email || '',
-        namaLengkap: user.nama_lengkap || user.username,
-        telepon: user.telepon,
-        avatarUrl: user.avatar_url,
+        email: '', // Email tidak tersedia di tabel users
+        namaLengkap: user.username, // Gunakan username sebagai nama lengkap
+        telepon: '', // Telepon tidak tersedia di tabel users
+        avatarUrl: '', // Avatar tidak tersedia di tabel users
         role: mappedRole,
         level: level,
         peranId: user.peran_id,
-        status: user.status === 'aktif' ? UserStatus.ACTIVE : UserStatus.INACTIVE,
+        status: user.status === 'aktif' ? UserStatus.AKTIF : UserStatus.NONAKTIF,
         isSuperAdmin: level === 1 // Super admin jika level 1
       };
 
@@ -184,12 +184,12 @@ export class AuthService {
 
       // Check if username already exists
       const [existingUsers] = await connection.execute<RowDataPacket[]>(
-        'SELECT id FROM users WHERE username = ? OR email = ?',
-        [userData.username, userData.email]
+        'SELECT id FROM users WHERE username = ?',
+        [userData.username]
       );
 
       if (existingUsers.length > 0) {
-        throw new Error('Username or email already exists');
+        throw new Error('Username already exists');
       }
 
       // Hash password
@@ -200,27 +200,21 @@ export class AuthService {
 
       // Insert user
       const [result] = await connection.execute<ResultSetHeader>(
-        `INSERT INTO users (id, tenant_id, username, email, password_hash, nama_lengkap, telepon, avatar_url, peran_id, toko_id, level, status, is_super_admin, dibuat_pada, diperbarui_pada)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'aktif', ?, NOW(), NOW())`,
+        `INSERT INTO users (id, tenant_id, username, password_hash, peran_id, toko_id, status, dibuat_pada, diperbarui_pada)
+         VALUES (?, ?, ?, ?, ?, ?, 'aktif', NOW(), NOW())`,
         [
           userId,
           userData.tenant_id,
           userData.username,
-          userData.email,
           hashedPassword,
-          userData.nama_lengkap,
-          userData.telepon || null,
-          userData.avatar_url || null,
           userData.peran_id,
-          userData.toko_id || null,
-          userData.level,
-          userData.is_super_admin || false
+          userData.toko_id || null
         ]
       );
 
       // Get created user
       const [newUser] = await connection.execute<RowDataPacket[]>(
-        `SELECT id, tenant_id, username, email, password_hash, nama_lengkap, telepon, avatar_url, peran_id, toko_id, level, status, is_super_admin, dibuat_pada, diperbarui_pada
+        `SELECT id, tenant_id, username, password_hash, peran_id, toko_id, status, dibuat_pada, diperbarui_pada
          FROM users WHERE id = ?`,
         [userId]
       );
@@ -237,16 +231,10 @@ export class AuthService {
         id: newUser[0].id,
         tenant_id: newUser[0].tenant_id,
         username: newUser[0].username,
-        email: newUser[0].email,
         password_hash: '', // Don't return password
-        nama_lengkap: newUser[0].nama_lengkap,
-        telepon: newUser[0].telepon,
-        avatar_url: newUser[0].avatar_url,
         peran_id: newUser[0].peran_id,
         toko_id: newUser[0].toko_id,
-        level: newUser[0].level,
-        status: newUser[0].status === 'aktif' ? UserStatus.ACTIVE : UserStatus.INACTIVE,
-        is_super_admin: newUser[0].is_super_admin,
+        status: newUser[0].status === 'aktif' ? UserStatus.AKTIF : UserStatus.NONAKTIF,
         last_login: null,
         dibuat_pada: newUser[0].dibuat_pada,
         diperbarui_pada: newUser[0].diperbarui_pada
@@ -268,8 +256,7 @@ export class AuthService {
     
     try {
       const [rows] = await connection.execute<RowDataPacket[]>(
-        `SELECT u.id, u.tenant_id, u.username, u.email, u.nama_lengkap, u.telepon, 
-                u.avatar_url, u.peran_id, u.toko_id, u.status,
+        `SELECT u.id, u.tenant_id, u.username, u.peran_id, u.toko_id, u.status,
                 p.level, p.nama as nama_peran
          FROM users u
          LEFT JOIN peran p ON u.peran_id = p.id
@@ -309,14 +296,14 @@ export class AuthService {
         tenantId: user.tenant_id,
         tokoId: user.toko_id || undefined,
         username: user.username,
-        email: user.email || '',
-        namaLengkap: user.nama_lengkap || user.username,
-        telepon: user.telepon,
-        avatarUrl: user.avatar_url,
+        email: '', // Email tidak tersedia di tabel users
+        namaLengkap: user.username, // Gunakan username sebagai nama lengkap
+        telepon: '', // Telepon tidak tersedia di tabel users
+        avatarUrl: '', // Avatar tidak tersedia di tabel users
         role: mappedRole,
         level: level,
         peranId: user.peran_id,
-        status: user.status === 'aktif' ? UserStatus.ACTIVE : UserStatus.INACTIVE,
+        status: user.status === 'aktif' ? UserStatus.AKTIF : UserStatus.NONAKTIF,
         isSuperAdmin: level === 1 // Super admin jika level 1
       };
 

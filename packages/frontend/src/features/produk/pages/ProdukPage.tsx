@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useEffect } from 'react'
 import { PackagePlus } from 'lucide-react'
 import { ProdukToolbar } from '@/features/produk/components/ProdukToolbar'
 import { ProdukTable } from '@/features/produk/components/ProdukTable'
@@ -10,11 +10,16 @@ import { useProdukRealtime } from '@/features/produk/hooks/useProdukRealtime'
 import { useToast } from '@/core/hooks/use-toast'
 
 export function ProdukPage() {
-  const { createProduk, updateProduk } = useProdukStore()
+  const { createProduk, updateProduk, loadMasterData } = useProdukStore()
   const { toast } = useToast()
 
   // Realtime subscription (no-ops if server doesn't emit yet)
   useProdukRealtime()
+
+  // Load master data on component mount
+  useEffect(() => {
+    loadMasterData()
+  }, [loadMasterData])
 
   const [detailOpen, setDetailOpen] = useState(false)
   const [editOpen, setEditOpen] = useState(false)

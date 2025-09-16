@@ -13,7 +13,7 @@ export function BrandPage() {
   const [detailOpen, setDetailOpen] = useState(false)
   const [editOpen, setEditOpen] = useState(false)
   const [selected, setSelected] = useState<UIBrand | null>(null)
-  const [editing, setEditing] = useState<{ nama: string } | null>(null)
+  const [editing, setEditing] = useState<{ nama: string; deskripsi?: string; logo_url?: string; website?: string } | null>(null)
   const [saving, setSaving] = useState(false)
 
   const openCreate = () => {
@@ -29,18 +29,23 @@ export function BrandPage() {
 
   const onEdit = (b: UIBrand) => {
     setSelected(b)
-    setEditing({ nama: b.nama })
+    setEditing({
+      nama: b.nama,
+      deskripsi: b.deskripsi,
+      logo_url: b.logo_url,
+      website: b.website
+    })
     setEditOpen(true)
   }
 
-  const onSave = async (data: { nama: string }) => {
+  const onSave = async (data: { nama: string; deskripsi?: string; logo_url?: string; website?: string }) => {
     setSaving(true)
     try {
       if (selected) {
-        await updateBrand(selected.id, data.nama)
+        await updateBrand(selected.id, data)
         toast({ title: 'Brand diperbarui' })
       } else {
-        await createBrand(data.nama)
+        await createBrand(data)
         toast({ title: 'Brand dibuat' })
       }
     } catch (e: any) {

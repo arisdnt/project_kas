@@ -1,119 +1,59 @@
 /**
- * Routes untuk API Promo
- * Sesuai dengan Blueprint Arsitektur Sistem Point of Sales Real-Time Multi-Tenant (Revisi 4.0)
+ * Promo Routes
+ * Promo management routes with proper authentication and authorization
  */
 
 import { Router } from 'express';
-import { PromoController } from '../controllers/PromoController';
-import { authenticate, authorize } from '@/features/auth/middleware/authMiddleware';
-import { UserRole } from '@/features/auth/models/User';
+import { authenticate, requirePermission } from '@/features/auth/middleware/authMiddleware';
 import { attachAccessScope, requireStoreWhenNeeded } from '@/core/middleware/accessScope';
+import { PERMISSIONS } from '@/features/auth/models/User';
+import { PromoController } from '../controllers/PromoController';
 
 const router = Router();
 
-// Middleware untuk semua routes promo
+// Apply common middleware
 router.use(authenticate);
 router.use(attachAccessScope);
 
-// ===== PROMO ROUTES =====
-
-/**
- * @route GET /api/v1/promos
- * @desc Get all promos
- * @access Private - Admin/Cashier
- */
-router.get('/', 
-  authorize(UserRole.ADMIN, UserRole.CASHIER), 
-  requireStoreWhenNeeded,
-  PromoController.getAllPromos
+// Promo CRUD routes - require store access for most operations
+router.get('/',
+  requirePermission(PERMISSIONS.PRODUCT_READ), // Using product read permission for promos
+  PromoController.search
 );
 
-/**
- * @route GET /api/v1/promos/stats
- * @desc Get promo statistics
- * @access Private - Admin/Cashier
- */
-router.get('/stats', 
-  authorize(UserRole.ADMIN, UserRole.CASHIER), 
-  requireStoreWhenNeeded,
-  PromoController.getPromoStats
+router.get('/code/:code',
+  requirePermission(PERMISSIONS.PRODUCT_READ),
+  PromoController.findByCode
 );
 
-/**
- * @route GET /api/v1/promos/active
- * @desc Get active promos
- * @access Private - Admin/Cashier
- */
-router.get('/active', 
-  authorize(UserRole.ADMIN, UserRole.CASHIER), 
-  requireStoreWhenNeeded,
-  PromoController.getActivePromos
+router.get('/:id',
+  requirePermission(PERMISSIONS.PRODUCT_READ),
+  PromoController.findById
 );
 
-/**
- * @route GET /api/v1/promos/range
- * @desc Get promos by date range
- * @access Private - Admin/Cashier
- */
-router.get('/range', 
-  authorize(UserRole.ADMIN, UserRole.CASHIER), 
+router.post('/',
+  requirePermission(PERMISSIONS.PRODUCT_CREATE),
   requireStoreWhenNeeded,
-  PromoController.getPromosByDateRange
+  PromoController.create
 );
 
-/**
- * @route GET /api/v1/promos/:id
- * @desc Get promo by ID
- * @access Private - Admin/Cashier
- */
-router.get('/:id', 
-  authorize(UserRole.ADMIN, UserRole.CASHIER), 
+router.put('/:id',
+  requirePermission(PERMISSIONS.PRODUCT_UPDATE),
   requireStoreWhenNeeded,
-  PromoController.getPromoById
+  PromoController.update
 );
 
-/**
- * @route POST /api/v1/promos
- * @desc Create new promo
- * @access Private - Admin only
- */
-router.post('/', 
-  authorize(UserRole.ADMIN), 
+router.delete('/:id',
+  requirePermission(PERMISSIONS.PRODUCT_DELETE),
   requireStoreWhenNeeded,
-  PromoController.createPromo
+  PromoController.delete
 );
 
-/**
- * @route PUT /api/v1/promos/:id
- * @desc Update promo
- * @access Private - Admin only
- */
-router.put('/:id', 
-  authorize(UserRole.ADMIN), 
+// Promo validation endpoint for POS system
+router.post('/validate',
+  requirePermission(PERMISSIONS.TRANSACTION_CREATE),
   requireStoreWhenNeeded,
-  PromoController.updatePromo
-);
-
-/**
- * @route PATCH /api/v1/promos/:id/toggle
- * @desc Toggle promo status
- * @access Private - Admin only
- */
-router.patch('/:id/toggle', 
-  authorize(UserRole.ADMIN), 
-  requireStoreWhenNeeded,
-  PromoController.togglePromoStatus
-);
-
-/**
- * @route DELETE /api/v1/promos/:id
- * @desc Delete promo
- * @access Private - Admin only
- */
-router.delete('/:id', 
-  authorize(UserRole.ADMIN), 
-  requireStoreWhenNeeded,
-  PromoController.deletePromo
+  PromoController.validatePromo
 );
 
 export default router;

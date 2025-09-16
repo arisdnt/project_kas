@@ -109,41 +109,54 @@ app.get('/health/status', async (req, res) => {
 // Import routes
 import authRoutes from '@/features/auth/routes/authRoutes';
 import produkRoutes from '@/features/produk/routes/produkRoutes';
-import inventarisRoutes from '@/features/inventaris/routes/inventarisRoutes';
 import penjualanRoutes from '@/features/penjualan/routes/penjualanRoutes';
 import pelangganRoutes from '@/features/pelanggan/routes/pelangganRoutes';
 import promoRoutes from '@/features/promo/routes/promoRoutes';
-import monitoringRoutes from '@/features/monitoring/routes/monitoringRoutes';
-import { MonitoringService } from '@/features/monitoring/services/MonitoringService';
-import filesRoutes from '@/features/storage/routes/filesRoutes';
-import { dokumenRoutes } from '@/features/storage/routes/dokumenRoutes';
-import keuanganRoutes from '@/features/keuangan/routes/keuanganRoutes';
-import { fileTypesRoutes } from '@/features/storage/routes/fileTypesRoutes';
-import { stokOpnameRoutes } from '@/features/stok-opname/routes/stokOpnameRoutes';
+import dokumenRoutes from '@/features/dokumen/routes/dokumenRoutes';
 import profileRoutes from '@/features/profile/routes/profileRoutes';
-import penggunaRoutes from '@/features/pengguna/routes/penggunaRoutes';
 import dashboardRoutes from '@/features/dashboard/routes/dashboardRoutes';
-import { ensureBucket } from '@/core/storage/minioClient';
+import supplierRoutes from '@/features/supplier/routes/supplierRoutes';
+import tokoRoutes from '@/features/toko/routes/tokoRoutes';
+import pembelianRoutes from '@/features/pembelian/routes/pembelianRoutes';
+import returRoutes from '@/features/retur/routes/returRoutes';
+import tenantRoutes from '@/features/tenant/routes/tenantRoutes';
+import auditRoutes from '@/features/audit/routes/auditRoutes';
+import backupRoutes from '@/features/backup/routes/backupRoutes';
+import konfigurasiRoutes from '@/features/konfigurasi/routes/konfigurasiRoutes';
+import notifikasiRoutes from '@/features/notifikasi/routes/notifikasiRoutes';
+import sessionRoutes from '@/features/session/routes/sessionRoutes';
+import webhookRoutes from '@/features/webhook/routes/webhookRoutes';
+import detailUserRoutes from '@/features/profilsaya/routes/profilsayaRoutes';
+import pengaturansayaRoutes from '@/features/pengaturansaya/routes/userRoutes';
+import tenantsayaRoutes from '@/features/tenantsaya/routes/tenantRoutes';
+import tokoSayaRoutes from '@/features/tokosaya/routes/tokoRoutes';
 
-// Initialize monitoring service
-const monitoringService = new MonitoringService(io);
+// Note: Monitoring service not implemented yet
 
-// API Routes dengan rate limiting khusus
+// API Routes
 app.use('/api/auth', authRateLimiter as any, authRoutes);
 app.use('/api/produk', produkRoutes);
-app.use('/api/inventaris', inventarisRoutes);
 app.use('/api/penjualan', penjualanRoutes);
 app.use('/api/pelanggan', pelangganRoutes);
 app.use('/api/promos', promoRoutes);
-app.use('/api/monitoring', monitoringRoutes);
-app.use('/api/stok-opname', stokOpnameRoutes);
 app.use('/api/profile', profileRoutes);
-app.use('/api/pengguna', penggunaRoutes);
-app.use('/api/files', uploadRateLimiter as any, filesRoutes);
 app.use('/api/dokumen', uploadRateLimiter as any, dokumenRoutes);
-app.use('/api/file-types', fileTypesRoutes);
-app.use('/api/laporan/keuangan', keuanganRoutes);
 app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/supplier', supplierRoutes);
+app.use('/api/toko', tokoRoutes);
+app.use('/api/pembelian', pembelianRoutes);
+app.use('/api/retur', returRoutes);
+app.use('/api/tenant', tenantRoutes);
+app.use('/api/audit', auditRoutes);
+app.use('/api/backup', backupRoutes);
+app.use('/api/konfigurasi', konfigurasiRoutes);
+app.use('/api/notifikasi', notifikasiRoutes);
+app.use('/api/session', sessionRoutes);
+app.use('/api/webhook', webhookRoutes);
+app.use('/api/profilsaya', detailUserRoutes);
+app.use('/api/pengaturansaya', pengaturansayaRoutes);
+app.use('/api/tenantsaya', tenantsayaRoutes);
+app.use('/api/tokosaya', tokoSayaRoutes);
 
 app.get('/api', (req, res) => {
   res.json({
@@ -166,10 +179,9 @@ app.get(['/dashboard', '/dashboard/*', '/'], (req, res) => {
 // Socket.IO connection handling
 io.on('connection', (socket) => {
   logger.info(`Socket connected: ${socket.id}`);
-  
-  // Handle monitoring socket connections
-  monitoringService.handleSocketConnection(socket);
-  
+
+  // Note: Monitoring service not implemented yet
+
   socket.on('disconnect', () => {
     logger.info(`Socket disconnected: ${socket.id}`);
   });
@@ -207,7 +219,6 @@ app.use('*', (req, res) => {
 // Graceful shutdown
 process.on('SIGTERM', async () => {
   logger.info('SIGTERM received, shutting down gracefully');
-  monitoringService.stopMonitoring();
   server.close(() => {
     logger.info('HTTP server closed');
   });
@@ -217,7 +228,6 @@ process.on('SIGTERM', async () => {
 
 process.on('SIGINT', async () => {
   logger.info('SIGINT received, shutting down gracefully');
-  monitoringService.stopMonitoring();
   server.close(() => {
     logger.info('HTTP server closed');
   });
@@ -235,12 +245,7 @@ async function startServer() {
       process.exit(1);
     }
     
-    // Ensure object storage bucket (non-fatal if fails)
-    try {
-      await ensureBucket()
-    } catch (e) {
-      logger.warn({ e }, 'Skipping MinIO bucket ensure due to error')
-    }
+    // Note: Object storage bucket setup removed (not implemented yet)
 
     // Start HTTP server
     server.listen(appConfig.port, appConfig.host, () => {

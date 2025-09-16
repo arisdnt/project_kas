@@ -53,7 +53,8 @@ export function attachAccessScope(req: Request, _res: Response, next: NextFuncti
     isGod,
     // God user melewati semua pembatasan
     enforceTenant: !isGod,
-    // Level >=3 (admin_toko/kasir) dibatasi toko; Admin (2) hanya dibatasi tenant
+    // Hanya level >=3 (admin_toko/kasir) yang dibatasi toko
+    // Super admin (1) dan admin (2) tidak dibatasi toko
     enforceStore: !isGod && (level ?? 5) >= 3
   };
 

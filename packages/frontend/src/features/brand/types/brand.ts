@@ -1,5 +1,9 @@
 export type UIBrand = {
-  id: number
+  id: string
   nama: string
+  deskripsi?: string
+  logo_url?: string
+  website?: string
+  status?: string
 }
 

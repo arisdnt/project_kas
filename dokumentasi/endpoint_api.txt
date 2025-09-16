@@ -1,0 +1,18 @@
+## itur Endpoint Profilsaya:
+### Self-Service Routes (untuk user yang login):
+- GET /api/profilsaya/me - Mendapatkan profil sendiri
+- PUT /api/profilsaya/me - Update profil sendiri
+### Administrative Routes (untuk admin):
+- GET /api/profilsaya - Mendapatkan semua detail user
+- GET /api/profilsaya/stats - Statistik detail user
+- GET /api/profilsaya/departments - Detail user berdasarkan departemen
+- POST /api/profilsaya - Membuat detail user baru
+- PUT /api/profilsaya/:id - Update detail user tertentu
+- DELETE /api/profilsaya/:id - Hapus detail user
+
+
+###  API Endpoints yang Berhasil:
+1. 1.
+   GET /api/pengaturansaya/profile - Mendapatkan data profil user
+2. 2.
+   POST /api/pengaturansaya/change-password - Mengubah password user

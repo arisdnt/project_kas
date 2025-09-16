@@ -1,353 +1,228 @@
 /**
- * Controller untuk Master Data (Kategori, Brand, Supplier)
- * Sesuai dengan Blueprint Arsitektur Sistem Point of Sales Real-Time Multi-Tenant (Revisi 4.0)
+ * Master Data Controller
+ * Handles category, brand, and supplier operations for products
  */
 
 import { Request, Response } from 'express';
-import { 
-  getAllKategori,
-  createKategori,
-  updateKategori,
-  deleteKategori,
-  getAllBrand,
-  createBrand,
-  updateBrand,
-  deleteBrand,
-  getAllSupplier,
-  getSupplierById,
-  createSupplier,
-  updateSupplier,
-  deleteSupplier
-} from '../services/modules';
-import { logger } from '@/core/utils/logger';
-import { AccessScope } from '@/core/middleware/accessScope';
-import {
-  CreateKategoriSchema,
-  UpdateKategoriSchema,
-  CreateBrandSchema,
-  UpdateBrandSchema,
-  CreateSupplierSchema,
-  UpdateSupplierSchema
-} from '../models/Produk';
+import { ProdukService } from '../services/ProdukService';
+import { z } from 'zod';
+
+const CreateCategorySchema = z.object({
+  nama: z.string().min(1).max(100),
+  deskripsi: z.string().optional(),
+  icon_url: z.string().url().optional(),
+  urutan: z.number().int().min(0).optional()
+});
+
+const UpdateCategorySchema = z.object({
+  nama: z.string().min(1).max(100).optional(),
+  deskripsi: z.string().optional(),
+  icon_url: z.string().url().optional(),
+  urutan: z.number().int().min(0).optional(),
+  status: z.enum(['aktif', 'nonaktif']).optional()
+});
+
+const CreateBrandSchema = z.object({
+  nama: z.string().min(1).max(100),
+  deskripsi: z.string().optional(),
+  logo_url: z.string().url().optional(),
+  website: z.string().url().optional()
+});
+
+const CreateSupplierSchema = z.object({
+  nama: z.string().min(1).max(100),
+  kontak_person: z.string().max(100).optional(),
+  telepon: z.string().max(20).optional(),
+  email: z.string().email().optional(),
+  alamat: z.string().optional()
+});
 
 export class MasterDataController {
-  // ===== KATEGORI ENDPOINTS =====
-  
-  static async getAllKategori(req: Request, res: Response) {
+  // Category operations
+  static async getCategories(req: Request, res: Response) {
     try {
-      const scope = req.accessScope as AccessScope;
-      const kategori = await getAllKategori(scope);
-      return res.json({
-        success: true,
-        data: kategori,
-        message: 'Data kategori berhasil diambil'
-      });
-    } catch (error: any) {
-      logger.error({ error }, 'Error in getAllKategori');
-      return res.status(500).json({
-        success: false,
-        message: error.message || 'Terjadi kesalahan server'
-      });
-    }
-  }
-
-  static async createKategori(req: Request, res: Response) {
-    try {
-      const data = CreateKategoriSchema.parse(req.body);
-      const scope = req.accessScope as AccessScope;
-      const kategori = await createKategori(data, scope);
-      
-      return res.status(201).json({
-        success: true,
-        data: kategori,
-        message: 'Kategori berhasil dibuat'
-      });
-    } catch (error: any) {
-      logger.error({ error }, 'Error in createKategori');
-      
-      if (error.name === 'ZodError') {
-        return res.status(400).json({
-          success: false,
-          message: 'Data tidak valid',
-          errors: error.errors
-        });
+      if (!req.user || !req.accessScope) {
+        return res.status(401).json({ success: false, message: 'Unauthorized' });
       }
-      
-      return res.status(500).json({
-        success: false,
-        message: error.message || 'Terjadi kesalahan server'
+
+      console.log('Getting categories with scope:', req.accessScope);
+      const categories = await ProdukService.getCategories(req.accessScope);
+      console.log('Categories retrieved:', categories.length);
+      return res.json({ success: true, data: categories });
+    } catch (error: any) {
+      console.error('Get categories error:', error);
+      console.error('Error stack:', error.stack);
+      return res.status(500).json({ 
+        success: false, 
+        message: 'Internal server error',
+        error: error.message 
       });
     }
   }
 
-  static async updateKategori(req: Request, res: Response) {
+  static async createCategory(req: Request, res: Response) {
     try {
-      const id = String(req.params.id);
-      const data = UpdateKategoriSchema.parse({ ...req.body, id });
-      const scope = req.accessScope as AccessScope;
-      const kategori = await updateKategori(data, scope);
-      
-      return res.json({
-        success: true,
-        data: kategori,
-        message: 'Kategori berhasil diperbarui'
-      });
-    } catch (error: any) {
-      logger.error({ error }, 'Error in updateKategori');
-      
-      if (error.name === 'ZodError') {
-        return res.status(400).json({
-          success: false,
-          message: 'Data tidak valid',
-          errors: error.errors
-        });
+      if (!req.user || !req.accessScope) {
+        return res.status(401).json({ success: false, message: 'Unauthorized' });
       }
-      
-      return res.status(500).json({
+
+      const data = CreateCategorySchema.parse(req.body);
+      const category = await ProdukService.createCategory(req.accessScope, data);
+
+      return res.status(201).json({ success: true, data: category });
+    } catch (error: any) {
+      console.error('Create category error:', error);
+      return res.status(400).json({
         success: false,
-        message: error.message || 'Terjadi kesalahan server'
+        message: error.message || 'Failed to create category'
       });
     }
   }
 
-  static async deleteKategori(req: Request, res: Response) {
+  static async updateCategory(req: Request, res: Response) {
     try {
-      const id = String(req.params.id);
-      const scope = req.accessScope as AccessScope;
-      await deleteKategori(id, scope);
-      
-      return res.json({
-        success: true,
-        message: 'Kategori berhasil dihapus'
-      });
+      if (!req.user || !req.accessScope) {
+        return res.status(401).json({ success: false, message: 'Unauthorized' });
+      }
+
+      const { id } = req.params;
+      const data = UpdateCategorySchema.parse(req.body);
+      const category = await ProdukService.updateCategory(req.accessScope, id, data);
+
+      return res.json({ success: true, data: category });
     } catch (error: any) {
-      logger.error({ error }, 'Error in deleteKategori');
-      return res.status(500).json({
+      console.error('Update category error:', error);
+      return res.status(400).json({
         success: false,
-        message: error.message || 'Terjadi kesalahan server'
+        message: error.message || 'Failed to update category'
       });
     }
   }
 
-  // ===== BRAND ENDPOINTS =====
-  
-  static async getAllBrand(req: Request, res: Response) {
+  static async deleteCategory(req: Request, res: Response) {
     try {
-      const scope = req.accessScope as AccessScope;
-      const brand = await getAllBrand(scope);
-      return res.json({
-        success: true,
-        data: brand,
-        message: 'Data brand berhasil diambil'
-      });
+      if (!req.user || !req.accessScope) {
+        return res.status(401).json({ success: false, message: 'Unauthorized' });
+      }
+
+      const { id } = req.params;
+      const deleted = await ProdukService.deleteCategory(req.accessScope, id);
+
+      if (!deleted) {
+        return res.status(404).json({ success: false, message: 'Category not found' });
+      }
+
+      return res.json({ success: true, message: 'Category deleted successfully' });
     } catch (error: any) {
-      logger.error({ error }, 'Error in getAllBrand');
-      return res.status(500).json({
-        success: false,
-        message: error.message || 'Terjadi kesalahan server'
-      });
+      console.error('Delete category error:', error);
+      return res.status(500).json({ success: false, message: 'Internal server error' });
+    }
+  }
+
+  // Brand operations
+  static async getBrands(req: Request, res: Response) {
+    try {
+      if (!req.user || !req.accessScope) {
+        return res.status(401).json({ success: false, message: 'Unauthorized' });
+      }
+
+      const brands = await ProdukService.getBrands(req.accessScope);
+      return res.json({ success: true, data: brands });
+    } catch (error: any) {
+      console.error('Get brands error:', error);
+      return res.status(500).json({ success: false, message: 'Internal server error' });
     }
   }
 
   static async createBrand(req: Request, res: Response) {
     try {
-      const data = CreateBrandSchema.parse(req.body);
-      const scope = req.accessScope as AccessScope;
-      const brand = await createBrand(data, scope);
-      
-      return res.status(201).json({
-        success: true,
-        data: brand,
-        message: 'Brand berhasil dibuat'
-      });
-    } catch (error: any) {
-      logger.error({ error }, 'Error in createBrand');
-      
-      if (error.name === 'ZodError') {
-        return res.status(400).json({
-          success: false,
-          message: 'Data tidak valid',
-          errors: error.errors
-        });
+      if (!req.user || !req.accessScope) {
+        return res.status(401).json({ success: false, message: 'Unauthorized' });
       }
-      
-      return res.status(500).json({
+
+      const data = CreateBrandSchema.parse(req.body);
+      const brand = await ProdukService.createBrand(req.accessScope, data);
+
+      return res.status(201).json({ success: true, data: brand });
+    } catch (error: any) {
+      console.error('Create brand error:', error);
+      return res.status(400).json({
         success: false,
-        message: error.message || 'Terjadi kesalahan server'
+        message: error.message || 'Failed to create brand'
       });
     }
   }
 
   static async updateBrand(req: Request, res: Response) {
     try {
-      const id = String(req.params.id);
-      const data = UpdateBrandSchema.parse({ ...req.body, id });
-      const scope = req.accessScope as AccessScope;
-      const brand = await updateBrand(data, scope);
-      
-      return res.json({
-        success: true,
-        data: brand,
-        message: 'Brand berhasil diperbarui'
-      });
-    } catch (error: any) {
-      logger.error({ error }, 'Error in updateBrand');
-      
-      if (error.name === 'ZodError') {
-        return res.status(400).json({
-          success: false,
-          message: 'Data tidak valid',
-          errors: error.errors
-        });
+      if (!req.user || !req.accessScope) {
+        return res.status(401).json({ success: false, message: 'Unauthorized' });
       }
-      
-      return res.status(500).json({
+
+      const { id } = req.params;
+      const data = CreateBrandSchema.partial().parse(req.body);
+      const brand = await ProdukService.updateBrand(req.accessScope, id, data);
+
+      return res.json({ success: true, data: brand });
+    } catch (error: any) {
+      console.error('Update brand error:', error);
+      return res.status(400).json({
         success: false,
-        message: error.message || 'Terjadi kesalahan server'
+        message: error.message || 'Failed to update brand'
       });
     }
   }
 
   static async deleteBrand(req: Request, res: Response) {
     try {
-      const id = String(req.params.id);
-      const scope = req.accessScope as AccessScope;
-      await deleteBrand(id, scope);
-      
-      return res.json({
-        success: true,
-        message: 'Brand berhasil dihapus'
-      });
+      if (!req.user || !req.accessScope) {
+        return res.status(401).json({ success: false, message: 'Unauthorized' });
+      }
+
+      const { id } = req.params;
+      const deleted = await ProdukService.deleteBrand(req.accessScope, id);
+
+      if (!deleted) {
+        return res.status(404).json({ success: false, message: 'Brand not found' });
+      }
+
+      return res.json({ success: true, message: 'Brand deleted successfully' });
     } catch (error: any) {
-      logger.error({ error }, 'Error in deleteBrand');
-      return res.status(500).json({
-        success: false,
-        message: error.message || 'Terjadi kesalahan server'
-      });
+      console.error('Delete brand error:', error);
+      return res.status(500).json({ success: false, message: 'Internal server error' });
     }
   }
 
-  // ===== SUPPLIER ENDPOINTS =====
-  
-  static async getAllSupplier(req: Request, res: Response) {
+  // Supplier operations
+  static async getSuppliers(req: Request, res: Response) {
     try {
-      const scope = req.accessScope as AccessScope;
-      const supplier = await getAllSupplier(scope);
-      return res.json({
-        success: true,
-        data: supplier,
-        message: 'Data supplier berhasil diambil'
-      });
+      if (!req.user || !req.accessScope) {
+        return res.status(401).json({ success: false, message: 'Unauthorized' });
+      }
+
+      const suppliers = await ProdukService.getSuppliers(req.accessScope);
+      return res.json({ success: true, data: suppliers });
     } catch (error: any) {
-      logger.error({ error }, 'Error in getAllSupplier');
-      return res.status(500).json({
-        success: false,
-        message: error.message || 'Terjadi kesalahan server'
-      });
+      console.error('Get suppliers error:', error);
+      return res.status(500).json({ success: false, message: 'Internal server error' });
     }
   }
 
   static async createSupplier(req: Request, res: Response) {
     try {
+      if (!req.user || !req.accessScope) {
+        return res.status(401).json({ success: false, message: 'Unauthorized' });
+      }
+
       const data = CreateSupplierSchema.parse(req.body);
-      const scope = req.accessScope as AccessScope;
-      const supplier = await createSupplier(data, scope);
-      
-      return res.status(201).json({
-        success: true,
-        data: supplier,
-        message: 'Supplier berhasil dibuat'
-      });
-    } catch (error: any) {
-      logger.error({ error }, 'Error in createSupplier');
-      
-      if (error.name === 'ZodError') {
-        return res.status(400).json({
-          success: false,
-          message: 'Data tidak valid',
-          errors: error.errors
-        });
-      }
-      
-      return res.status(500).json({
-        success: false,
-        message: error.message || 'Terjadi kesalahan server'
-      });
-    }
-  }
+      const supplier = await ProdukService.createSupplier(req.accessScope, data);
 
-  static async updateSupplier(req: Request, res: Response) {
-    try {
-      const id = String(req.params.id);
-      const data = UpdateSupplierSchema.parse({ ...req.body, id });
-      const scope = req.accessScope as AccessScope;
-      const supplier = await updateSupplier(data, scope);
-      
-      return res.json({
-        success: true,
-        data: supplier,
-        message: 'Supplier berhasil diperbarui'
-      });
+      return res.status(201).json({ success: true, data: supplier });
     } catch (error: any) {
-      logger.error({ error }, 'Error in updateSupplier');
-      
-      if (error.name === 'ZodError') {
-        return res.status(400).json({
-          success: false,
-          message: 'Data tidak valid',
-          errors: error.errors
-        });
-      }
-      
-      return res.status(500).json({
+      console.error('Create supplier error:', error);
+      return res.status(400).json({
         success: false,
-        message: error.message || 'Terjadi kesalahan server'
-      });
-    }
-  }
-
-  static async deleteSupplier(req: Request, res: Response) {
-    try {
-      const id = String(req.params.id);
-      const scope = req.accessScope as AccessScope;
-      await deleteSupplier(id, scope);
-      
-      return res.json({
-        success: true,
-        message: 'Supplier berhasil dihapus'
-      });
-    } catch (error: any) {
-      logger.error({ error }, 'Error in deleteSupplier');
-      return res.status(500).json({
-        success: false,
-        message: error.message || 'Terjadi kesalahan server'
-      });
-    }
-  }
-
-  static async getSupplierById(req: Request, res: Response) {
-    try {
-      const id = String(req.params.id);
-      const scope = req.accessScope as AccessScope;
-      const supplier = await getSupplierById(id, scope);
-      
-      if (!supplier) {
-        return res.status(404).json({
-          success: false,
-          message: 'Supplier tidak ditemukan'
-        });
-      }
-      
-      return res.json({
-        success: true,
-        data: supplier,
-        message: 'Data supplier berhasil diambil'
-      });
-    } catch (error: any) {
-      logger.error({ error }, 'Error in getSupplierById');
-      return res.status(500).json({
-        success: false,
-        message: error.message || 'Terjadi kesalahan server'
+        message: error.message || 'Failed to create supplier'
       });
     }
   }

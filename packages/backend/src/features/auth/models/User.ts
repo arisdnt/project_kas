@@ -13,28 +13,23 @@ export enum UserRole {
   MANAGER = 'manager'
 }
 
-// Enum untuk status user
+// Enum untuk status user sesuai database
 export enum UserStatus {
-  ACTIVE = 'active',
-  INACTIVE = 'inactive',
-  SUSPENDED = 'suspended'
+  AKTIF = 'aktif',
+  NONAKTIF = 'nonaktif',
+  SUSPENDED = 'suspended',
+  CUTI = 'cuti'
 }
 
 // Schema validasi untuk User - disesuaikan dengan struktur tabel users
 export const UserSchema = z.object({
   id: z.string().uuid(),
   tenant_id: z.string().uuid(),
+  toko_id: z.string().uuid().nullable().optional(),
+  peran_id: z.string().uuid().nullable().optional(),
   username: z.string().min(3).max(50),
-  email: z.string().email(),
   password_hash: z.string().min(8),
-  nama_lengkap: z.string().min(2).max(100),
-  telepon: z.string().max(20).optional(),
-  avatar_url: z.string().optional(),
-  peran_id: z.string().uuid(),
-  toko_id: z.string().uuid().optional(),
-  level: z.number().int().min(1).max(8),
-  status: z.nativeEnum(UserStatus).default(UserStatus.ACTIVE),
-  is_super_admin: z.boolean().default(false),
+  status: z.nativeEnum(UserStatus).default(UserStatus.AKTIF),
   last_login: z.date().nullable().optional(),
   dibuat_pada: z.date(),
   diperbarui_pada: z.date()
@@ -110,6 +105,19 @@ export interface AuthenticatedUser {
   godPermissions?: string[]; // Permissions khusus god user
 }
 
+// Interface untuk user context dalam JWT
+export interface UserContext {
+  id: string; // users.id
+  tenantId: string; // users.tenant_id
+  tokoId?: string; // users.toko_id
+  peranId?: string; // users.peran_id
+  username: string; // users.username
+  role: UserRole; // mapped dari users.peran_id
+  status: UserStatus; // users.status
+  isGodUser?: boolean; // Flag untuk god user
+  godPermissions?: string[]; // Permissions khusus god user
+}
+
 // Permissions mapping
 export const PERMISSIONS = {
   // User management
@@ -140,9 +148,48 @@ export const PERMISSIONS = {
   REPORT_READ: 'report:read',
   REPORT_EXPORT: 'report:export',
 
-  // Settings management
+  // Settings permissions
   SETTINGS_READ: 'settings:read',
-  SETTINGS_UPDATE: 'settings:update'
+  SETTINGS_UPDATE: 'settings:update',
+
+  // System management permissions
+  SYSTEM_MANAGE: 'system:manage',
+
+  // Notification permissions
+  NOTIFICATION_CREATE: 'notification:create',
+  NOTIFICATION_READ: 'notification:read',
+  NOTIFICATION_UPDATE: 'notification:update',
+  NOTIFICATION_DELETE: 'notification:delete',
+
+  // Document permissions
+  DOCUMENT_CREATE: 'document:create',
+  DOCUMENT_READ: 'document:read',
+  DOCUMENT_UPDATE: 'document:update',
+  DOCUMENT_DELETE: 'document:delete',
+
+  // Store permissions
+  STORE_CREATE: 'store:create',
+  STORE_READ: 'store:read',
+  STORE_UPDATE: 'store:update',
+  STORE_DELETE: 'store:delete',
+
+  // Backup permissions
+  BACKUP_CREATE: 'backup:create',
+  BACKUP_READ: 'backup:read',
+  BACKUP_UPDATE: 'backup:update',
+  BACKUP_DELETE: 'backup:delete',
+
+  // Integration permissions
+  INTEGRATION_CREATE: 'integration:create',
+  INTEGRATION_READ: 'integration:read',
+  INTEGRATION_UPDATE: 'integration:update',
+  INTEGRATION_DELETE: 'integration:delete',
+
+  // Webhook permissions
+  WEBHOOK_CREATE: 'webhook:create',
+  WEBHOOK_READ: 'webhook:read',
+  WEBHOOK_UPDATE: 'webhook:update',
+  WEBHOOK_DELETE: 'webhook:delete'
 } as const;
 
 // Role permissions mapping
@@ -164,7 +211,15 @@ export const ROLE_PERMISSIONS = {
     PERMISSIONS.REPORT_READ,
     PERMISSIONS.REPORT_EXPORT,
     PERMISSIONS.SETTINGS_READ,
-    PERMISSIONS.SETTINGS_UPDATE
+    PERMISSIONS.SETTINGS_UPDATE,
+    PERMISSIONS.STORE_CREATE,
+    PERMISSIONS.STORE_READ,
+    PERMISSIONS.STORE_UPDATE,
+    PERMISSIONS.STORE_DELETE,
+    PERMISSIONS.BACKUP_CREATE,
+    PERMISSIONS.BACKUP_READ,
+    PERMISSIONS.BACKUP_UPDATE,
+    PERMISSIONS.BACKUP_DELETE
   ],
   [UserRole.MANAGER]: [
     PERMISSIONS.USER_READ,
@@ -174,7 +229,9 @@ export const ROLE_PERMISSIONS = {
     PERMISSIONS.CUSTOMER_UPDATE,
     PERMISSIONS.TRANSACTION_READ,
     PERMISSIONS.REPORT_READ,
-    PERMISSIONS.REPORT_EXPORT
+    PERMISSIONS.REPORT_EXPORT,
+    PERMISSIONS.STORE_READ,
+    PERMISSIONS.STORE_UPDATE
   ],
   [UserRole.CASHIER]: [
     PERMISSIONS.PRODUCT_READ,

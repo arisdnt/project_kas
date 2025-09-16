@@ -19,12 +19,12 @@ type BrandActions = {
   setSearch: (v: string) => void
   loadFirst: () => Promise<void>
   loadNext: () => Promise<void>
-  createBrand: (nama: string) => Promise<void>
-  updateBrand: (id: number, nama: string) => Promise<void>
-  deleteBrand: (id: number) => Promise<void>
+  createBrand: (data: { nama: string; deskripsi?: string; logo_url?: string; website?: string }) => Promise<void>
+  updateBrand: (id: string, data: { nama?: string; deskripsi?: string; logo_url?: string; website?: string }) => Promise<void>
+  deleteBrand: (id: string) => Promise<void>
 }
 
-const API_BASE = `${config.api.url}:${config.api.port}/api/produk/brand`
+const API_BASE = `${config.api.url}:${config.api.port}/api/produk/master/brands`
 
 const authHeaders = () => {
   const token = useAuthStore.getState().token
@@ -79,11 +79,11 @@ export const useBrandStore = create<BrandState & BrandActions>()(
       set({ items: slice, page: nextPage, hasNext: nextHas, loading: false })
     },
 
-    createBrand: async (nama: string) => {
+    createBrand: async (data: { nama: string; deskripsi?: string; logo_url?: string; website?: string }) => {
       const res = await fetch(API_BASE, {
         method: 'POST',
         headers: authHeaders(),
-        body: JSON.stringify({ nama }),
+        body: JSON.stringify(data),
       })
       const js = await res.json()
       if (!res.ok || !js.success) throw new Error(js.message || 'Gagal membuat brand')
@@ -93,20 +93,20 @@ export const useBrandStore = create<BrandState & BrandActions>()(
       set({ all, items: slice, page: 1, hasNext })
     },
 
-    updateBrand: async (id: number, nama: string) => {
+    updateBrand: async (id: string, data: { nama?: string; deskripsi?: string; logo_url?: string; website?: string }) => {
       const res = await fetch(`${API_BASE}/${id}`, {
         method: 'PUT',
         headers: authHeaders(),
-        body: JSON.stringify({ id, nama }),
+        body: JSON.stringify(data),
       })
       const js = await res.json()
       if (!res.ok || !js.success) throw new Error(js.message || 'Gagal mengupdate brand')
-      const all = get().all.map((b) => (b.id === id ? { ...b, nama } : b))
+      const all = get().all.map((b) => (b.id === id ? { ...b, ...data } : b))
       const { slice, hasNext } = filterAndSlice(all, get().search, get().page, get().limit)
       set({ all, items: slice, hasNext })
     },
 
-    deleteBrand: async (id: number) => {
+    deleteBrand: async (id: string) => {
       const res = await fetch(`${API_BASE}/${id}`, { method: 'DELETE', headers: authHeaders() })
       const js = await res.json()
       if (!res.ok || !js.success) throw new Error(js.message || 'Gagal menghapus brand')

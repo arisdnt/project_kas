@@ -1,72 +1,128 @@
 /**
- * Controller Penjualan
+ * Sales Controller
+ * Handles sales transaction operations with access scope validation
  */
 
-import { Request, Response } from 'express'
-import { CreateTransaksiSchema } from '../models/Penjualan'
-import { PenjualanService } from '../services/PenjualanService'
-import { logger } from '@/core/utils/logger'
-import { AccessScope } from '@/core/middleware/accessScope'
+import { Request, Response } from 'express';
+import { PenjualanService, CreateTransaksiRequest } from '../services/PenjualanService';
+import { SearchTransaksiQuerySchema, CreateTransaksiPenjualanSchema, UpdateTransaksiPenjualanSchema } from '../models/TransaksiPenjualanCore';
+import { CreateItemTransaksiSchema } from '../models/ItemTransaksiModel';
+import { requireStoreWhenNeeded } from '@/core/middleware/accessScope';
+import { z } from 'zod';
+
+const CreateTransaksiRequestSchema = z.object({
+  transaction: CreateTransaksiPenjualanSchema,
+  items: z.array(CreateItemTransaksiSchema).min(1, 'At least one item is required')
+});
 
 export class PenjualanController {
+  static async search(req: Request, res: Response) {
+    try {
+      if (!req.user || !req.accessScope) {
+        return res.status(401).json({ success: false, message: 'Unauthorized' });
+      }
+
+      const query = SearchTransaksiQuerySchema.parse(req.query);
+      const result = await PenjualanService.search(req.accessScope, query);
+
+      return res.json({
+        success: true,
+        data: result.data,
+        pagination: {
+          total: result.total,
+          page: result.page,
+          totalPages: result.totalPages,
+          limit: Number(query.limit)
+        }
+      });
+    } catch (error: any) {
+      console.error('Search transactions error:', error);
+      return res.status(400).json({
+        success: false,
+        message: error.message || 'Failed to search transactions'
+      });
+    }
+  }
+
+  static async findById(req: Request, res: Response) {
+    try {
+      if (!req.user || !req.accessScope) {
+        return res.status(401).json({ success: false, message: 'Unauthorized' });
+      }
+
+      const { id } = req.params;
+      const transaction = await PenjualanService.findById(req.accessScope, id);
+
+      return res.json({ success: true, data: transaction });
+    } catch (error: any) {
+      console.error('Find transaction error:', error);
+      if (error.message === 'Transaction not found') {
+        return res.status(404).json({ success: false, message: error.message });
+      }
+      return res.status(500).json({ success: false, message: 'Internal server error' });
+    }
+  }
+
   static async create(req: Request, res: Response) {
     try {
-      if (!req.user) {
-        return res.status(401).json({ success: false, message: 'Unauthorized' })
+      if (!req.user || !req.accessScope) {
+        return res.status(401).json({ success: false, message: 'Unauthorized' });
       }
-      const scope = req.accessScope as AccessScope | undefined
-      if (!scope) {
-        return res.status(401).json({ success: false, message: 'Access scope tidak tersedia' })
-      }
-      const payload = CreateTransaksiSchema.parse(req.body)
-      const result = await PenjualanService.createTransaksi(req.user, scope, payload)
-      return res.status(201).json({ success: true, data: result, message: 'Transaksi dibuat' })
+
+      // Store required for transaction creation
+      await new Promise<void>((resolve, reject) =>
+        requireStoreWhenNeeded(req, res, (err?: any) => err ? reject(err) : resolve())
+      );
+
+      const request = CreateTransaksiRequestSchema.parse(req.body);
+      const transaction = await PenjualanService.create(req.accessScope, request);
+
+      return res.status(201).json({ success: true, data: transaction });
     } catch (error: any) {
-      logger.error({ error }, 'Gagal membuat transaksi')
-      const status = error?.name === 'ZodError' ? 400 : 500
-      return res.status(status).json({ success: false, message: error?.message || 'Gagal membuat transaksi' })
+      console.error('Create transaction error:', error);
+      return res.status(400).json({
+        success: false,
+        message: error.message || 'Failed to create transaction'
+      });
     }
   }
 
-  static async detail(req: Request, res: Response) {
+  static async update(req: Request, res: Response) {
     try {
-      if (!req.user) {
-        return res.status(401).json({ success: false, message: 'Unauthorized' })
+      if (!req.user || !req.accessScope) {
+        return res.status(401).json({ success: false, message: 'Unauthorized' });
       }
-      const id = String(req.params.id)
-      const scope = req.accessScope as AccessScope | undefined
-      if (!scope) {
-        return res.status(401).json({ success: false, message: 'Access scope tidak tersedia' })
-      }
-      const detail = await PenjualanService.getDetailTransaksi(id, scope)
-      if (!detail) return res.status(404).json({ success: false, message: 'Transaksi tidak ditemukan' })
-      return res.json({ success: true, data: detail })
+
+      const { id } = req.params;
+      const data = UpdateTransaksiPenjualanSchema.parse(req.body);
+      const result = await PenjualanService.update(req.accessScope, id, data);
+
+      return res.json({ success: true, data: result });
     } catch (error: any) {
-      logger.error({ error }, 'Gagal mengambil detail transaksi')
-      return res.status(500).json({ success: false, message: error?.message || 'Gagal mengambil detail' })
+      console.error('Update transaction error:', error);
+      return res.status(400).json({
+        success: false,
+        message: error.message || 'Failed to update transaction'
+      });
     }
   }
 
-  static async cetakStruk(req: Request, res: Response) {
+  static async cancel(req: Request, res: Response) {
     try {
-      if (!req.user) {
-        return res.status(401).json({ success: false, message: 'Unauthorized' })
+      if (!req.user || !req.accessScope) {
+        return res.status(401).json({ success: false, message: 'Unauthorized' });
       }
-      const id = String(req.params.id)
-      const scope = req.accessScope as AccessScope | undefined
-      if (!scope) {
-        return res.status(401).json({ success: false, message: 'Access scope tidak tersedia' })
-      }
-      const detail = await PenjualanService.getDetailTransaksi(id, scope)
-      if (!detail) return res.status(404).json({ success: false, message: 'Transaksi tidak ditemukan' })
-      // Format sebagai teks struk (untuk stub). Integrasi printer server bisa ditambahkan di sini.
-      const text = PenjualanService.formatStrukText(detail, { nama: 'KasirPro', alamat: '' })
-      // Kembalikan plain text untuk debugging/preview
-      res.setHeader('Content-Type', 'text/plain; charset=utf-8')
-      return res.send(text)
+
+      const { id } = req.params;
+      const result = await PenjualanService.cancel(req.accessScope, id);
+
+      return res.json({ success: true, data: result });
     } catch (error: any) {
-      logger.error({ error }, 'Gagal mencetak struk')
-      return res.status(500).json({ success: false, message: error?.message || 'Gagal mencetak struk' })
+      console.error('Cancel transaction error:', error);
+      return res.status(400).json({
+        success: false,
+        message: error.message || 'Failed to cancel transaction'
+      });
     }
   }
 }

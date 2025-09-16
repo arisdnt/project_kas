@@ -160,3 +160,25 @@ export const PERAN_LEVEL_DESCRIPTIONS = {
   [PERAN_LEVELS.KASIR]: 'Kasir - Memiliki akses penuh untuk proses kasir di toko terkait',
   [PERAN_LEVELS.REVIEWER]: 'Reviewer - Hanya memiliki akses read di toko terkait'
 } as const;
+
+// Middleware untuk memerlukan level minimum
+export const requireMinimumLevel = (minimumLevel: number) => {
+  return (req: Request, res: Response, next: NextFunction): void => {
+    const user = req.user;
+    if (!user) {
+      res.status(401).json({ success: false, message: 'Unauthorized' });
+      return;
+    }
+
+    const userLevel = user.level || 5;
+    if (userLevel > minimumLevel) {
+      res.status(403).json({ 
+        success: false, 
+        message: `Akses ditolak. Diperlukan level ${minimumLevel} atau lebih tinggi` 
+      });
+      return;
+    }
+
+    next();
+  };
+};

@@ -1,52 +1,124 @@
 /**
- * Routes untuk API Produk dan Inventaris
- * Sesuai dengan Blueprint Arsitektur Sistem Point of Sales Real-Time Multi-Tenant (Revisi 4.0)
+ * Product Routes
+ * Main product management routes with proper authentication and authorization
  */
 
 import { Router } from 'express';
-import { MasterDataController } from '../controllers/MasterDataController';
+import { authenticate, requirePermission } from '@/features/auth/middleware/authMiddleware';
+import { attachAccessScope, requireStoreWhenNeeded } from '@/core/middleware/accessScope';
+import { PERMISSIONS } from '@/features/auth/models/User';
+import { ProdukController } from '../controllers/ProdukController';
 import { ProdukInventarisController } from '../controllers/ProdukInventarisController';
-import { authenticate, authorize } from '@/features/auth/middleware/authMiddleware';
-import { UserRole } from '@/features/auth/models/User';
-import { requireStoreWhenNeeded } from '@/core/middleware/accessScope';
-import { attachAccessScope } from '@/core/middleware/accessScope';
+import { MasterDataController } from '../controllers/MasterDataController';
 
 const router = Router();
 
-// Middleware untuk semua routes produk
+// Apply common middleware
 router.use(authenticate);
 router.use(attachAccessScope);
 
-// ===== KATEGORI ROUTES =====
-router.get('/kategori', authorize(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.CASHIER), MasterDataController.getAllKategori);
-router.post('/kategori', authorize(UserRole.SUPER_ADMIN, UserRole.ADMIN), MasterDataController.createKategori);
-router.put('/kategori/:id', authorize(UserRole.SUPER_ADMIN, UserRole.ADMIN), MasterDataController.updateKategori);
-router.delete('/kategori/:id', authorize(UserRole.SUPER_ADMIN, UserRole.ADMIN), MasterDataController.deleteKategori);
+// Product CRUD routes
+router.get('/', requirePermission(PERMISSIONS.PRODUCT_READ), ProdukController.search);
+router.get('/:id', requirePermission(PERMISSIONS.PRODUCT_READ), ProdukController.findById);
+router.post('/', requirePermission(PERMISSIONS.PRODUCT_CREATE), ProdukController.create);
+router.put('/:id', requirePermission(PERMISSIONS.PRODUCT_UPDATE), ProdukController.update);
+router.delete('/:id', requirePermission(PERMISSIONS.PRODUCT_DELETE), ProdukController.delete);
 
-// ===== BRAND ROUTES =====
-router.get('/brand', authorize(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.CASHIER), MasterDataController.getAllBrand);
-router.post('/brand', authorize(UserRole.SUPER_ADMIN, UserRole.ADMIN), MasterDataController.createBrand);
-router.put('/brand/:id', authorize(UserRole.SUPER_ADMIN, UserRole.ADMIN), MasterDataController.updateBrand);
-router.delete('/brand/:id', authorize(UserRole.SUPER_ADMIN, UserRole.ADMIN), MasterDataController.deleteBrand);
+// Inventory routes - require store access
+router.get('/inventory/search',
+  requirePermission(PERMISSIONS.PRODUCT_READ),
+  requireStoreWhenNeeded,
+  ProdukInventarisController.search
+);
 
-// ===== SUPPLIER ROUTES =====
-router.get('/supplier', authorize(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.CASHIER), MasterDataController.getAllSupplier);
-router.get('/supplier/:id', authorize(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.CASHIER), MasterDataController.getSupplierById);
-router.post('/supplier', authorize(UserRole.SUPER_ADMIN, UserRole.ADMIN), MasterDataController.createSupplier);
-router.put('/supplier/:id', authorize(UserRole.SUPER_ADMIN, UserRole.ADMIN), MasterDataController.updateSupplier);
-router.delete('/supplier/:id', authorize(UserRole.SUPER_ADMIN, UserRole.ADMIN), MasterDataController.deleteSupplier);
+router.get('/inventory/low-stock',
+  requirePermission(PERMISSIONS.PRODUCT_READ),
+  requireStoreWhenNeeded,
+  ProdukInventarisController.getLowStockItems
+);
 
-// ===== PRODUK ROUTES =====
-router.get('/produk', authorize(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.CASHIER), ProdukInventarisController.getAllProduk);
-router.get('/produk/:id', authorize(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.CASHIER), ProdukInventarisController.getProdukById);
-router.post('/produk', authorize(UserRole.SUPER_ADMIN, UserRole.ADMIN), ProdukInventarisController.createProduk);
-router.put('/produk/:id', authorize(UserRole.SUPER_ADMIN, UserRole.ADMIN), ProdukInventarisController.updateProduk);
-router.delete('/produk/:id', authorize(UserRole.SUPER_ADMIN, UserRole.ADMIN), ProdukInventarisController.deleteProduk);
+router.get('/:produkId/inventory',
+  requirePermission(PERMISSIONS.PRODUCT_READ),
+  ProdukInventarisController.getProductInventory
+);
 
-// ===== INVENTARIS ROUTES =====
-router.get('/inventaris', authorize(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.CASHIER), requireStoreWhenNeeded, ProdukInventarisController.getInventarisByToko);
-router.post('/inventaris', authorize(UserRole.SUPER_ADMIN, UserRole.ADMIN), requireStoreWhenNeeded, ProdukInventarisController.upsertInventaris);
-router.put('/inventaris/:productId/stok', authorize(UserRole.SUPER_ADMIN, UserRole.ADMIN), requireStoreWhenNeeded, ProdukInventarisController.updateStok);
-router.delete('/inventaris/:productId', authorize(UserRole.SUPER_ADMIN, UserRole.ADMIN), requireStoreWhenNeeded, ProdukInventarisController.deleteInventaris);
+router.post('/:produkId/inventory',
+  requirePermission(PERMISSIONS.PRODUCT_UPDATE),
+  requireStoreWhenNeeded,
+  ProdukInventarisController.updateStock
+);
+
+router.put('/:produkId/inventory',
+  requirePermission(PERMISSIONS.PRODUCT_UPDATE),
+  requireStoreWhenNeeded,
+  ProdukInventarisController.updateStock
+);
+
+// Master data routes
+router.get('/master/categories',
+  requirePermission(PERMISSIONS.PRODUCT_READ),
+  MasterDataController.getCategories
+);
+
+router.post('/master/categories',
+  requirePermission(PERMISSIONS.PRODUCT_CREATE),
+  MasterDataController.createCategory
+);
+
+router.put('/master/categories/:id',
+  requirePermission(PERMISSIONS.PRODUCT_UPDATE),
+  MasterDataController.updateCategory
+);
+
+router.delete('/master/categories/:id',
+  requirePermission(PERMISSIONS.PRODUCT_DELETE),
+  MasterDataController.deleteCategory
+);
+
+router.get('/master/brands',
+  requirePermission(PERMISSIONS.PRODUCT_READ),
+  MasterDataController.getBrands
+);
+
+router.post('/master/brands',
+  requirePermission(PERMISSIONS.PRODUCT_CREATE),
+  MasterDataController.createBrand
+);
+
+router.put('/master/brands/:id',
+  requirePermission(PERMISSIONS.PRODUCT_UPDATE),
+  MasterDataController.updateBrand
+);
+
+router.delete('/master/brands/:id',
+  requirePermission(PERMISSIONS.PRODUCT_DELETE),
+  MasterDataController.deleteBrand
+);
+
+router.get('/master/suppliers',
+  requirePermission(PERMISSIONS.PRODUCT_READ),
+  MasterDataController.getSuppliers
+);
+
+router.post('/master/suppliers',
+  requirePermission(PERMISSIONS.PRODUCT_CREATE),
+  MasterDataController.createSupplier
+);
+
+// Route aliases untuk kompatibilitas frontend
+router.get('/brand',
+  requirePermission(PERMISSIONS.PRODUCT_READ),
+  MasterDataController.getBrands
+);
+
+router.get('/kategori',
+  requirePermission(PERMISSIONS.PRODUCT_READ),
+  MasterDataController.getCategories
+);
+
+router.get('/supplier',
+  requirePermission(PERMISSIONS.PRODUCT_READ),
+  MasterDataController.getSuppliers
+);
 
 export default router;

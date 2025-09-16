@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useRef } from 'react'
 import { Card, CardContent } from '@/core/components/ui/card'
 import { Button } from '@/core/components/ui/button'
-import { useKategoriStore, UIKategori } from '@/features/kategori/store/kategoriStore'
+import { Badge } from '@/core/components/ui/badge'
+import { useKategoriStore } from '@/features/kategori/store/kategoriStore'
+import { UIKategori } from '@/features/kategori/types/kategori'
 import { Eye, Pencil, Trash2 } from 'lucide-react'
 
 type Props = {
@@ -36,6 +38,9 @@ export function KategoriTable({ onView, onEdit }: Props) {
       {Array.from({ length: 8 }).map((_, i) => (
         <tr key={i} className="animate-pulse">
           <td className="px-4 py-3"><div className="h-3.5 bg-gray-200 rounded w-48" /></td>
+          <td className="px-4 py-3"><div className="h-3.5 bg-gray-200 rounded w-32" /></td>
+          <td className="px-4 py-3"><div className="h-3.5 bg-gray-200 rounded w-12" /></td>
+          <td className="px-4 py-3"><div className="h-5 bg-gray-200 rounded w-16" /></td>
           <td className="px-4 py-3"><div className="h-8 bg-gray-200 rounded w-28" /></td>
         </tr>
       ))}
@@ -55,6 +60,9 @@ export function KategoriTable({ onView, onEdit }: Props) {
             <thead className="sticky top-0 z-10 bg-white border-b shadow-[0_1px_0_0_rgba(0,0,0,0.04)]">
               <tr className="text-left text-gray-600">
                 <th className="px-4 py-3 font-medium">Nama Kategori</th>
+                <th className="px-4 py-3 font-medium">Deskripsi</th>
+                <th className="px-4 py-3 font-medium">Urutan</th>
+                <th className="px-4 py-3 font-medium">Status</th>
                 <th className="px-4 py-3 font-medium">Aksi</th>
               </tr>
             </thead>
@@ -62,7 +70,25 @@ export function KategoriTable({ onView, onEdit }: Props) {
               {items.map((k) => (
                 <tr key={k.id} className="border-b last:border-0 hover:bg-gray-50/50">
                   <td className="px-4 py-3">
-                    <div className="font-medium text-gray-900">{k.nama}</div>
+                    <div className="flex items-center gap-2">
+                      {k.icon_url && (
+                        <img src={k.icon_url} alt="Icon" className="w-6 h-6 object-contain" />
+                      )}
+                      <div className="font-medium text-gray-900">{k.nama}</div>
+                    </div>
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="text-sm text-gray-600 max-w-xs truncate">
+                      {k.deskripsi || '-'}
+                    </div>
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="text-sm">{k.urutan}</div>
+                  </td>
+                  <td className="px-4 py-3">
+                    <Badge variant={k.status === 'aktif' ? 'default' : 'secondary'}>
+                      {k.status === 'aktif' ? 'Aktif' : 'Non-aktif'}
+                    </Badge>
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2">

@@ -92,7 +92,7 @@ export const getRateLimitConfig = (env: string = 'development') => {
   const configs = {
     development: {
       ...defaultRateLimit,
-      max: 50 // Lebih ketat untuk testing rate limiting
+      max: 1000 // Lebih longgar untuk development
     },
     production: defaultRateLimit,
     test: {

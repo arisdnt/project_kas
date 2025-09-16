@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { devtools } from 'zustand/middleware'
-import { UIKategori } from '@/features/kategori/types/kategori'
+import { UIKategori, CreateKategoriRequest, UpdateKategoriRequest } from '@/features/kategori/types/kategori'
 import { useAuthStore } from '@/core/store/authStore'
 import { config } from '@/core/config'
 
@@ -19,12 +19,12 @@ type KategoriActions = {
   setSearch: (v: string) => void
   loadFirst: () => Promise<void>
   loadNext: () => Promise<void>
-  createKategori: (nama: string) => Promise<void>
-  updateKategori: (id: number, nama: string) => Promise<void>
-  deleteKategori: (id: number) => Promise<void>
+  createKategori: (data: CreateKategoriRequest) => Promise<void>
+  updateKategori: (id: string, data: UpdateKategoriRequest) => Promise<void>
+  deleteKategori: (id: string) => Promise<void>
 }
 
-const API_BASE = `${config.api.url}:${config.api.port}/api/produk/kategori`
+const API_BASE = `${config.api.url}:${config.api.port}/api/produk/master/categories`
 
 const authHeaders = () => {
   const token = useAuthStore.getState().token
@@ -81,11 +81,11 @@ export const useKategoriStore = create<KategoriState & KategoriActions>()(
       set({ items: slice, page: nextPage, hasNext: nextHas, loading: false })
     },
 
-    createKategori: async (nama: string) => {
+    createKategori: async (data: CreateKategoriRequest) => {
       const res = await fetch(API_BASE, {
         method: 'POST',
         headers: authHeaders(),
-        body: JSON.stringify({ nama }),
+        body: JSON.stringify(data),
       })
       const js = await res.json()
       if (!res.ok || !js.success) throw new Error(js.message || 'Gagal membuat kategori')
@@ -95,20 +95,21 @@ export const useKategoriStore = create<KategoriState & KategoriActions>()(
       set({ all, items: slice, page: 1, hasNext })
     },
 
-    updateKategori: async (id: number, nama: string) => {
+    updateKategori: async (id: string, data: UpdateKategoriRequest) => {
       const res = await fetch(`${API_BASE}/${id}`, {
         method: 'PUT',
         headers: authHeaders(),
-        body: JSON.stringify({ id, nama }),
+        body: JSON.stringify(data),
       })
       const js = await res.json()
       if (!res.ok || !js.success) throw new Error(js.message || 'Gagal mengupdate kategori')
-      const all = get().all.map((k) => (k.id === id ? { ...k, nama } : k))
+      const updated: UIKategori = js.data
+      const all = get().all.map((k) => (k.id === id ? updated : k))
       const { slice, hasNext } = filterAndSlice(all, get().search, get().page, get().limit)
       set({ all, items: slice, hasNext })
     },
 
-    deleteKategori: async (id: number) => {
+    deleteKategori: async (id: string) => {
       const res = await fetch(`${API_BASE}/${id}`, { method: 'DELETE', headers: authHeaders() })
       const js = await res.json()
       if (!res.ok || !js.success) throw new Error(js.message || 'Gagal menghapus kategori')

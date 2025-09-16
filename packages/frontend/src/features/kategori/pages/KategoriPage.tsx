@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { KategoriToolbar } from '@/features/kategori/components/KategoriToolbar'
 import { KategoriTable } from '@/features/kategori/components/KategoriTable'
-import { useKategoriStore, UIKategori } from '@/features/kategori/store/kategoriStore'
+import { useKategoriStore } from '@/features/kategori/store/kategoriStore'
+import { UIKategori, CreateKategoriRequest, UpdateKategoriRequest } from '@/features/kategori/types/kategori'
 import { KategoriDetailSidebar } from '@/features/kategori/components/KategoriDetailSidebar'
 import { KategoriEditSidebar } from '@/features/kategori/components/KategoriEditSidebar'
 import { useToast } from '@/core/hooks/use-toast'
@@ -13,7 +14,7 @@ export function KategoriPage() {
   const [detailOpen, setDetailOpen] = useState(false)
   const [editOpen, setEditOpen] = useState(false)
   const [selected, setSelected] = useState<UIKategori | null>(null)
-  const [editing, setEditing] = useState<{ nama: string } | null>(null)
+  const [editing, setEditing] = useState<CreateKategoriRequest | null>(null)
   const [saving, setSaving] = useState(false)
 
   const openCreate = () => {
@@ -29,18 +30,23 @@ export function KategoriPage() {
 
   const onEdit = (k: UIKategori) => {
     setSelected(k)
-    setEditing({ nama: k.nama })
+    setEditing({
+      nama: k.nama,
+      deskripsi: k.deskripsi,
+      icon_url: k.icon_url,
+      urutan: k.urutan
+    })
     setEditOpen(true)
   }
 
-  const onSave = async (data: { nama: string }) => {
+  const onSave = async (data: CreateKategoriRequest) => {
     setSaving(true)
     try {
       if (selected) {
-        await updateKategori(selected.id, data.nama)
+        await updateKategori(selected.id, data)
         toast({ title: 'Kategori diperbarui' })
       } else {
-        await createKategori(data.nama)
+        await createKategori(data)
         toast({ title: 'Kategori dibuat' })
       }
     } catch (e: any) {

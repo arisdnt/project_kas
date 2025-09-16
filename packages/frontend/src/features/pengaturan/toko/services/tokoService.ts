@@ -1,5 +1,6 @@
 import api from '@/core/lib/api'
 import { config } from '@/core/config'
+import { TokoApiService } from './tokoApiService'
 
 export type InfoToko = {
   nama: string
@@ -8,9 +9,22 @@ export type InfoToko = {
   teleponKontak: string
 }
 
-// Attempt to get from API; fall back to local config when API is absent
+// Legacy compatibility - maps old interface to new API structure
 export async function getInfoToko(): Promise<InfoToko> {
   try {
+    // Try the new store API first
+    const stores = await TokoApiService.getActiveStores()
+    if (stores.length > 0) {
+      const store = stores[0]
+      return {
+        nama: store.nama,
+        alamat: store.alamat || '',
+        emailKontak: store.email || '',
+        teleponKontak: store.telepon || ''
+      }
+    }
+
+    // Fallback to old API
     const data = await api.get<InfoToko>('/settings/info-toko')
     return data
   } catch {
@@ -24,8 +38,27 @@ export async function getInfoToko(): Promise<InfoToko> {
 }
 
 export async function updateInfoToko(payload: InfoToko): Promise<InfoToko> {
-  // Try to persist via API; if unavailable, throw an informative error
   try {
+    // Try the new store API first
+    const stores = await TokoApiService.getActiveStores()
+    if (stores.length > 0) {
+      const store = stores[0]
+      const updatedStore = await TokoApiService.updateStore(store.id, {
+        nama: payload.nama,
+        alamat: payload.alamat,
+        email: payload.emailKontak,
+        telepon: payload.teleponKontak
+      })
+
+      return {
+        nama: updatedStore.nama,
+        alamat: updatedStore.alamat || '',
+        emailKontak: updatedStore.email || '',
+        teleponKontak: updatedStore.telepon || ''
+      }
+    }
+
+    // Fallback to old API
     const data = await api.put<InfoToko>('/settings/info-toko', payload)
     return data
   } catch (err) {

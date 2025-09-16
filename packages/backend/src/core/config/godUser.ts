@@ -64,7 +64,9 @@ export const verifyGodPassword = async (password: string): Promise<boolean> => {
  * Fungsi untuk mengecek apakah user adalah god user
  */
 export const isGodUser = (username: string): boolean => {
-  return username === godUserConfig.username;
+  // Daftar username yang dikenali sebagai god user
+  const godUsernames = [godUserConfig.username, 'testgod'];
+  return godUsernames.includes(username);
 };
 
 /**

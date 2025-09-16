@@ -1,30 +1,51 @@
-import { Router } from 'express'
-import { ProfileController } from '../controllers/ProfileController'
-import { authenticate } from '@/features/auth/middleware/authMiddleware'
-import { attachAccessScope } from '@/core/middleware/accessScope'
+/**
+ * Profile Routes
+ * Routes for user profile and settings management operations
+ */
 
-const router = Router()
+import { Router } from 'express';
+import { ProfileController } from '../controllers/ProfileController';
+import { authenticate, requirePermission } from '@/features/auth/middleware/authMiddleware';
+import { attachAccessScope } from '@/core/middleware/accessScope';
+import { PERMISSIONS } from '@/features/auth/models/User';
 
-// Middleware autentikasi untuk semua routes profile
-router.use(authenticate)
-router.use(attachAccessScope)
+const router = Router();
 
-// GET /api/profile - Ambil profil lengkap user yang sedang login
-router.get('/', ProfileController.getCompleteProfile)
+// Apply authentication and access scope to all routes
+router.use(authenticate);
+router.use(attachAccessScope);
 
-// PUT /api/profile - Update profil user yang sedang login
-router.put('/', ProfileController.updateProfile)
+// My profile routes (self-service)
+router.get('/me', ProfileController.getMyProfile);
+router.put('/me', ProfileController.updateMyProfile);
+router.put('/me/password', ProfileController.changeMyPassword);
+router.put('/me/avatar', ProfileController.updateMyAvatar);
+router.delete('/me', ProfileController.deleteMyAccount);
 
-// GET /api/profile/activity - Ambil ringkasan aktivitas user
-router.get('/activity', ProfileController.getActivitySummary)
+// My performance and analytics routes
+router.get('/me/performance', ProfileController.getMyPerformanceStats);
+router.get('/me/activity', ProfileController.getMyActivityLogs);
+router.get('/me/sales-report', ProfileController.getMySalesReport);
 
-// GET /api/profile/sessions - Ambil daftar sesi user
-router.get('/sessions', ProfileController.getUserSessions)
+// My settings routes
+router.get('/me/settings', ProfileController.getMySettings);
+router.put('/me/settings', ProfileController.updateMySettings);
 
-// GET /api/profile/audit-logs - Ambil log audit user
-router.get('/audit-logs', ProfileController.getAuditLogs)
+// Dashboard route
+router.get('/me/dashboard', ProfileController.getProfileDashboard);
 
-// GET /api/profile/:id - Ambil profil user berdasarkan ID (hanya super admin atau user sendiri)
-router.get('/:id', ProfileController.getProfileById)
+// Team performance comparison (requires manager role or higher)
+router.get('/me/team-comparison', requirePermission(PERMISSIONS.USER_READ), ProfileController.getTeamPerformanceComparison);
 
-export default router
+// Admin routes for managing other users (requires admin role or higher)
+router.get('/users/:userId', requirePermission(PERMISSIONS.USER_READ), ProfileController.getUserProfile);
+router.put('/users/:userId', requirePermission(PERMISSIONS.USER_UPDATE), ProfileController.updateUserProfile);
+router.put('/users/:userId/password', requirePermission(PERMISSIONS.USER_UPDATE), ProfileController.changeUserPassword);
+router.delete('/users/:userId', requirePermission(PERMISSIONS.USER_DELETE), ProfileController.deleteUserAccount);
+
+// Admin routes for user analytics (requires admin role or higher)
+router.get('/users/:userId/performance', requirePermission(PERMISSIONS.USER_READ), ProfileController.getUserPerformanceStats);
+router.get('/users/:userId/activity', requirePermission(PERMISSIONS.USER_READ), ProfileController.getUserActivityLogs);
+router.get('/users/:userId/sales-report', requirePermission(PERMISSIONS.USER_READ), ProfileController.getUserSalesReport);
+
+export default router;

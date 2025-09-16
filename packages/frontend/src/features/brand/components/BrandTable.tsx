@@ -63,6 +63,7 @@ export function BrandTable({ onView, onEdit }: Props) {
                 <tr key={b.id} className="border-b last:border-0 hover:bg-gray-50/50">
                   <td className="px-4 py-3">
                     <div className="font-medium text-gray-900">{b.nama}</div>
+                    {b.deskripsi && <div className="text-xs text-gray-500 truncate mt-0.5">{b.deskripsi}</div>}
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2">

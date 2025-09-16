@@ -95,7 +95,7 @@ export class AuthController {
           return res.status(409).json({
             success: false,
             error: 'Conflict',
-            message: 'Username or email already exists'
+            message: 'Username already exists'
           });
         }
       }
