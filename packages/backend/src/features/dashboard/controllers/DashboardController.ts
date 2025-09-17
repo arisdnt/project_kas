@@ -20,6 +20,57 @@ const TopItemsQuerySchema = z.object({
 });
 
 export class DashboardController {
+  /**
+   * @swagger
+   * /api/dashboard/overview:
+   *   get:
+   *     tags: [Dashboard]
+   *     summary: Data overview KPI dashboard
+   *     description: Mengambil data KPI untuk dashboard overview
+   *     security:
+   *       - bearerAuth: []
+   *     parameters:
+   *       - in: query
+   *         name: start_date
+   *         required: true
+   *         schema:
+   *           type: string
+   *           format: date
+   *         description: Tanggal mulai (YYYY-MM-DD)
+   *       - in: query
+   *         name: end_date
+   *         required: true
+   *         schema:
+   *           type: string
+   *           format: date
+   *         description: Tanggal akhir (YYYY-MM-DD)
+   *     responses:
+   *       200:
+   *         description: Data KPI berhasil diambil
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: true
+   *                 data:
+   *                   type: object
+   *                   properties:
+   *                     totalSales:
+   *                       type: number
+   *                     totalTransactions:
+   *                       type: number
+   *                     totalCustomers:
+   *                       type: number
+   *       401:
+   *         description: Unauthorized
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/ErrorResponse'
+   */
   static async getOverviewKPIs(req: Request, res: Response) {
     try {
       if (!req.user || !req.accessScope) {

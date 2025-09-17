@@ -38,7 +38,50 @@ const CreateSupplierSchema = z.object({
 });
 
 export class MasterDataController {
-  // Category operations
+  /**
+   * @swagger
+   * /api/produk/master/categories:
+   *   get:
+   *     tags: [Master Data]
+   *     summary: Ambil daftar kategori
+   *     description: Mengambil semua kategori produk
+   *     security:
+   *       - bearerAuth: []
+   *     responses:
+   *       200:
+   *         description: Daftar kategori berhasil diambil
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: true
+   *                 data:
+   *                   type: array
+   *                   items:
+   *                     type: object
+   *                     properties:
+   *                       id:
+   *                         type: string
+   *                         format: uuid
+   *                       nama:
+   *                         type: string
+   *                       deskripsi:
+   *                         type: string
+   *                       icon_url:
+   *                         type: string
+   *                       status:
+   *                         type: string
+   *                         enum: [aktif, nonaktif]
+   *       401:
+   *         description: Unauthorized
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/ErrorResponse'
+   */
   static async getCategories(req: Request, res: Response) {
     try {
       if (!req.user || !req.accessScope) {
@@ -60,6 +103,59 @@ export class MasterDataController {
     }
   }
 
+  /**
+   * @swagger
+   * /api/produk/master/categories:
+   *   post:
+   *     tags: [Master Data]
+   *     summary: Buat kategori baru
+   *     description: Membuat kategori produk baru
+   *     security:
+   *       - bearerAuth: []
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             required:
+   *               - nama
+   *             properties:
+   *               nama:
+   *                 type: string
+   *                 maxLength: 100
+   *                 description: Nama kategori
+   *               deskripsi:
+   *                 type: string
+   *                 description: Deskripsi kategori
+   *               icon_url:
+   *                 type: string
+   *                 format: uri
+   *                 description: URL icon kategori
+   *               urutan:
+   *                 type: integer
+   *                 minimum: 0
+   *                 description: Urutan tampil kategori
+   *     responses:
+   *       201:
+   *         description: Kategori berhasil dibuat
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: true
+   *                 data:
+   *                   type: object
+   *       400:
+   *         description: Data tidak valid
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/ErrorResponse'
+   */
   static async createCategory(req: Request, res: Response) {
     try {
       if (!req.user || !req.accessScope) {

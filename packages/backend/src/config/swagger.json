@@ -1,0 +1,1319 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "Sistem POS API",
+    "version": "1.0.0",
+    "description": "Dokumentasi REST API Sistem POS real-time multi-tenant.",
+    "contact": {
+      "name": "Sistem POS Team",
+      "email": "support@sistempos.com"
+    }
+  },
+  "servers": [
+    {
+      "url": "http://localhost:3000/api",
+      "description": "Development API Server"
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    },
+    "schemas": {
+      "Pagination": {
+        "type": "object",
+        "properties": {
+          "total": {
+            "type": "integer",
+            "example": 120
+          },
+          "page": {
+            "type": "integer",
+            "example": 1
+          },
+          "totalPages": {
+            "type": "integer",
+            "example": 12
+          },
+          "limit": {
+            "type": "integer",
+            "example": 10
+          }
+        }
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "example": false
+          },
+          "message": {
+            "type": "string",
+            "example": "Terjadi kesalahan"
+          },
+          "errors": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "ValidationError": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "example": false
+          },
+          "message": {
+            "type": "string",
+            "example": "Validasi gagal"
+          },
+          "errors": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "field": {
+                  "type": "string",
+                  "example": "email"
+                },
+                "message": {
+                  "type": "string",
+                  "example": "Alamat email tidak valid"
+                }
+              }
+            }
+          }
+        }
+      },
+      "SuccessResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "example": true
+          },
+          "message": {
+            "type": "string",
+            "example": "Operasi berhasil"
+          }
+        }
+      },
+      "TransaksiPenjualan": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "kode_transaksi": {
+            "type": "string"
+          },
+          "total": {
+            "type": "number"
+          },
+          "status": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      }
+    },
+    "parameters": {
+      "PaginationPage": {
+        "in": "query",
+        "name": "page",
+        "schema": {
+          "type": "integer",
+          "minimum": 1,
+          "default": 1
+        },
+        "description": "Nomor halaman (>= 1)"
+      },
+      "PaginationLimit": {
+        "in": "query",
+        "name": "limit",
+        "schema": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100,
+          "default": 10
+        },
+        "description": "Jumlah data per halaman"
+      },
+      "SearchQuery": {
+        "in": "query",
+        "name": "search",
+        "schema": {
+          "type": "string"
+        },
+        "description": "Pencarian bebas"
+      }
+    },
+    "responses": {
+      "Unauthorized": {
+        "description": "Tidak memiliki kredensial yang valid",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "Forbidden": {
+        "description": "Tidak memiliki izin",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "NotFound": {
+        "description": "Data tidak ditemukan",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "ValidationFailed": {
+        "description": "Request tidak lolos validasi",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ValidationError"
+            }
+          }
+        }
+      },
+      "InternalError": {
+        "description": "Kesalahan tidak terduga",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      }
+    }
+  },
+  "security": [
+    {
+      "bearerAuth": []
+    }
+  ],
+  "paths": {
+    "/api/auth/login": {
+      "post": {
+        "tags": [
+          "Authentication"
+        ],
+        "summary": "Login pengguna",
+        "description": "Melakukan autentikasi pengguna dan mengembalikan access token",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "username",
+                  "password",
+                  "tenantId"
+                ],
+                "properties": {
+                  "username": {
+                    "type": "string",
+                    "description": "Username pengguna",
+                    "example": "admin"
+                  },
+                  "password": {
+                    "type": "string",
+                    "description": "Password pengguna",
+                    "example": "admin123"
+                  },
+                  "tenantId": {
+                    "type": "string",
+                    "description": "ID tenant",
+                    "example": "7f69ce68-9068-11f0-8eff-00155d24a169"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Login berhasil",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Login successful"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "user": {
+                          "type": "object",
+                          "description": "Data pengguna"
+                        },
+                        "accessToken": {
+                          "type": "string",
+                          "description": "JWT access token"
+                        },
+                        "refreshToken": {
+                          "type": "string",
+                          "description": "JWT refresh token"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Kredensial tidak valid",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Akses tenant tidak valid",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/refresh": {
+      "post": {
+        "tags": [
+          "Authentication"
+        ],
+        "summary": "Refresh access token",
+        "description": "Memperbarui access token menggunakan refresh token",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "refreshToken"
+                ],
+                "properties": {
+                  "refreshToken": {
+                    "type": "string",
+                    "description": "JWT refresh token",
+                    "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Token berhasil diperbarui",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Token refreshed successfully"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "accessToken": {
+                          "type": "string",
+                          "description": "JWT access token baru"
+                        },
+                        "refreshToken": {
+                          "type": "string",
+                          "description": "JWT refresh token baru"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Refresh token tidak valid atau expired",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/dashboard/overview": {
+      "get": {
+        "tags": [
+          "Dashboard"
+        ],
+        "summary": "Data overview KPI dashboard",
+        "description": "Mengambil data KPI untuk dashboard overview",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "start_date",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            },
+            "description": "Tanggal mulai (YYYY-MM-DD)"
+          },
+          {
+            "in": "query",
+            "name": "end_date",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            },
+            "description": "Tanggal akhir (YYYY-MM-DD)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Data KPI berhasil diambil",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "totalSales": {
+                          "type": "number"
+                        },
+                        "totalTransactions": {
+                          "type": "number"
+                        },
+                        "totalCustomers": {
+                          "type": "number"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/pelanggan": {
+      "get": {
+        "tags": [
+          "Pelanggan"
+        ],
+        "summary": "Cari pelanggan",
+        "description": "Mencari pelanggan dengan filter dan pagination",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "page",
+            "schema": {
+              "type": "string",
+              "default": "1"
+            },
+            "description": "Nomor halaman"
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "string",
+              "default": "10"
+            },
+            "description": "Jumlah item per halaman"
+          },
+          {
+            "in": "query",
+            "name": "search",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Kata kunci pencarian nama pelanggan"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Daftar pelanggan berhasil diambil",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "nama": {
+                            "type": "string"
+                          },
+                          "email": {
+                            "type": "string"
+                          },
+                          "no_hp": {
+                            "type": "string"
+                          },
+                          "tipe": {
+                            "type": "string",
+                            "enum": [
+                              "reguler",
+                              "vip",
+                              "member",
+                              "wholesale"
+                            ]
+                          }
+                        }
+                      }
+                    },
+                    "pagination": {
+                      "$ref": "#/components/schemas/Pagination"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/penjualan": {
+      "get": {
+        "tags": [
+          "Penjualan"
+        ],
+        "summary": "Cari transaksi penjualan",
+        "description": "Mencari transaksi penjualan dengan filter dan pagination",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "page",
+            "schema": {
+              "type": "string",
+              "default": "1"
+            },
+            "description": "Nomor halaman"
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "string",
+              "default": "10"
+            },
+            "description": "Jumlah item per halaman"
+          },
+          {
+            "in": "query",
+            "name": "search",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Kata kunci pencarian"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Daftar transaksi berhasil diambil",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/TransaksiPenjualan"
+                      }
+                    },
+                    "pagination": {
+                      "$ref": "#/components/schemas/Pagination"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/produk/master/categories": {
+      "get": {
+        "tags": [
+          "Master Data"
+        ],
+        "summary": "Ambil daftar kategori",
+        "description": "Mengambil semua kategori produk",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Daftar kategori berhasil diambil",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "nama": {
+                            "type": "string"
+                          },
+                          "deskripsi": {
+                            "type": "string"
+                          },
+                          "icon_url": {
+                            "type": "string"
+                          },
+                          "status": {
+                            "type": "string",
+                            "enum": [
+                              "aktif",
+                              "nonaktif"
+                            ]
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Master Data"
+        ],
+        "summary": "Buat kategori baru",
+        "description": "Membuat kategori produk baru",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "nama"
+                ],
+                "properties": {
+                  "nama": {
+                    "type": "string",
+                    "maxLength": 100,
+                    "description": "Nama kategori"
+                  },
+                  "deskripsi": {
+                    "type": "string",
+                    "description": "Deskripsi kategori"
+                  },
+                  "icon_url": {
+                    "type": "string",
+                    "format": "uri",
+                    "description": "URL icon kategori"
+                  },
+                  "urutan": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "description": "Urutan tampil kategori"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Kategori berhasil dibuat",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "type": "object"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Data tidak valid",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/produk": {
+      "get": {
+        "tags": [
+          "Produk"
+        ],
+        "summary": "Cari produk",
+        "description": "Mencari produk dengan filter dan pagination",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "page",
+            "schema": {
+              "type": "string",
+              "default": "1"
+            },
+            "description": "Nomor halaman"
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "string",
+              "default": "10"
+            },
+            "description": "Jumlah item per halaman"
+          },
+          {
+            "in": "query",
+            "name": "search",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Kata kunci pencarian"
+          },
+          {
+            "in": "query",
+            "name": "kategori_id",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Filter berdasarkan kategori"
+          },
+          {
+            "in": "query",
+            "name": "brand_id",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Filter berdasarkan brand"
+          },
+          {
+            "in": "query",
+            "name": "is_aktif",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "0",
+                "1"
+              ]
+            },
+            "description": "Filter status aktif"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Daftar produk berhasil diambil",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Produk"
+                      }
+                    },
+                    "pagination": {
+                      "$ref": "#/components/schemas/Pagination"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Produk"
+        ],
+        "summary": "Buat produk baru",
+        "description": "Membuat produk baru (memerlukan akses toko)",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "kategori_id",
+                  "brand_id",
+                  "supplier_id",
+                  "kode",
+                  "nama"
+                ],
+                "properties": {
+                  "kategori_id": {
+                    "type": "string",
+                    "format": "uuid",
+                    "description": "ID kategori produk"
+                  },
+                  "brand_id": {
+                    "type": "string",
+                    "format": "uuid",
+                    "description": "ID brand produk"
+                  },
+                  "supplier_id": {
+                    "type": "string",
+                    "format": "uuid",
+                    "description": "ID supplier produk"
+                  },
+                  "kode": {
+                    "type": "string",
+                    "maxLength": 50,
+                    "description": "Kode produk unik"
+                  },
+                  "nama": {
+                    "type": "string",
+                    "maxLength": 255,
+                    "description": "Nama produk"
+                  },
+                  "harga_beli": {
+                    "type": "number",
+                    "minimum": 0,
+                    "description": "Harga beli produk"
+                  },
+                  "harga_jual": {
+                    "type": "number",
+                    "minimum": 0,
+                    "description": "Harga jual produk"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Produk berhasil dibuat",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/Produk"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Data tidak valid",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/produk/{id}": {
+      "get": {
+        "tags": [
+          "Produk"
+        ],
+        "summary": "Ambil produk berdasarkan ID",
+        "description": "Mengambil detail produk berdasarkan ID",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "ID produk"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Detail produk berhasil diambil",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/Produk"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Produk tidak ditemukan",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Produk"
+        ],
+        "summary": "Update produk",
+        "description": "Mengupdate data produk berdasarkan ID",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "ID produk"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "nama": {
+                    "type": "string",
+                    "maxLength": 255,
+                    "description": "Nama produk"
+                  },
+                  "harga_beli": {
+                    "type": "number",
+                    "minimum": 0,
+                    "description": "Harga beli produk"
+                  },
+                  "harga_jual": {
+                    "type": "number",
+                    "minimum": 0,
+                    "description": "Harga jual produk"
+                  },
+                  "is_aktif": {
+                    "type": "integer",
+                    "enum": [
+                      0,
+                      1
+                    ],
+                    "description": "Status aktif produk"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Produk berhasil diupdate",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/Produk"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Data tidak valid",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Produk"
+        ],
+        "summary": "Hapus produk",
+        "description": "Menghapus produk berdasarkan ID",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "ID produk"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Produk berhasil dihapus",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "message": {
+                          "type": "string",
+                          "example": "Product deleted successfully"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Gagal menghapus produk",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/supplier": {
+      "get": {
+        "tags": [
+          "Supplier"
+        ],
+        "summary": "Cari supplier",
+        "description": "Mencari supplier dengan filter dan pagination",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "page",
+            "schema": {
+              "type": "string",
+              "default": "1"
+            },
+            "description": "Nomor halaman"
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "string",
+              "default": "10"
+            },
+            "description": "Jumlah item per halaman"
+          },
+          {
+            "in": "query",
+            "name": "search",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Kata kunci pencarian nama supplier"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Daftar supplier berhasil diambil",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "nama": {
+                            "type": "string"
+                          },
+                          "kontak_person": {
+                            "type": "string"
+                          },
+                          "telepon": {
+                            "type": "string"
+                          },
+                          "email": {
+                            "type": "string"
+                          },
+                          "alamat": {
+                            "type": "string"
+                          }
+                        }
+                      }
+                    },
+                    "pagination": {
+                      "$ref": "#/components/schemas/Pagination"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "tags": []
+}

@@ -27,6 +27,70 @@ const ImportCustomersSchema = z.object({
 });
 
 export class PelangganController {
+  /**
+   * @swagger
+   * /api/pelanggan:
+   *   get:
+   *     tags: [Pelanggan]
+   *     summary: Cari pelanggan
+   *     description: Mencari pelanggan dengan filter dan pagination
+   *     security:
+   *       - bearerAuth: []
+   *     parameters:
+   *       - in: query
+   *         name: page
+   *         schema:
+   *           type: string
+   *           default: "1"
+   *         description: Nomor halaman
+   *       - in: query
+   *         name: limit
+   *         schema:
+   *           type: string
+   *           default: "10"
+   *         description: Jumlah item per halaman
+   *       - in: query
+   *         name: search
+   *         schema:
+   *           type: string
+   *         description: Kata kunci pencarian nama pelanggan
+   *     responses:
+   *       200:
+   *         description: Daftar pelanggan berhasil diambil
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: true
+   *                 data:
+   *                   type: array
+   *                   items:
+   *                     type: object
+   *                     properties:
+   *                       id:
+   *                         type: string
+   *                         format: uuid
+   *                       nama:
+   *                         type: string
+   *                       email:
+   *                         type: string
+   *                       no_hp:
+   *                         type: string
+   *                       tipe:
+   *                         type: string
+   *                         enum: [reguler, vip, member, wholesale]
+   *                 pagination:
+   *                   $ref: '#/components/schemas/Pagination'
+   *       401:
+   *         description: Unauthorized
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/ErrorResponse'
+   */
   static async searchCustomers(req: Request, res: Response) {
     try {
       if (!req.user || !req.accessScope) {

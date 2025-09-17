@@ -10,6 +10,7 @@ import path from 'path';
 import { Server } from 'socket.io';
 import cors from 'cors';
 import helmet from 'helmet';
+import { registerSwagger } from '@/config/swagger/registerSwagger';
 import { appConfig } from '@/core/config/app';
 import {
   defaultRateLimiter,
@@ -134,7 +135,8 @@ import kasirRoutes from '@/features/kasir/routes/kasirRoutes';
 import { KasirController } from '@/features/kasir/controllers/KasirController';
 import { KasirSocketService } from '@/features/kasir/services/KasirSocketService';
 
-// Note: Monitoring service not implemented yet
+// Inisialisasi Swagger UI + JSON endpoints
+registerSwagger(app);
 
 // API Routes
 app.use('/api/auth', authRateLimiter as any, authRoutes);

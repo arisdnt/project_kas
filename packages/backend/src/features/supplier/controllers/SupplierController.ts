@@ -28,6 +28,71 @@ const RateSupplierSchema = z.object({
 });
 
 export class SupplierController {
+  /**
+   * @swagger
+   * /api/supplier:
+   *   get:
+   *     tags: [Supplier]
+   *     summary: Cari supplier
+   *     description: Mencari supplier dengan filter dan pagination
+   *     security:
+   *       - bearerAuth: []
+   *     parameters:
+   *       - in: query
+   *         name: page
+   *         schema:
+   *           type: string
+   *           default: "1"
+   *         description: Nomor halaman
+   *       - in: query
+   *         name: limit
+   *         schema:
+   *           type: string
+   *           default: "10"
+   *         description: Jumlah item per halaman
+   *       - in: query
+   *         name: search
+   *         schema:
+   *           type: string
+   *         description: Kata kunci pencarian nama supplier
+   *     responses:
+   *       200:
+   *         description: Daftar supplier berhasil diambil
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: true
+   *                 data:
+   *                   type: array
+   *                   items:
+   *                     type: object
+   *                     properties:
+   *                       id:
+   *                         type: string
+   *                         format: uuid
+   *                       nama:
+   *                         type: string
+   *                       kontak_person:
+   *                         type: string
+   *                       telepon:
+   *                         type: string
+   *                       email:
+   *                         type: string
+   *                       alamat:
+   *                         type: string
+   *                 pagination:
+   *                   $ref: '#/components/schemas/Pagination'
+   *       401:
+   *         description: Unauthorized
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/ErrorResponse'
+   */
   static async searchSuppliers(req: Request, res: Response) {
     try {
       if (!req.user || !req.accessScope) {

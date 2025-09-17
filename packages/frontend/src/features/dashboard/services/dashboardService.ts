@@ -268,40 +268,37 @@ export class DashboardService {
   }
 
   /**
-   * Mendapatkan transaksi terbaru dari API penjualan
+   * Mendapatkan transaksi terbaru dari API dashboard
    */
   static async getTransaksiTerbaru(
     filter: FilterPeriode = { tipeFilter: 'semua', limit: 10 }
   ): Promise<TransaksiTerbaru[]> {
     try {
       const backendFilter = this.convertFilterToBackend(filter);
-
-      // Menggunakan endpoint penjualan dengan parameter untuk mendapatkan data terbaru
       const params = new URLSearchParams({
-        limit: (filter.limit || 10).toString(),
-        sort: 'tanggal',
-        order: 'desc',
         start_date: backendFilter.start_date,
-        end_date: backendFilter.end_date
+        end_date: backendFilter.end_date,
+        limit: (filter.limit || 10).toString()
       });
 
-  // NOTE: Jangan tambahkan prefix /api lagi karena ApiClient sudah menambahkan /api di baseUrl
-  const response = await api.get<ApiResponse<any>>(`/penjualan?${params.toString()}`);
+      const response = await api.get<ApiResponse<any>>(`/dashboard/analytics/recent-transactions?${params.toString()}`);
 
-      if ((response as ApiResponse).success && (response as ApiResponse).data) {
-        const resp = response as ApiResponse;
-        // Beberapa endpoint mengembalikan { data: { data: [...] } } atau { data: [...] }
-        const raw = Array.isArray(resp.data) ? resp.data : (resp.data?.data || []);
+      if (response.success && response.data) {
+        const raw = Array.isArray(response.data) ? response.data : (response.data?.data || []);
         return this.convertBackendTransactionsToFrontend(raw);
       } else {
-        console.warn('No transaction data available');
+        // Kembalikan array kosong jika tidak ada data, bukan mock data
+        console.warn('No recent transactions data available');
         return [];
       }
     } catch (error) {
       console.error('Error fetching recent transactions:', error);
+      // Kembalikan array kosong jika terjadi error, bukan mock data
       return [];
     }
   }
+
+
 
   /**
    * Convert backend transaction format to frontend format
@@ -359,28 +356,43 @@ export class DashboardService {
   }
 
   /**
-   * Mendapatkan produk terlaris
+   * Mendapatkan produk terlaris dari API dashboard
    */
   static async getProdukTerlaris(
-    filter: FilterPeriode = { tipeFilter: 'semua', limit: 10 }
+    filter: FilterPeriode = { tipeFilter: 'semua', limit: 5 }
   ): Promise<ProdukTerlaris[]> {
     try {
       const backendFilter = this.convertFilterToBackend(filter);
-      const queryString = this.buildBackendQueryString(backendFilter);
-      const response = await api.get<ApiResponse<BackendTopProduct[]>>(
-        `${this.BASE_URL}/analytics/top-products?${queryString}`
-      );
 
-      if (response.success && (response as ApiResponse<BackendTopProduct[]>).data) {
-        return this.convertBackendTopProductsToFrontend((response as ApiResponse<BackendTopProduct[]>).data);
+      const params = new URLSearchParams({
+        start_date: backendFilter.start_date,
+        end_date: backendFilter.end_date,
+        limit: (filter.limit || 5).toString()
+      });
+
+      const response = await api.get<ApiResponse<any>>(`/dashboard/analytics/top-products?${params.toString()}`);
+
+      if (response.success && response.data) {
+        const raw = Array.isArray(response.data) ? response.data : (response.data?.data || []);
+        
+        // Kembalikan array kosong jika tidak ada data, bukan mock data
+        if (raw.length === 0) {
+          console.warn('No top products data available');
+          return [];
+        }
+        
+        return this.convertBackendTopProductsToFrontend(raw);
       } else {
-        throw new Error(response.message || 'Failed to fetch top products');
+        console.warn('No top products data available');
+        return [];
       }
     } catch (error) {
       console.error('Error fetching top products:', error);
       return [];
     }
   }
+
+
 
   /**
    * Mendapatkan data dashboard lengkap
