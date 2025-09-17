@@ -4,14 +4,15 @@ import { Button } from '@/core/components/ui/button'
 import { Badge } from '@/core/components/ui/badge'
 import { useKategoriStore } from '@/features/kategori/store/kategoriStore'
 import { UIKategori } from '@/features/kategori/types/kategori'
-import { Eye, Pencil, Trash2 } from 'lucide-react'
+import { Eye, Pencil, Trash2, Package } from 'lucide-react'
 
 type Props = {
   onView: (k: UIKategori) => void
   onEdit: (k: UIKategori) => void
+  onViewProducts: (k: UIKategori) => void
 }
 
-export function KategoriTable({ onView, onEdit }: Props) {
+export function KategoriTable({ onView, onEdit, onViewProducts }: Props) {
   const { items, loading, hasNext, loadNext, loadFirst, deleteKategori } = useKategoriStore()
   const scrollerRef = useRef<HTMLDivElement | null>(null)
 
@@ -40,8 +41,9 @@ export function KategoriTable({ onView, onEdit }: Props) {
           <td className="px-4 py-3"><div className="h-3.5 bg-gray-200 rounded w-48" /></td>
           <td className="px-4 py-3"><div className="h-3.5 bg-gray-200 rounded w-32" /></td>
           <td className="px-4 py-3"><div className="h-3.5 bg-gray-200 rounded w-12" /></td>
+          <td className="px-4 py-3"><div className="h-3.5 bg-gray-200 rounded w-16" /></td>
           <td className="px-4 py-3"><div className="h-5 bg-gray-200 rounded w-16" /></td>
-          <td className="px-4 py-3"><div className="h-8 bg-gray-200 rounded w-28" /></td>
+          <td className="px-4 py-3"><div className="h-8 bg-gray-200 rounded w-32" /></td>
         </tr>
       ))}
     </tbody>
@@ -62,6 +64,7 @@ export function KategoriTable({ onView, onEdit }: Props) {
                 <th className="px-4 py-3 font-medium">Nama Kategori</th>
                 <th className="px-4 py-3 font-medium">Deskripsi</th>
                 <th className="px-4 py-3 font-medium">Urutan</th>
+                <th className="px-4 py-3 font-medium">Total Produk</th>
                 <th className="px-4 py-3 font-medium">Status</th>
                 <th className="px-4 py-3 font-medium">Aksi</th>
               </tr>
@@ -84,6 +87,22 @@ export function KategoriTable({ onView, onEdit }: Props) {
                   </td>
                   <td className="px-4 py-3">
                     <div className="text-sm">{k.urutan}</div>
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-medium">{k.jumlah_produk}</span>
+                      {k.jumlah_produk > 0 && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => onViewProducts(k)}
+                          className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 h-6 px-2"
+                        >
+                          <Package className="h-3 w-3 mr-1" />
+                          Detail
+                        </Button>
+                      )}
+                    </div>
                   </td>
                   <td className="px-4 py-3">
                     <Badge variant={k.status === 'aktif' ? 'default' : 'secondary'}>

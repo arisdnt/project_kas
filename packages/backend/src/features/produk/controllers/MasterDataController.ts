@@ -119,6 +119,33 @@ export class MasterDataController {
     }
   }
 
+  static async getProductsByCategory(req: Request, res: Response) {
+    try {
+      if (!req.user || !req.accessScope) {
+        return res.status(401).json({ success: false, message: 'Unauthorized' });
+      }
+
+      const { id } = req.params;
+      const { page = '1', limit = '50', search } = req.query;
+
+      const options = {
+        page: parseInt(page as string, 10),
+        limit: parseInt(limit as string, 10),
+        search: search as string
+      };
+
+      const result = await ProdukService.getProductsByCategory(req.accessScope, id, options);
+      return res.json({ success: true, ...result });
+    } catch (error: any) {
+      console.error('Get products by category error:', error);
+      return res.status(500).json({
+        success: false,
+        message: 'Internal server error',
+        error: error.message
+      });
+    }
+  }
+
   // Brand operations
   static async getBrands(req: Request, res: Response) {
     try {

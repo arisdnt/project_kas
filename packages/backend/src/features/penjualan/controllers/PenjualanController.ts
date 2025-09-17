@@ -75,7 +75,17 @@ export class PenjualanController {
       );
 
       const request = CreateTransaksiRequestSchema.parse(req.body);
-      const transaction = await PenjualanService.create(req.accessScope, request);
+      
+      // Tambahkan pengguna_id dari token ke data transaksi
+      const requestWithUser = {
+        ...request,
+        transaction: {
+          ...request.transaction,
+          pengguna_id: req.user.id
+        }
+      };
+      
+      const transaction = await PenjualanService.create(req.accessScope, requestWithUser);
 
       return res.status(201).json({ success: true, data: transaction });
     } catch (error: any) {

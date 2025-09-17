@@ -16,6 +16,11 @@ type UIProduk = {
   hargaBeli?: number
   marginPersen?: number
   stok?: number
+  satuan?: string
+  status?: string
+  isOnline?: boolean
+  deskripsi?: string
+  stokMinimum?: number
   dibuatPada?: string
   diperbaruiPada?: string
 }
@@ -48,21 +53,25 @@ function mapProdukDto(p: any): UIProduk {
   return {
     id: p.id,
     nama: p.nama,
-    // backend uses `kode` for SKU; keep compatibility with older `sku`
-    sku: p.kode ?? p.sku ?? undefined,
-    kategori: p.kategori ? { id: p.kategori.id, nama: p.kategori.nama } : undefined,
-    brand: p.brand ? { id: p.brand.id, nama: p.brand.nama } : undefined,
-    supplier: p.supplier ? { id: p.supplier.id, nama: p.supplier.nama } : undefined,
+    sku: p.kode,
+    kategori: p.kategori_nama ? { nama: p.kategori_nama } : undefined,
+    brand: p.brand_nama ? { nama: p.brand_nama } : undefined,
+    supplier: p.supplier_nama ? { nama: p.supplier_nama } : undefined,
     harga: p.harga_jual != null ? Number(p.harga_jual) : (inv?.harga_jual_toko != null ? Number(inv.harga_jual_toko) : undefined),
     hargaBeli: p.harga_beli != null ? Number(p.harga_beli) : undefined,
     marginPersen: p.margin_persen != null ? Number(p.margin_persen) : undefined,
     stok: inv?.stok_tersedia != null ? Number(inv.stok_tersedia) : undefined,
+    satuan: p.satuan,
+    status: p.is_aktif ? 'aktif' : 'tidak aktif',
+    isOnline: p.is_dijual_online,
+    deskripsi: p.deskripsi,
+    stokMinimum: p.stok_minimum,
     dibuatPada: p.dibuat_pada || p.dibuatPada,
     diperbaruiPada: p.diperbarui_pada || p.diperbaruiPada,
   }
 }
 
-type Filters = { kategoriId?: string; brandId?: string; supplierId?: string }
+type Filters = { kategoriFilter?: string; brandFilter?: string; supplierFilter?: string }
 
 type ProdukState = {
   items: UIProduk[]
@@ -299,9 +308,9 @@ function matchesSearchFilters(p: UIProduk, search: string, filters: Filters): bo
     const hay = `${p.nama ?? ''} ${(p.sku ?? '').toString()}`.toLowerCase()
     if (!hay.includes(s)) return false
   }
-  if (filters.kategoriId && p.kategori?.id && filters.kategoriId !== p.kategori.id) return false
-  if (filters.brandId && p.brand?.id && filters.brandId !== p.brand.id) return false
-  if (filters.supplierId && p.supplier?.id && filters.supplierId !== p.supplier.id) return false
+  if (filters.kategoriFilter && p.kategori?.nama !== filters.kategoriFilter) return false
+  if (filters.brandFilter && p.brand?.nama !== filters.brandFilter) return false
+  if (filters.supplierFilter && p.supplier?.nama !== filters.supplierFilter) return false
   return true
 }
 
@@ -316,9 +325,9 @@ async function fetchPage(
   params.set('page', String(page))
   params.set('limit', String(limit))
   if (search) params.set('search', search)
-  if (filters.kategoriId) params.set('kategori_id', filters.kategoriId)
-  if (filters.brandId) params.set('brand_id', filters.brandId)
-  if (filters.supplierId) params.set('supplier_id', filters.supplierId)
+  if (filters.kategoriFilter) params.set('kategori_nama', filters.kategoriFilter)
+  if (filters.brandFilter) params.set('brand_nama', filters.brandFilter)
+  if (filters.supplierFilter) params.set('supplier_nama', filters.supplierFilter)
 
   try {
     const res = await fetch(`${API_BASE}?${params.toString()}`, {

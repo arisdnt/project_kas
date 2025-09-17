@@ -5,6 +5,7 @@ import { useKategoriStore } from '@/features/kategori/store/kategoriStore'
 import { UIKategori, CreateKategoriRequest, UpdateKategoriRequest } from '@/features/kategori/types/kategori'
 import { KategoriDetailSidebar } from '@/features/kategori/components/KategoriDetailSidebar'
 import { KategoriEditSidebar } from '@/features/kategori/components/KategoriEditSidebar'
+import { ProductsByCategoryModal } from '@/features/kategori/components/ProductsByCategoryModal'
 import { useToast } from '@/core/hooks/use-toast'
 
 export function KategoriPage() {
@@ -13,7 +14,9 @@ export function KategoriPage() {
 
   const [detailOpen, setDetailOpen] = useState(false)
   const [editOpen, setEditOpen] = useState(false)
+  const [productsModalOpen, setProductsModalOpen] = useState(false)
   const [selected, setSelected] = useState<UIKategori | null>(null)
+  const [productsCategory, setProductsCategory] = useState<UIKategori | null>(null)
   const [editing, setEditing] = useState<CreateKategoriRequest | null>(null)
   const [saving, setSaving] = useState(false)
 
@@ -37,6 +40,11 @@ export function KategoriPage() {
       urutan: k.urutan
     })
     setEditOpen(true)
+  }
+
+  const onViewProducts = (k: UIKategori) => {
+    setProductsCategory(k)
+    setProductsModalOpen(true)
   }
 
   const onSave = async (data: CreateKategoriRequest) => {
@@ -64,7 +72,7 @@ export function KategoriPage() {
       </div>
 
       <div className="flex-1 min-h-0">
-        <KategoriTable onView={onView} onEdit={onEdit} />
+        <KategoriTable onView={onView} onEdit={onEdit} onViewProducts={onViewProducts} />
       </div>
 
       <KategoriDetailSidebar
@@ -85,6 +93,17 @@ export function KategoriPage() {
         }}
         onSave={onSave}
         isLoading={saving}
+      />
+
+      <ProductsByCategoryModal
+        kategori={productsCategory}
+        open={productsModalOpen}
+        onOpenChange={(o) => {
+          setProductsModalOpen(o)
+          if (!o) {
+            setProductsCategory(null)
+          }
+        }}
       />
     </div>
   )

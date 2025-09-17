@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Input } from '@/core/components/ui/input'
 import { Button } from '@/core/components/ui/button'
-import { useRefDataStore } from '@/features/produk/store/refDataStore'
 import { useProdukStore } from '@/features/produk/store/produkStore'
 import { useAuthStore } from '@/core/store/authStore'
 import { Plus, Search, X } from 'lucide-react'
@@ -11,32 +10,43 @@ type Props = {
 }
 
 export function ProdukToolbar({ onCreate }: Props) {
-  const { kategori, brand, supplier, loadAll } = useRefDataStore()
-  const { setSearch, setFilters, loadFirst } = useProdukStore()
+  const { items, setSearch, setFilters, loadFirst } = useProdukStore()
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
   const [query, setQuery] = useState('')
-  const [kategoriId, setKategoriId] = useState<string | undefined>()
-  const [brandId, setBrandId] = useState<string | undefined>()
-  const [supplierId, setSupplierId] = useState<string | undefined>()
+  const [kategoriFilter, setKategoriFilter] = useState<string | undefined>()
+  const [brandFilter, setBrandFilter] = useState<string | undefined>()
+  const [supplierFilter, setSupplierFilter] = useState<string | undefined>()
 
-  useEffect(() => {
-    loadAll()
-  }, [loadAll])
+  // Generate unique values from loaded items
+  const kategoriOptions = useMemo(() => {
+    const unique = Array.from(new Set(items.map(item => item.kategori?.nama).filter(Boolean)))
+    return [{ value: 'all', label: 'Semua Kategori' }, ...unique.map(nama => ({ value: nama!, label: nama! }))]
+  }, [items])
+
+  const brandOptions = useMemo(() => {
+    const unique = Array.from(new Set(items.map(item => item.brand?.nama).filter(Boolean)))
+    return [{ value: 'all', label: 'Semua Brand' }, ...unique.map(nama => ({ value: nama!, label: nama! }))]
+  }, [items])
+
+  const supplierOptions = useMemo(() => {
+    const unique = Array.from(new Set(items.map(item => item.supplier?.nama).filter(Boolean)))
+    return [{ value: 'all', label: 'Semua Supplier' }, ...unique.map(nama => ({ value: nama!, label: nama! }))]
+  }, [items])
 
   // Debounced search & filters
   useEffect(() => {
     if (!isAuthenticated) return
     const id = setTimeout(() => {
       setSearch(query)
-      setFilters({ kategoriId, brandId, supplierId })
+      setFilters({
+        kategoriFilter: kategoriFilter === 'all' ? undefined : kategoriFilter,
+        brandFilter: brandFilter === 'all' ? undefined : brandFilter,
+        supplierFilter: supplierFilter === 'all' ? undefined : supplierFilter
+      })
       loadFirst()
     }, 250)
     return () => clearTimeout(id)
-  }, [query, kategoriId, brandId, supplierId, setSearch, setFilters, loadFirst, isAuthenticated])
-
-  const kategoriOpts = useMemo(() => [{ id: 'all', nama: 'Semua Kategori' }, ...kategori], [kategori])
-  const brandOpts = useMemo(() => [{ id: 'all', nama: 'Semua Brand' }, ...brand], [brand])
-  const supplierOpts = useMemo(() => [{ id: 'all', nama: 'Semua Supplier' }, ...supplier], [supplier])
+  }, [query, kategoriFilter, brandFilter, supplierFilter, setSearch, setFilters, loadFirst, isAuthenticated])
 
   return (
     <div className="flex flex-col sm:flex-row items-stretch gap-2 sm:gap-3">
@@ -44,7 +54,7 @@ export function ProdukToolbar({ onCreate }: Props) {
         <div className="relative w-full">
           <Search className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
           <Input
-            placeholder="Cari nama, SKU, deskripsi..."
+            placeholder="Cari nama produk atau kode..."
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             className="pl-9"
@@ -63,36 +73,36 @@ export function ProdukToolbar({ onCreate }: Props) {
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-3 w-full sm:w-auto">
         <select
           className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-0"
-          value={kategoriId ?? 'all'}
-          onChange={(e) => setKategoriId(e.target.value === 'all' ? undefined : e.target.value)}
+          value={kategoriFilter ?? 'all'}
+          onChange={(e) => setKategoriFilter(e.target.value === 'all' ? undefined : e.target.value)}
         >
-          {kategoriOpts.map((o) => (
-            <option key={o.id} value={o.id}>
-              {o.nama}
+          {kategoriOptions.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
             </option>
           ))}
         </select>
 
         <select
           className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-0"
-          value={brandId ?? 'all'}
-          onChange={(e) => setBrandId(e.target.value === 'all' ? undefined : e.target.value)}
+          value={brandFilter ?? 'all'}
+          onChange={(e) => setBrandFilter(e.target.value === 'all' ? undefined : e.target.value)}
         >
-          {brandOpts.map((o) => (
-            <option key={o.id} value={o.id}>
-              {o.nama}
+          {brandOptions.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
             </option>
           ))}
         </select>
 
         <select
           className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-0"
-          value={supplierId ?? 'all'}
-          onChange={(e) => setSupplierId(e.target.value === 'all' ? undefined : e.target.value)}
+          value={supplierFilter ?? 'all'}
+          onChange={(e) => setSupplierFilter(e.target.value === 'all' ? undefined : e.target.value)}
         >
-          {supplierOpts.map((o) => (
-            <option key={o.id} value={o.id}>
-              {o.nama}
+          {supplierOptions.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
             </option>
           ))}
         </select>

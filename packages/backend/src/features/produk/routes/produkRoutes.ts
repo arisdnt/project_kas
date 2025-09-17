@@ -75,6 +75,11 @@ router.delete('/master/categories/:id',
   MasterDataController.deleteCategory
 );
 
+router.get('/master/categories/:id/products',
+  requirePermission(PERMISSIONS.PRODUCT_READ),
+  MasterDataController.getProductsByCategory
+);
+
 router.get('/master/brands',
   requirePermission(PERMISSIONS.PRODUCT_READ),
   MasterDataController.getBrands

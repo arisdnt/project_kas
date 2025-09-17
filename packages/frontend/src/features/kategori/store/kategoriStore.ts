@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { devtools } from 'zustand/middleware'
-import { UIKategori, CreateKategoriRequest, UpdateKategoriRequest } from '@/features/kategori/types/kategori'
+import { UIKategori, CreateKategoriRequest, UpdateKategoriRequest, ProductsByCategoryResponse } from '@/features/kategori/types/kategori'
 import { useAuthStore } from '@/core/store/authStore'
 import { config } from '@/core/config'
 
@@ -22,6 +22,7 @@ type KategoriActions = {
   createKategori: (data: CreateKategoriRequest) => Promise<void>
   updateKategori: (id: string, data: UpdateKategoriRequest) => Promise<void>
   deleteKategori: (id: string) => Promise<void>
+  getProductsByCategory: (categoryId: string, options?: { page?: number; limit?: number; search?: string }) => Promise<ProductsByCategoryResponse>
 }
 
 const API_BASE = `${config.api.url}:${config.api.port}/api/produk/master/categories`
@@ -116,6 +117,21 @@ export const useKategoriStore = create<KategoriState & KategoriActions>()(
       const all = get().all.filter((k) => k.id !== id)
       const { slice, hasNext } = filterAndSlice(all, get().search, 1, get().limit)
       set({ all, items: slice, page: 1, hasNext })
+    },
+
+    getProductsByCategory: async (categoryId: string, options?: { page?: number; limit?: number; search?: string }) => {
+      const { page = 1, limit = 50, search } = options || {}
+      const params = new URLSearchParams()
+      params.append('page', page.toString())
+      params.append('limit', limit.toString())
+      if (search) params.append('search', search)
+
+      const res = await fetch(`${API_BASE}/${categoryId}/products?${params.toString()}`, {
+        headers: authHeaders()
+      })
+      const js = await res.json()
+      if (!res.ok || !js.success) throw new Error(js.message || 'Gagal memuat produk kategori')
+      return js as ProductsByCategoryResponse
     },
   }))
 )

@@ -3,13 +3,16 @@ import { Card, CardContent } from '@/core/components/ui/card'
 import { Button } from '@/core/components/ui/button'
 import { PaymentModal } from './PaymentModal'
 import { useKasirStore, useKasirTotals } from '@/features/kasir/store/kasirStore'
-import { ShoppingCart, CreditCard, Store } from 'lucide-react'
+import { CreditCard, Store } from 'lucide-react'
 import { config } from '@/core/config'
 
 export function PaymentSummary() {
   const [showPaymentModal, setShowPaymentModal] = useState(false)
+
   const items = useKasirStore((s) => s.items)
   const clear = useKasirStore((s) => s.clear)
+  const invoiceNumber = useKasirStore((s) => s.invoiceNumber)
+
   const { subtotal, pajak, discount, total } = useKasirTotals()
 
   const formatCurrency = (amount: number) => {
@@ -46,7 +49,7 @@ export function PaymentSummary() {
                 <p className="text-lg font-bold text-gray-800">INVOICE</p>
                 <div className="h-px bg-gray-300 my-1"></div>
                 <p className="text-sm font-bold text-gray-800">
-                  {Math.floor(Math.random() * 1000000).toString().padStart(6, '0')}
+                  {invoiceNumber}
                 </p>
               </div>
               
@@ -94,32 +97,37 @@ export function PaymentSummary() {
             </div>
 
             {/* Ringkasan Pembayaran */}
-            {items.length > 0 && (
-              <div className="space-y-3">
-                <h4 className="text-sm font-medium text-gray-700 border-b border-gray-200 pb-1">Ringkasan Pembayaran</h4>
-                <div className="space-y-2 border border-gray-300 rounded p-3 bg-gray-50">
-                  <div className="flex justify-between text-sm border-b border-gray-200 pb-1">
-                    <span className="text-gray-700 font-medium">Subtotal</span>
-                    <span className="font-mono font-semibold">{formatCurrency(subtotal)}</span>
-                  </div>
-                  <div className="flex justify-between text-sm border-b border-gray-200 pb-1">
-                    <span className="text-gray-700 font-medium">Pajak (11%)</span>
-                    <span className="font-mono font-semibold">{formatCurrency(pajak)}</span>
-                  </div>
-                  {discount > 0 && (
-                    <div className="flex justify-between text-sm text-green-600 border-b border-gray-200 pb-1">
-                      <span className="font-medium">Diskon</span>
-                      <span className="font-mono font-semibold">-{formatCurrency(discount)}</span>
+            <div className="space-y-3">
+              {items.length > 0 && (
+                <>
+                  <h4 className="text-sm font-medium text-gray-700 border-b border-gray-200 pb-1">Ringkasan Pembayaran</h4>
+                  <div className="space-y-2 border border-gray-300 rounded p-3 bg-gray-50">
+                    <div className="flex justify-between text-sm border-b border-gray-200 pb-1">
+                      <span className="text-gray-700 font-medium">Subtotal</span>
+                      <span className="font-mono font-semibold">{formatCurrency(subtotal)}</span>
                     </div>
-                  )}
-                  <div className="border-t border-gray-300 pt-2 mt-2">
-                    <div className="flex justify-between text-lg font-bold text-red-600">
-                      <span>TOTAL BAYAR</span>
-                      <span className="font-mono">{formatCurrency(total)}</span>
+                    <div className="flex justify-between text-sm border-b border-gray-200 pb-1">
+                      <span className="text-gray-700 font-medium">Pajak (11%)</span>
+                      <span className="font-mono font-semibold">{formatCurrency(pajak)}</span>
+                    </div>
+                    {discount > 0 && (
+                      <div className="flex justify-between text-sm text-green-600 border-b border-gray-200 pb-1">
+                        <span className="font-medium">Diskon</span>
+                        <span className="font-mono font-semibold">-{formatCurrency(discount)}</span>
+                      </div>
+                    )}
+                    <div className="border-t border-gray-300 pt-2 mt-2">
+                      <div className="flex justify-between text-lg font-bold text-red-600">
+                        <span>TOTAL BAYAR</span>
+                        <span className="font-mono">{formatCurrency(total)}</span>
+                      </div>
                     </div>
                   </div>
-                </div>
+                </>
+              )}
 
+
+              {items.length > 0 && (
                 <Button
                   onClick={() => setShowPaymentModal(true)}
                   className="w-full h-12 text-base font-semibold"
@@ -128,8 +136,8 @@ export function PaymentSummary() {
                   <CreditCard className="h-5 w-5 mr-2" />
                   Proses Pembayaran
                 </Button>
-              </div>
-            )}
+              )}
+            </div>
           </div>
         </CardContent>
       </Card>

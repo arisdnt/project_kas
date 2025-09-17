@@ -1,0 +1,53 @@
+{
+  "success": true,
+  "data": [
+    {
+      "id": "7f6c3f2d-9068-11f0-8eff-00155d24a169",
+      "tenant_id": "7f69ce68-9068-11f0-8eff-00155d24a169",
+      "toko_id": "7f6af52b-9068-11f0-8eff-00155d24a169",
+      "nama": "Elektronik",
+      "deskripsi": "Kategori produk elektronik",
+      "icon_url": null,
+      "urutan": 0,
+      "status": "aktif",
+      "dibuat_pada": "2025-09-13 13:11:33",
+      "diperbarui_pada": "2025-09-14 18:20:38"
+    },
+    {
+      "id": "7f6c3fdc-9068-11f0-8eff-00155d24a169",
+      "tenant_id": "7f69ce68-9068-11f0-8eff-00155d24a169",
+      "toko_id": "7f6af52b-9068-11f0-8eff-00155d24a169",
+      "nama": "Fashion",
+      "deskripsi": "Kategori produk fashion",
+      "icon_url": null,
+      "urutan": 0,
+      "status": "aktif",
+      "dibuat_pada": "2025-09-13 13:11:33",
+      "diperbarui_pada": "2025-09-14 18:20:38"
+    },
+    {
+      "id": "7f6c3bd6-9068-11f0-8eff-00155d24a169",
+      "tenant_id": "7f69ce68-9068-11f0-8eff-00155d24a169",
+      "toko_id": "7f6af52b-9068-11f0-8eff-00155d24a169",
+      "nama": "Makanan",
+      "deskripsi": "Kategori produk makanan",
+      "icon_url": null,
+      "urutan": 0,
+      "status": "aktif",
+      "dibuat_pada": "2025-09-13 13:11:33",
+      "diperbarui_pada": "2025-09-14 18:20:38"
+    },
+    {
+      "id": "7f6c3ddf-9068-11f0-8eff-00155d24a169",
+      "tenant_id": "7f69ce68-9068-11f0-8eff-00155d24a169",
+      "toko_id": "7f6af52b-9068-11f0-8eff-00155d24a169",
+      "nama": "Minuman",
+      "deskripsi": "Kategori produk minuman",
+      "icon_url": null,
+      "urutan": 0,
+      "status": "aktif",
+      "dibuat_pada": "2025-09-13 13:11:33",
+      "diperbarui_pada": "2025-09-14 18:20:38"
+    }
+  ]
+}

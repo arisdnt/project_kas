@@ -74,7 +74,7 @@ export class ProdukQueryService {
     const [countRows] = await pool.execute<RowDataPacket[]>(scopedCount.sql, scopedCount.params);
     const total = Number(countRows[0]?.total || 0);
 
-    // Data query with joins
+    // Data query with joins including inventory data
     const dataBase = `
       SELECT
         p.id, p.kode, p.nama, p.deskripsi, p.satuan,
@@ -82,15 +82,24 @@ export class ProdukQueryService {
         p.is_aktif, p.is_dijual_online,
         k.nama as kategori_nama,
         b.nama as brand_nama,
-        s.nama as supplier_nama
+        s.nama as supplier_nama,
+        i.stok_tersedia, i.stok_reserved, i.harga_jual_toko,
+        i.stok_minimum_toko, i.lokasi_rak, i.terakhir_update as stok_terakhir_update
       FROM produk p
       LEFT JOIN kategori k ON p.kategori_id = k.id
       LEFT JOIN brand b ON p.brand_id = b.id
       LEFT JOIN supplier s ON p.supplier_id = s.id
+      LEFT JOIN inventaris i ON p.id = i.produk_id ${scope.storeId ? 'AND i.toko_id = ?' : ''}
       ${baseWhere}
     `;
 
-    const scopedData = applyScopeToSql(dataBase, baseParams, scope, {
+    // Add store parameter if filtering by specific store
+    const finalParams = [...baseParams];
+    if (scope.storeId) {
+      finalParams.splice(-baseParams.length, 0, scope.storeId);
+    }
+
+    const scopedData = applyScopeToSql(dataBase, finalParams, scope, {
       tenantColumn: 'p.tenant_id',
       storeColumn: 'p.toko_id'
     });
@@ -98,8 +107,34 @@ export class ProdukQueryService {
     const finalSql = `${scopedData.sql} ORDER BY p.nama ASC LIMIT ${limit} OFFSET ${offset}`;
     const [rows] = await pool.execute<RowDataPacket[]>(finalSql, scopedData.params);
 
+    // Transform data to include inventaris array format expected by frontend
+    const transformedData = rows.map((row: any) => {
+      const inventaris = [];
+      // Always include inventory data - use 0 for stock if no inventory record exists
+      inventaris.push({
+        stok_tersedia: row.stok_tersedia || 0,
+        stok_reserved: row.stok_reserved || 0,
+        harga_jual_toko: row.harga_jual_toko || row.harga_jual,
+        stok_minimum_toko: row.stok_minimum_toko || row.stok_minimum || 0,
+        lokasi_rak: row.lokasi_rak || null,
+        terakhir_update: row.stok_terakhir_update || new Date().toISOString()
+      });
+
+      // Remove inventory fields from main object
+      const { 
+        stok_tersedia, stok_reserved, harga_jual_toko, 
+        stok_minimum_toko, lokasi_rak, stok_terakhir_update,
+        ...produkData 
+      } = row;
+
+      return {
+        ...produkData,
+        inventaris
+      };
+    });
+
     return {
-      data: rows as any[],
+      data: transformedData,
       total,
       page: Math.ceil(offset / limit) + 1,
       totalPages: Math.ceil(total / limit)
@@ -112,20 +147,50 @@ export class ProdukQueryService {
         p.*,
         k.nama as kategori_nama,
         b.nama as brand_nama, b.logo_url as brand_logo,
-        s.nama as supplier_nama, s.kontak_person as supplier_kontak
+        s.nama as supplier_nama, s.kontak_person as supplier_kontak,
+        i.stok_tersedia, i.stok_reserved, i.harga_jual_toko,
+        i.stok_minimum_toko, i.lokasi_rak, i.terakhir_update as stok_terakhir_update
       FROM produk p
       LEFT JOIN kategori k ON p.kategori_id = k.id
       LEFT JOIN brand b ON p.brand_id = b.id
       LEFT JOIN supplier s ON p.supplier_id = s.id
+      LEFT JOIN inventaris i ON p.id = i.produk_id ${scope.storeId ? 'AND i.toko_id = ?' : ''}
       WHERE p.id = ?
     `;
 
-    const scopedQuery = applyScopeToSql(sql, [id], scope, {
+    const params = scope.storeId ? [scope.storeId, id] : [id];
+    const scopedQuery = applyScopeToSql(sql, params, scope, {
       tenantColumn: 'p.tenant_id',
       storeColumn: 'p.toko_id'
     });
 
     const [rows] = await pool.execute<RowDataPacket[]>(scopedQuery.sql, scopedQuery.params);
-    return rows[0] as any || null;
+    const row = rows[0] as any;
+    
+    if (!row) return null;
+
+    // Transform data to include inventaris array format
+    const inventaris = [];
+    // Always include inventory data - use 0 for stock if no inventory record exists
+    inventaris.push({
+      stok_tersedia: row.stok_tersedia || 0,
+      stok_reserved: row.stok_reserved || 0,
+      harga_jual_toko: row.harga_jual_toko || row.harga_jual,
+      stok_minimum_toko: row.stok_minimum_toko || row.stok_minimum || 0,
+      lokasi_rak: row.lokasi_rak || null,
+      terakhir_update: row.stok_terakhir_update || new Date().toISOString()
+    });
+
+    // Remove inventory fields from main object
+    const { 
+      stok_tersedia, stok_reserved, harga_jual_toko, 
+      stok_minimum_toko, lokasi_rak, stok_terakhir_update,
+      ...produkData 
+    } = row;
+
+    return {
+      ...produkData,
+      inventaris
+    };
   }
 }

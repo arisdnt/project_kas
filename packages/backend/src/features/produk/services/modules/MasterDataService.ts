@@ -12,25 +12,46 @@ export class MasterDataService {
   // Category operations
   static async getCategories(scope: AccessScope) {
     let sql = `
-      SELECT id, tenant_id, toko_id, nama, deskripsi, icon_url, urutan, status, dibuat_pada, diperbarui_pada
-      FROM kategori
-      WHERE status = 'aktif'
+      SELECT
+        k.id,
+        k.tenant_id,
+        k.toko_id,
+        k.nama,
+        k.deskripsi,
+        k.icon_url,
+        k.urutan,
+        k.status,
+        k.dibuat_pada,
+        k.diperbarui_pada,
+        COUNT(p.id) as jumlah_produk
+      FROM kategori k
+      LEFT JOIN produk p ON k.id = p.kategori_id AND p.is_aktif = 1
+      WHERE k.status = 'aktif'
     `;
     let params: any[] = [];
 
     // Tambahkan filter tenant jika diperlukan
     if (scope.enforceTenant) {
-      sql += ` AND tenant_id = ?`;
+      sql += ` AND k.tenant_id = ?`;
+      params.push(scope.tenantId);
+
+      // Juga filter produk berdasarkan tenant yang sama
+      sql += ` AND (p.tenant_id = ? OR p.tenant_id IS NULL)`;
       params.push(scope.tenantId);
     }
 
     // Tambahkan filter toko jika diperlukan
     if (scope.enforceStore && scope.storeId) {
-      sql += ` AND toko_id = ?`;
+      sql += ` AND k.toko_id = ?`;
+      params.push(scope.storeId);
+
+      // Juga filter produk berdasarkan toko yang sama
+      sql += ` AND (p.toko_id = ? OR p.toko_id IS NULL)`;
       params.push(scope.storeId);
     }
 
-    sql += ` ORDER BY urutan ASC, nama ASC`;
+    sql += ` GROUP BY k.id, k.tenant_id, k.toko_id, k.nama, k.deskripsi, k.icon_url, k.urutan, k.status, k.dibuat_pada, k.diperbarui_pada`;
+    sql += ` ORDER BY k.urutan ASC, k.nama ASC`;
 
     console.log('Generated SQL:', sql);
     console.log('SQL Params:', params);
@@ -136,6 +157,116 @@ export class MasterDataService {
 
     const [result] = await pool.execute<ResultSetHeader>(scopedQuery.sql, scopedQuery.params);
     return result.affectedRows > 0;
+  }
+
+  static async getProductsByCategory(scope: AccessScope, categoryId: string, options: {
+    page?: number;
+    limit?: number;
+    search?: string;
+  } = {}) {
+    const { page = 1, limit = 50, search } = options;
+    const offset = (page - 1) * limit;
+
+    let sql = `
+      SELECT
+        p.id,
+        p.kode,
+        p.barcode,
+        p.nama,
+        p.deskripsi,
+        p.satuan,
+        p.harga_beli,
+        p.harga_jual,
+        p.margin_persen,
+        p.stok_minimum,
+        p.berat,
+        p.dimensi,
+        p.gambar_url,
+        p.is_aktif,
+        p.is_dijual_online,
+        p.pajak_persen,
+        p.dibuat_pada,
+        p.diperbarui_pada,
+        k.nama as kategori_nama,
+        b.nama as brand_nama,
+        s.nama as supplier_nama,
+        COALESCE(SUM(i.stok_tersedia), 0) as total_stok
+      FROM produk p
+      LEFT JOIN kategori k ON p.kategori_id = k.id
+      LEFT JOIN brand b ON p.brand_id = b.id
+      LEFT JOIN supplier s ON p.supplier_id = s.id
+      LEFT JOIN inventaris i ON p.id = i.produk_id
+      WHERE p.kategori_id = ? AND p.is_aktif = 1
+    `;
+
+    let params: any[] = [categoryId];
+
+    // Filter by tenant
+    if (scope.enforceTenant) {
+      sql += ` AND p.tenant_id = ?`;
+      params.push(scope.tenantId);
+    }
+
+    // Filter by store
+    if (scope.enforceStore && scope.storeId) {
+      sql += ` AND p.toko_id = ?`;
+      params.push(scope.storeId);
+    }
+
+    // Search filter
+    if (search && search.trim()) {
+      sql += ` AND (p.nama LIKE ? OR p.kode LIKE ? OR p.barcode LIKE ?)`;
+      const searchPattern = `%${search.trim()}%`;
+      params.push(searchPattern, searchPattern, searchPattern);
+    }
+
+    sql += ` GROUP BY p.id`;
+    sql += ` ORDER BY p.nama ASC`;
+    sql += ` LIMIT ? OFFSET ?`;
+    params.push(limit, offset);
+
+    console.log('Generated SQL for products by category:', sql);
+    console.log('SQL Params:', params);
+
+    const [rows] = await pool.execute<RowDataPacket[]>(sql, params);
+
+    // Get total count for pagination
+    let countSql = `
+      SELECT COUNT(DISTINCT p.id) as total
+      FROM produk p
+      WHERE p.kategori_id = ? AND p.is_aktif = 1
+    `;
+
+    let countParams: any[] = [categoryId];
+
+    if (scope.enforceTenant) {
+      countSql += ` AND p.tenant_id = ?`;
+      countParams.push(scope.tenantId);
+    }
+
+    if (scope.enforceStore && scope.storeId) {
+      countSql += ` AND p.toko_id = ?`;
+      countParams.push(scope.storeId);
+    }
+
+    if (search && search.trim()) {
+      countSql += ` AND (p.nama LIKE ? OR p.kode LIKE ? OR p.barcode LIKE ?)`;
+      const searchPattern = `%${search.trim()}%`;
+      countParams.push(searchPattern, searchPattern, searchPattern);
+    }
+
+    const [countRows] = await pool.execute<RowDataPacket[]>(countSql, countParams);
+    const total = (countRows[0] as any).total;
+
+    return {
+      data: rows as any[],
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit)
+      }
+    };
   }
 
   // Brand operations

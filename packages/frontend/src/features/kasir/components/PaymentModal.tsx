@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { Dialog, DialogContent } from '@/core/components/ui/dialog'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/core/components/ui/dialog'
 import { Button } from '@/core/components/ui/button'
 import { Input } from '@/core/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/core/components/ui/select'
@@ -208,14 +208,31 @@ export function PaymentModal({ open, onOpenChange, onSuccess }: PaymentModalProp
       const itemsPayload = lines.map((l) => {
         const lineAfter = Number((l.line * ratio).toFixed(2))
         const unit = l.qty > 0 ? Number((lineAfter / l.qty).toFixed(2)) : 0
-        return { id_produk: l.id_produk, jumlah: l.qty, harga: unit }
+        return { 
+          transaksi_penjualan_id: '', // Akan diisi oleh backend
+          produk_id: l.id_produk, // Ubah dari id_produk ke produk_id
+          kuantitas: l.qty, // Ubah dari jumlah ke kuantitas
+          harga_satuan: unit, // Ubah dari harga ke harga_satuan
+          subtotal: lineAfter // Tambahkan subtotal yang diperlukan
+        }
       })
 
+      // Format data sesuai schema backend: { transaction: {...}, items: [...] }
       const payload = {
-        id_pelanggan: customerLocal?.id,
-        metode_pembayaran: paymentMethod,
-        bayar: amountPaid,
-        kembalian: paymentMethod === 'TUNAI' ? Math.max(0, amountPaid - total) : 0,
+        transaction: {
+          pelanggan_id: customerLocal?.id || null,
+          tanggal: new Date().toISOString(),
+          subtotal: effTotal,
+          diskon_persen: 0,
+          diskon_nominal: discount,
+          pajak_persen: 0,
+          pajak_nominal: 0,
+          total: total,
+          bayar: amountPaid,
+          kembalian: paymentMethod === 'TUNAI' ? Math.max(0, amountPaid - total) : 0,
+          metode_bayar: paymentMethod.toLowerCase(), // Konversi ke lowercase sesuai enum backend
+          status: 'completed'
+        },
         items: itemsPayload,
       }
 
@@ -257,6 +274,12 @@ export function PaymentModal({ open, onOpenChange, onSuccess }: PaymentModalProp
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-5xl w-[80vw] max-h-[85vh] overflow-hidden flex flex-col pt-8 border border-gray-200">
+        <DialogHeader className="sr-only">
+          <DialogTitle>Proses Pembayaran</DialogTitle>
+          <DialogDescription>
+            Dialog untuk memproses pembayaran transaksi kasir dengan pilihan metode pembayaran dan pelanggan
+          </DialogDescription>
+        </DialogHeader>
         <div className="flex-1 overflow-y-auto">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 h-full">
             {/* Left: Customer & Summary */}

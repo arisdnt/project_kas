@@ -50,9 +50,9 @@ export function ProdukTable({ onView, onEdit }: Props) {
         const hay = `${p.nama ?? ''} ${(p.sku ?? '').toString()}`.toLowerCase()
         if (!hay.includes(s)) return false
       }
-      if (filters.kategoriId && p.kategori?.id && filters.kategoriId !== p.kategori.id) return false
-      if (filters.brandId && p.brand?.id && filters.brandId !== p.brand.id) return false
-      if (filters.supplierId && p.supplier?.id && filters.supplierId !== p.supplier.id) return false
+      if (filters.kategoriFilter && p.kategori?.nama !== filters.kategoriFilter) return false
+      if (filters.brandFilter && p.brand?.nama !== filters.brandFilter) return false
+      if (filters.supplierFilter && p.supplier?.nama !== filters.supplierFilter) return false
       return true
     })
   }, [items, search, filters])
@@ -65,9 +65,12 @@ export function ProdukTable({ onView, onEdit }: Props) {
           <td className="px-4 py-3"><div className="h-3.5 bg-gray-200 rounded w-24" /></td>
           <td className="px-4 py-3"><div className="h-3.5 bg-gray-200 rounded w-28" /></td>
           <td className="px-4 py-3"><div className="h-3.5 bg-gray-200 rounded w-28" /></td>
+          <td className="px-4 py-3"><div className="h-3.5 bg-gray-200 rounded w-28" /></td>
+          <td className="px-4 py-3"><div className="h-3.5 bg-gray-200 rounded w-20" /></td>
+          <td className="px-4 py-3"><div className="h-3.5 bg-gray-200 rounded w-16" /></td>
           <td className="px-4 py-3"><div className="h-3.5 bg-gray-200 rounded w-32" /></td>
           <td className="px-4 py-3"><div className="h-3.5 bg-gray-200 rounded w-32" /></td>
-          <td className="px-4 py-3"><div className="h-3.5 bg-gray-200 rounded w-24" /></td>
+          <td className="px-4 py-3"><div className="h-6 bg-gray-200 rounded w-20" /></td>
           <td className="px-4 py-3"><div className="h-8 bg-gray-200 rounded w-28" /></td>
         </tr>
       ))}
@@ -90,12 +93,15 @@ export function ProdukTable({ onView, onEdit }: Props) {
             <thead className="sticky top-0 z-10 bg-white border-b shadow-[0_1px_0_0_rgba(0,0,0,0.04)]">
               <tr className="text-left text-gray-600">
                 <th className="px-4 py-3 font-medium">Nama</th>
-                <th className="px-4 py-3 font-medium">SKU</th>
+                <th className="px-4 py-3 font-medium">Kode</th>
                 <th className="px-4 py-3 font-medium">Kategori</th>
                 <th className="px-4 py-3 font-medium">Brand</th>
+                <th className="px-4 py-3 font-medium">Supplier</th>
+                <th className="px-4 py-3 font-medium">Satuan</th>
+                <th className="px-4 py-3 font-medium">Stok</th>
                 <th className="px-4 py-3 font-medium">Harga Beli</th>
                 <th className="px-4 py-3 font-medium">Harga Jual</th>
-                <th className="px-4 py-3 font-medium">Margin</th>
+                <th className="px-4 py-3 font-medium">Status</th>
                 <th className="px-4 py-3 font-medium">Aksi</th>
               </tr>
             </thead>
@@ -103,23 +109,28 @@ export function ProdukTable({ onView, onEdit }: Props) {
               {displayItems.map((p) => {
                 const hargaBeli = p.hargaBeli ?? 0
                 const hargaJual = p.harga ?? 0
-                const selisih = hargaJual - hargaBeli
-                const marginPersen = hargaBeli > 0 ? ((selisih / hargaBeli) * 100) : 0
-                
+
                 return (
                   <tr key={p.id} className="border-b last:border-0 hover:bg-gray-50/50">
                     <td className="px-4 py-3">
                       <div className="font-medium text-gray-900">{p.nama}</div>
-                      <div className="text-xs text-gray-500">Stok: {p.stok ?? 0}</div>
                     </td>
                     <td className="px-4 py-3 text-gray-700">{p.sku ?? '-'}</td>
                     <td className="px-4 py-3 text-gray-700">{p.kategori?.nama ?? '-'}</td>
                     <td className="px-4 py-3 text-gray-700">{p.brand?.nama ?? '-'}</td>
+                    <td className="px-4 py-3 text-gray-700">{p.supplier?.nama ?? '-'}</td>
+                    <td className="px-4 py-3 text-gray-700">{p.satuan ?? 'pcs'}</td>
+                    <td className="px-4 py-3 text-gray-900 font-medium">{p.stok ?? 0}</td>
                     <td className="px-4 py-3 text-gray-900">{formatCurrency(hargaBeli)}</td>
                     <td className="px-4 py-3 text-gray-900">{formatCurrency(hargaJual)}</td>
                     <td className="px-4 py-3">
-                      <div className="text-gray-900">{formatCurrency(selisih)}</div>
-                      <div className="text-xs text-gray-500">{marginPersen.toFixed(1)}%</div>
+                      <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                        p.status === 'aktif'
+                          ? 'bg-green-100 text-green-800'
+                          : 'bg-red-100 text-red-800'
+                      }`}>
+                        {p.status ?? 'aktif'}
+                      </span>
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">

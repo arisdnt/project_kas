@@ -111,6 +111,14 @@ export class ProdukService {
     return MasterDataService.deleteCategory(scope, id);
   }
 
+  static async getProductsByCategory(scope: AccessScope, categoryId: string, options: {
+    page?: number;
+    limit?: number;
+    search?: string;
+  } = {}) {
+    return MasterDataService.getProductsByCategory(scope, categoryId, options);
+  }
+
   static async getBrands(scope: AccessScope) {
     return MasterDataService.getBrands(scope);
   }
