@@ -10,7 +10,7 @@ export function Brand() {
       </div>
       <div>
         <h1 className="text-lg sm:text-xl font-bold text-gray-900 tracking-tight">KasirPro</h1>
-        <p className="text-xs font-semibold hidden sm:block text-red-600">{tenantName} | {tokoName}</p>
+        <p className="text-xs font-semibold text-red-600">{tenantName} | {tokoName}</p>
       </div>
     </div>
   );

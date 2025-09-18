@@ -6,6 +6,7 @@ import { Filters, SaleTransaction } from '../types'
 import { exportMovementCSV } from '../utils/exporters'
 import { printStrukFromServer, previewStrukFallback } from '../utils/print'
 import { PenjualanService, TransaksiPenjualan } from '../services/penjualanService'
+import { useTenantToko } from '@/core/hooks/useTenantToko'
 
 function withinRange(d: string, from?: string, to?: string) {
   if (!from && !to) return true
@@ -16,6 +17,7 @@ function withinRange(d: string, from?: string, to?: string) {
 }
 
 export function PenjualanPage() {
+  const { tenantName, tokoName } = useTenantToko()
   const [apiTxs, setApiTxs] = useState<TransaksiPenjualan[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -168,6 +170,7 @@ export function PenjualanPage() {
       <div className="flex items-start justify-between">
         <div>
           <h2 className="text-xl font-bold text-gray-900">Pergerakan Penjualan</h2>
+          <p className="text-sm text-red-600 font-semibold">{tenantName} | {tokoName}</p>
           <p className="text-sm text-gray-600">Pergerakan barang berdasarkan transaksi</p>
         </div>
       </div>

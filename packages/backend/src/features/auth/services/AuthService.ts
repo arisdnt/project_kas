@@ -166,19 +166,31 @@ export class AuthService {
         throw new Error('Invalid username or password');
       }
 
-      // Check tenant access berdasarkan level user
-      if (loginData.tenantId && user.tenant_id !== loginData.tenantId) {
-        const level = user.level || 5;
-
-        // Level 1 dan 2 bisa akses tenant manapun
-        // Level 3 ke atas hanya bisa akses tenant mereka sendiri
-        if (level > 2) {
-          throw new Error('Invalid tenant access');
+      // Penentuan tenant akhir dengan logika lebih toleran
+      // Aturan:
+      // - Level 1 & 2 boleh akses tenant manapun (jika tenantId dikirim dan berbeda, gunakan yang dikirim)
+      // - Level > 2 hanya boleh tenant sendiri: jika dikirim tenant berbeda -> override diam-diam ke tenant user & log peringatan
+      // - Jika tenantId tidak dikirim: gunakan tenant user (semua level)
+      const level = user.level || 5;
+      let finalTenantId = user.tenant_id;
+      if (loginData.tenantId) {
+        if (loginData.tenantId !== user.tenant_id) {
+          if (level <= 2) {
+            finalTenantId = loginData.tenantId; // cross-tenant allowed
+          } else {
+            logger.warn({
+              userId: user.id,
+              username: user.username,
+              requestedTenant: loginData.tenantId,
+              userTenant: user.tenant_id,
+              level
+            }, 'Tenant mismatch for restricted level - overriding to user tenant');
+            // finalTenantId remains user's tenant
+          }
+        } else {
+          finalTenantId = loginData.tenantId; // same tenant provided
         }
       }
-
-      // Jika tenantId tidak disediakan, gunakan tenant dari user
-      const finalTenantId = loginData.tenantId || user.tenant_id;
 
       // Update last login
       await connection.execute(
@@ -188,7 +200,7 @@ export class AuthService {
 
       // Map role berdasarkan level dari tabel peran
       let mappedRole: UserRole;
-      const level = user.level || 5;
+  // level sudah dideklarasikan di atas
       
       switch (level) {
         case 1:

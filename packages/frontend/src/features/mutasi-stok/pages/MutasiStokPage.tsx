@@ -3,20 +3,8 @@ import { MutasiStokToolbar } from '@/features/mutasi-stok/components/MutasiStokT
 import { MutasiStokTable } from '@/features/mutasi-stok/components/MutasiStokTable'
 import { useMutasiStokStore, UIMutasiStok } from '@/features/mutasi-stok/store/mutasiStokStore'
 import { ProductDetailSidebar, Product } from '@/core/components/ui/product-detail-sidebar'
-import { Button } from '@/core/components/ui/button'
 import { useToast } from '@/core/hooks/use-toast'
-import { Input } from '@/core/components/ui/input'
-import { Label } from '@/core/components/ui/label'
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/core/components/ui/dialog'
-import { ScopeSelector } from '@/core/components/ui/scope-selector'
-import { Separator } from '@/core/components/ui/separator'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/core/components/ui/select'
+import { MutasiStokEditSidebar, MutasiStokFormData } from '@/features/mutasi-stok/components/MutasiStokEditSidebar'
 
 export function MutasiStokPage() {
   const { createMutasiStok, updateMutasiStok } = useMutasiStokStore()
@@ -29,22 +17,12 @@ export function MutasiStokPage() {
   const [saving, setSaving] = useState(false)
   
   // Form states
-  const [formData, setFormData] = useState({
-    id_produk: '',
-    jenis_mutasi: 'masuk' as 'masuk' | 'keluar',
-    jumlah: '',
-    keterangan: ''
+  const [formData, setFormData] = useState<MutasiStokFormData>({
+    id_produk: '', jenis_mutasi: 'masuk', jumlah: '', keterangan: ''
   })
-  const [scopeData, setScopeData] = useState<{
-    targetTenantId?: string
-    targetStoreId?: string
-    applyToAllTenants?: boolean
-    applyToAllStores?: boolean
-  }>({})
 
   const openCreate = () => {
     setFormData({ id_produk: '', jenis_mutasi: 'masuk', jumlah: '', keterangan: '' })
-    setScopeData({})
     setCreateOpen(true)
   }
 
@@ -64,50 +42,47 @@ export function MutasiStokPage() {
     setEditOpen(true)
   }
 
-  const handleCreate = async () => {
-    if (!formData.id_produk || !formData.jumlah) {
+  const handleCreate = async (data: MutasiStokFormData, scope?: any) => {
+    if (!data.id_produk || !data.jumlah) {
       toast({ title: 'Form tidak lengkap', description: 'Silakan isi semua field yang required' })
       return
     }
-
     setSaving(true)
     try {
       await createMutasiStok({
-        id_produk: parseInt(formData.id_produk),
-        jenis_mutasi: formData.jenis_mutasi,
-        jumlah: parseInt(formData.jumlah),
-        keterangan: formData.keterangan || undefined,
+        id_produk: parseInt(data.id_produk),
+        jenis_mutasi: data.jenis_mutasi,
+        jumlah: parseInt(data.jumlah),
+        keterangan: data.keterangan || undefined,
         tanggal_mutasi: new Date().toISOString().split('T')[0],
-        ...scopeData
+        ...scope
       })
       toast({ title: 'Mutasi stok dibuat' })
-      setCreateOpen(false)
-      setFormData({ id_produk: '', jenis_mutasi: 'masuk', jumlah: '', keterangan: '' })
-      setScopeData({})
     } catch (e: any) {
       toast({ title: 'Gagal membuat', description: e?.message || 'Terjadi kesalahan' })
+      throw e
     } finally {
       setSaving(false)
     }
   }
 
-  const handleUpdate = async () => {
-    if (!selected || !formData.jumlah) return
-
+  const handleUpdate = async (data: MutasiStokFormData) => {
+    if (!selected || !data.jumlah) return
     setSaving(true)
     try {
       await updateMutasiStok(selected.id, {
-        jenis_mutasi: formData.jenis_mutasi,
-        jumlah: parseInt(formData.jumlah),
-        keterangan: formData.keterangan || undefined
+        jenis_mutasi: data.jenis_mutasi,
+        jumlah: parseInt(data.jumlah),
+        keterangan: data.keterangan || undefined
       })
       toast({ title: 'Mutasi stok diperbarui' })
-      setEditOpen(false)
-      setSelected(null)
     } catch (e: any) {
       toast({ title: 'Gagal memperbarui', description: e?.message || 'Terjadi kesalahan' })
+      throw e
     } finally {
       setSaving(false)
+      setEditOpen(false)
+      setSelected(null)
     }
   }
 
@@ -155,163 +130,38 @@ export function MutasiStokPage() {
         }}
       />
 
-      {/* Create Dialog */}
-      <Dialog open={createOpen} onOpenChange={(o) => {
-        setCreateOpen(o)
-        if (!o) {
+      <MutasiStokEditSidebar
+        data={formData}
+        open={createOpen}
+        onOpenChange={(o) => {
+          setCreateOpen(o)
+          if (!o) {
+            setFormData({ id_produk: '', jenis_mutasi: 'masuk', jumlah: '', keterangan: '' })
+          }
+        }}
+        onSave={async (d, scope) => {
+          await handleCreate(d, scope)
           setFormData({ id_produk: '', jenis_mutasi: 'masuk', jumlah: '', keterangan: '' })
-          setScopeData({})
-        }
-      }}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Buat Mutasi Stok Baru</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-5">
-            <div className="space-y-3">
-              <h3 className="text-sm font-medium">Scope</h3>
-              <ScopeSelector onScopeChange={setScopeData} disabled={saving} compact />
-              <Separator />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="id_produk">ID Produk</Label>
-              <Input
-                id="id_produk"
-                placeholder="Masukkan ID produk"
-                value={formData.id_produk}
-                onChange={(e) => setFormData(prev => ({ ...prev, id_produk: e.target.value }))}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="jenis_mutasi">Jenis Mutasi</Label>
-              <Select
-                value={formData.jenis_mutasi}
-                onValueChange={(value: 'masuk' | 'keluar') => 
-                  setFormData(prev => ({ ...prev, jenis_mutasi: value }))
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Pilih jenis mutasi" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="masuk">Stok Masuk</SelectItem>
-                  <SelectItem value="keluar">Stok Keluar</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="jumlah">Jumlah</Label>
-              <Input
-                id="jumlah"
-                type="number"
-                placeholder="Masukkan jumlah mutasi"
-                value={formData.jumlah}
-                onChange={(e) => setFormData(prev => ({ ...prev, jumlah: e.target.value }))}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="keterangan">Keterangan</Label>
-              <Input
-                id="keterangan"
-                placeholder="Keterangan opsional"
-                value={formData.keterangan}
-                onChange={(e) => setFormData(prev => ({ ...prev, keterangan: e.target.value }))}
-              />
-            </div>
-            <div className="flex gap-2 pt-4">
-              <Button 
-                onClick={handleCreate} 
-                disabled={saving}
-                className="flex-1"
-              >
-                {saving ? 'Menyimpan...' : 'Simpan'}
-              </Button>
-              <Button 
-                variant="outline" 
-                onClick={() => setCreateOpen(false)}
-                disabled={saving}
-              >
-                Batal
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
+        }}
+        isLoading={saving}
+        isCreate
+      />
 
-      {/* Edit Dialog */}
-      <Dialog open={editOpen} onOpenChange={(o) => {
-        setEditOpen(o)
-        if (!o) {
-          setSelected(null)
-          setFormData({ id_produk: '', jenis_mutasi: 'masuk', jumlah: '', keterangan: '' })
-        }
-      }}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Edit Mutasi Stok</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label>Produk</Label>
-              <div className="p-2 bg-gray-50 rounded text-sm">
-                {selected?.nama_produk}
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="edit_jenis_mutasi">Jenis Mutasi</Label>
-              <Select
-                value={formData.jenis_mutasi}
-                onValueChange={(value: 'masuk' | 'keluar') => 
-                  setFormData(prev => ({ ...prev, jenis_mutasi: value }))
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Pilih jenis mutasi" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="masuk">Stok Masuk</SelectItem>
-                  <SelectItem value="keluar">Stok Keluar</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="edit_jumlah">Jumlah</Label>
-              <Input
-                id="edit_jumlah"
-                type="number"
-                placeholder="Masukkan jumlah mutasi"
-                value={formData.jumlah}
-                onChange={(e) => setFormData(prev => ({ ...prev, jumlah: e.target.value }))}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="edit_keterangan">Keterangan</Label>
-              <Input
-                id="edit_keterangan"
-                placeholder="Keterangan opsional"
-                value={formData.keterangan}
-                onChange={(e) => setFormData(prev => ({ ...prev, keterangan: e.target.value }))}
-              />
-            </div>
-            <div className="flex gap-2 pt-4">
-              <Button 
-                onClick={handleUpdate} 
-                disabled={saving}
-                className="flex-1"
-              >
-                {saving ? 'Menyimpan...' : 'Update'}
-              </Button>
-              <Button 
-                variant="outline" 
-                onClick={() => setEditOpen(false)}
-                disabled={saving}
-              >
-                Batal
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
+      <MutasiStokEditSidebar
+        data={selected ? formData : null}
+        open={editOpen}
+        onOpenChange={(o) => {
+          setEditOpen(o)
+          if (!o) {
+            setSelected(null)
+            setFormData({ id_produk: '', jenis_mutasi: 'masuk', jumlah: '', keterangan: '' })
+          }
+        }}
+        onSave={async (d) => {
+          await handleUpdate(d)
+        }}
+        isLoading={saving}
+      />
     </div>
   )
 }
