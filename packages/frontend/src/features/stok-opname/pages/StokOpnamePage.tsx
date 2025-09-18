@@ -3,13 +3,9 @@ import { StokOpnameToolbar } from '@/features/stok-opname/components/StokOpnameT
 import { StokOpnameTable } from '@/features/stok-opname/components/StokOpnameTable'
 import { useStokOpnameStore, UIStokOpname } from '@/features/stok-opname/store/stokOpnameStore'
 import { ProductDetailSidebar, Product } from '@/core/components/ui/product-detail-sidebar'
-import { Button } from '@/core/components/ui/button'
+// Removed Button import (no longer used after refactor)
 import { useToast } from '@/core/hooks/use-toast'
-import { Input } from '@/core/components/ui/input'
-import { Label } from '@/core/components/ui/label'
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/core/components/ui/dialog'
-import { ScopeSelector } from '@/core/components/ui/scope-selector'
-import { Separator } from '@/core/components/ui/separator'
+import { StokOpnameEditSidebar, StokOpnameFormData } from '@/features/stok-opname/components/StokOpnameEditSidebar'
 
 export function StokOpnamePage() {
   const { createStokOpname, updateStokOpname, completeStokOpname, cancelStokOpname } = useStokOpnameStore()
@@ -22,21 +18,10 @@ export function StokOpnamePage() {
   const [saving, setSaving] = useState(false)
   
   // Form states
-  const [formData, setFormData] = useState({
-    id_produk: '',
-    stok_fisik: '',
-    catatan: ''
-  })
-  const [scopeData, setScopeData] = useState<{
-    targetTenantId?: string
-    targetStoreId?: string
-    applyToAllTenants?: boolean
-    applyToAllStores?: boolean
-  }>({})
+  const [formData, setFormData] = useState<StokOpnameFormData>({ id_produk: '', stok_fisik: '', catatan: '' })
 
   const openCreate = () => {
-    setFormData({ id_produk: '', stok_fisik: '', catatan: '' })
-    setScopeData({})
+  setFormData({ id_produk: '', stok_fisik: '', catatan: '' })
     setCreateOpen(true)
   }
 
@@ -73,48 +58,45 @@ export function StokOpnamePage() {
     }
   }
 
-  const handleCreate = async () => {
-    if (!formData.id_produk || !formData.stok_fisik) {
+  const handleCreate = async (data: StokOpnameFormData, scope?: any) => {
+    if (!data.id_produk || !data.stok_fisik) {
       toast({ title: 'Form tidak lengkap', description: 'Silakan isi semua field yang required' })
       return
     }
-
     setSaving(true)
     try {
       await createStokOpname({
-        id_produk: parseInt(formData.id_produk),
-        stok_fisik: parseInt(formData.stok_fisik),
-        catatan: formData.catatan || undefined,
+        id_produk: parseInt(data.id_produk),
+        stok_fisik: parseInt(data.stok_fisik),
+        catatan: data.catatan || undefined,
         tanggal_opname: new Date().toISOString().split('T')[0],
-        ...scopeData
+        ...scope
       })
       toast({ title: 'Stok opname dibuat' })
-      setCreateOpen(false)
-      setFormData({ id_produk: '', stok_fisik: '', catatan: '' })
-      setScopeData({})
     } catch (e: any) {
       toast({ title: 'Gagal membuat', description: e?.message || 'Terjadi kesalahan' })
+      throw e
     } finally {
       setSaving(false)
     }
   }
 
-  const handleUpdate = async () => {
-    if (!selected || !formData.stok_fisik) return
-
+  const handleUpdate = async (data: StokOpnameFormData) => {
+    if (!selected || !data.stok_fisik) return
     setSaving(true)
     try {
       await updateStokOpname(selected.id, {
-        stok_fisik: parseInt(formData.stok_fisik),
-        catatan: formData.catatan || undefined
+        stok_fisik: parseInt(data.stok_fisik),
+        catatan: data.catatan || undefined
       })
       toast({ title: 'Stok opname diperbarui' })
-      setEditOpen(false)
-      setSelected(null)
     } catch (e: any) {
       toast({ title: 'Gagal memperbarui', description: e?.message || 'Terjadi kesalahan' })
+      throw e
     } finally {
       setSaving(false)
+      setEditOpen(false)
+      setSelected(null)
     }
   }
 
@@ -164,129 +146,38 @@ export function StokOpnamePage() {
         }}
       />
 
-      {/* Create Dialog */}
-      <Dialog open={createOpen} onOpenChange={(o) => {
-        setCreateOpen(o)
-        if (!o) {
+      <StokOpnameEditSidebar
+        data={formData}
+        open={createOpen}
+        onOpenChange={(o) => {
+          setCreateOpen(o)
+          if (!o) {
+            setFormData({ id_produk: '', stok_fisik: '', catatan: '' })
+          }
+        }}
+        onSave={async (d, scope) => {
+          await handleCreate(d, scope)
           setFormData({ id_produk: '', stok_fisik: '', catatan: '' })
-          setScopeData({})
-        }
-      }}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Buat Stok Opname Baru</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-5">
-            <div className="space-y-3">
-              <h3 className="text-sm font-medium">Scope</h3>
-              <ScopeSelector onScopeChange={setScopeData} disabled={saving} compact />
-              <Separator />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="id_produk">ID Produk</Label>
-              <Input
-                id="id_produk"
-                placeholder="Masukkan ID produk"
-                value={formData.id_produk}
-                onChange={(e) => setFormData(prev => ({ ...prev, id_produk: e.target.value }))}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="stok_fisik">Stok Fisik</Label>
-              <Input
-                id="stok_fisik"
-                type="number"
-                placeholder="Masukkan jumlah stok fisik"
-                value={formData.stok_fisik}
-                onChange={(e) => setFormData(prev => ({ ...prev, stok_fisik: e.target.value }))}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="catatan">Catatan</Label>
-              <Input
-                id="catatan"
-                placeholder="Catatan opsional"
-                value={formData.catatan}
-                onChange={(e) => setFormData(prev => ({ ...prev, catatan: e.target.value }))}
-              />
-            </div>
-            <div className="flex gap-2 pt-4">
-              <Button 
-                onClick={handleCreate} 
-                disabled={saving}
-                className="flex-1"
-              >
-                {saving ? 'Menyimpan...' : 'Simpan'}
-              </Button>
-              <Button 
-                variant="outline" 
-                onClick={() => setCreateOpen(false)}
-                disabled={saving}
-              >
-                Batal
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
+        }}
+        isLoading={saving}
+        isCreate
+      />
 
-      {/* Edit Dialog */}
-      <Dialog open={editOpen} onOpenChange={(o) => {
-        setEditOpen(o)
-        if (!o) {
-          setSelected(null)
-          setFormData({ id_produk: '', stok_fisik: '', catatan: '' })
-        }
-      }}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Edit Stok Opname</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label>Produk</Label>
-              <div className="p-2 bg-gray-50 rounded text-sm">
-                {selected?.nama_produk}
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="edit_stok_fisik">Stok Fisik</Label>
-              <Input
-                id="edit_stok_fisik"
-                type="number"
-                placeholder="Masukkan jumlah stok fisik"
-                value={formData.stok_fisik}
-                onChange={(e) => setFormData(prev => ({ ...prev, stok_fisik: e.target.value }))}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="edit_catatan">Catatan</Label>
-              <Input
-                id="edit_catatan"
-                placeholder="Catatan opsional"
-                value={formData.catatan}
-                onChange={(e) => setFormData(prev => ({ ...prev, catatan: e.target.value }))}
-              />
-            </div>
-            <div className="flex gap-2 pt-4">
-              <Button 
-                onClick={handleUpdate} 
-                disabled={saving}
-                className="flex-1"
-              >
-                {saving ? 'Menyimpan...' : 'Update'}
-              </Button>
-              <Button 
-                variant="outline" 
-                onClick={() => setEditOpen(false)}
-                disabled={saving}
-              >
-                Batal
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
+      <StokOpnameEditSidebar
+        data={selected ? formData : null}
+        open={editOpen}
+        onOpenChange={(o) => {
+          setEditOpen(o)
+          if (!o) {
+            setSelected(null)
+            setFormData({ id_produk: '', stok_fisik: '', catatan: '' })
+          }
+        }}
+        onSave={async (d) => {
+          await handleUpdate(d)
+        }}
+        isLoading={saving}
+      />
     </div>
   )
 }
