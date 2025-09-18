@@ -173,16 +173,22 @@ export const ensureTenantAccess = (req: Request, res: Response, next: NextFuncti
   const requestTenantId = (req.params.tenantId || req.query.tenantId || req.body.tenantId) as string | undefined;
   
   if (requestTenantId && requestTenantId !== req.user.tenantId) {
-    // Super admin bisa akses semua tenant
-    if (req.user.role !== UserRole.SUPER_ADMIN) {
+    // Level 1 (SUPER_ADMIN) dan Level 2 (ADMIN) bisa akses semua tenant
+    const canAccessAllTenants = req.user.role === UserRole.SUPER_ADMIN ||
+                                req.user.role === UserRole.ADMIN ||
+                                (req.user.level && req.user.level <= 2);
+
+    if (!canAccessAllTenants) {
       logger.warn({
         userId: req.user.id,
+        userLevel: req.user.level,
+        userRole: req.user.role,
         userTenantId: req.user.tenantId,
         requestTenantId,
         method: req.method,
         url: req.url
       }, 'Tenant access violation');
-      
+
       return res.status(403).json({
         error: 'Forbidden',
         message: 'Access denied to this tenant data'

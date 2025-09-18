@@ -74,7 +74,8 @@ export const useAuthStore = create<AuthStore>()(
           
           if (!response.ok || !data.success) throw new Error(data.message || 'Login gagal')
           set({ user: data.data.user, token: data.data.accessToken, isAuthenticated: true, loading: false })
-          if (!data.data.user.isGodUser) { get().ensureStoreContext().catch(() => {}) }
+          // Always attempt store context (now also for god user to load real list)
+          get().ensureStoreContext().catch(() => {})
         } catch (e) {
           set({ loading: false })
           throw e
@@ -88,18 +89,33 @@ export const useAuthStore = create<AuthStore>()(
       setToken: (token: string) => { set({ token }) },
       // Pastikan user punya tokoId; kalau tidak, ambil daftar toko aktif dan set yang pertama.
       ensureStoreContext: async () => {
-        const state = get(); const user = state.user; if (!user) return; if (user.isGodUser) return; if (user.tokoId) return;
-        if ((get() as any)._busyStore) return; (get() as any)._busyStore = true
-        try {
-          const res = await fetch(`${config.api.url}:${config.api.port}/api/tokosaya`, { headers: { 'Authorization': state.token ? `Bearer ${state.token}` : '' } })
-          if (!res.ok) return
-          const data = await res.json(); const list = Array.isArray(data?.data) ? data.data : []
-          ;(useAuthStore as any).lastStoreList = list; set({ storeCacheVersion: Date.now() })
-          if (list.length === 1 && list[0]?.id) { set({ user: { ...user, tokoId: list[0].id } }); return }
-          const active = list.find((t: any) => (t.status || '').toLowerCase() === 'active') || list[0]
-          if (active?.id) set({ user: { ...user, tokoId: active.id } })
-        } finally { (get() as any)._busyStore = false }
-      },
+         const state = get(); const user = state.user; if (!user) return; 
+         // God user: fetch real stores (not synthetic) then pick first/active
+         if (user.isGodUser) {
+           if (user.tokoId) return
+           if ((get() as any)._busyStore) return; (get() as any)._busyStore = true
+           try {
+             const res = await fetch(`${config.api.url}:${config.api.port}/api/tokosaya`, { headers: { 'Authorization': state.token ? `Bearer ${state.token}` : '' } })
+             if (!res.ok) return
+             const data = await res.json(); const list = Array.isArray(data?.data) ? data.data : []
+             ;(useAuthStore as any).lastStoreList = list; set({ storeCacheVersion: Date.now() })
+             const active = list.find((t: any) => (t.status || '').toLowerCase() === 'active') || list[0]
+             if (active?.id) set({ user: { ...user, tokoId: active.id } })
+           } finally { (get() as any)._busyStore = false }
+           return
+         }
+         if (user.tokoId) return;
+         if ((get() as any)._busyStore) return; (get() as any)._busyStore = true
+         try {
+           const res = await fetch(`${config.api.url}:${config.api.port}/api/tokosaya`, { headers: { 'Authorization': state.token ? `Bearer ${state.token}` : '' } })
+           if (!res.ok) return
+           const data = await res.json(); const list = Array.isArray(data?.data) ? data.data : []
+           ;(useAuthStore as any).lastStoreList = list; set({ storeCacheVersion: Date.now() })
+           if (list.length === 1 && list[0]?.id) { set({ user: { ...user, tokoId: list[0].id } }); return }
+           const active = list.find((t: any) => (t.status || '').toLowerCase() === 'active') || list[0]
+           if (active?.id) set({ user: { ...user, tokoId: active.id } })
+         } finally { (get() as any)._busyStore = false }
+       },
       setStore: (tokoId: string) => { const { user } = get(); if (!user) return; set({ user: { ...user, tokoId } }) }
     }),
     { name: 'authStore' }

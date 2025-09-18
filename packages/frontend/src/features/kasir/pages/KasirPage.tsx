@@ -111,17 +111,18 @@ export function KasirPage() {
     })
   }
 
+  // (One-time init guard moved into existing initialization to avoid duplicate code & lint errors)
   useEffect(() => {
     // Initialize kasir session and load data when authenticated
     if (isAuthenticated) {
+      if ((window as any).__kasirInitRan) return
+      ;(window as any).__kasirInitRan = true
       const initializeKasir = async () => {
         try {
           await Promise.all([
             initSession(),
             loadSummary()
           ])
-
-          // Load produk minimal untuk kebutuhan pencarian lokal (nama/SKU)
           if (!produkLoading && produkItems.length === 0) {
             await loadFirst()
           }
@@ -129,10 +130,9 @@ export function KasirPage() {
           console.error('Failed to initialize kasir:', error)
         }
       }
-
       initializeKasir()
     }
-  }, [isAuthenticated, initSession, loadSummary, loadFirst, produkItems.length, produkLoading])
+  }, [isAuthenticated])
 
   useEffect(() => {
     const handleGlobalKeyDown = (e: KeyboardEvent) => {
@@ -192,18 +192,25 @@ export function KasirPage() {
   const setStore = authState.setStore
   const isGod = !!user?.isGodUser
   const hasStore = !!user?.tokoId
-  const showInlineSwitcher = isGod && hasStore && storeList.length > 0
 
-  if (needsStore) {
+  // Skip store validation for god users, level 1, and level 2 users
+  const isLevel1SuperAdmin = user?.level === 1
+  const isLevel2Admin = user?.level === 2
+  const showInlineSwitcher = (isGod || isLevel1SuperAdmin || isLevel2Admin) && hasStore && storeList.length > 0
+  const [advancedMode, setAdvancedMode] = useState(false)
+  const effectiveNeedsStore = (isGod || isLevel1SuperAdmin || isLevel2Admin) ? false : needsStore
+
+  // Remove store validation for level 1 and 2 users
+  if (effectiveNeedsStore && !isGod && !isLevel1SuperAdmin && !isLevel2Admin) {
     return (
       <div className="p-6 space-y-6">
         <h2 className="text-xl font-semibold">Pilih Toko</h2>
         <p className="text-sm text-gray-600 max-w-xl">
-          Anda belum memiliki konteks toko aktif. {user?.isGodUser ? 'Sebagai God User Anda bisa memilih toko mana saja untuk melakukan transaksi.' : 'Hubungi administrator untuk diberikan akses ke toko.'}
+          Anda belum memiliki konteks toko aktif. Hubungi administrator untuk diberikan akses ke toko.
         </p>
         {storeList.length === 0 && (
           <div className="p-4 border rounded bg-yellow-50 text-yellow-700 text-sm">
-            {user?.isGodUser ? 'Tidak ada toko yang tersedia saat ini.' : 'Tidak ada toko yang dapat diakses.'}
+            Tidak ada toko yang dapat diakses.
           </div>
         )}
         {storeList.length > 0 && (
@@ -249,33 +256,43 @@ export function KasirPage() {
       tabIndex={-1}
       className="flex flex-col min-h-0 h-[calc(100vh-4rem-3rem)] py-2 sm:py-3 overflow-hidden focus:outline-none"
     >
-      {showInlineSwitcher && (
-        <div className="px-3 pb-2">
-          <div className="flex flex-wrap items-center gap-2 rounded border bg-white shadow-sm p-2">
-            <span className="text-xs font-medium text-gray-600">Toko Aktif:</span>
-            {storeList.map((t: any) => {
-              const active = t.id === user?.tokoId
-              return (
-                <button
-                  key={t.id}
-                  onClick={async () => {
-                    if (active) return
-                    setStore(t.id)
-                    await initSession()
-                    await loadSummary()
-                  }}
-                  className={`text-xs px-2 py-1 rounded border transition ${active ? 'bg-blue-600 text-white border-blue-600 cursor-default' : 'bg-white hover:bg-blue-50 border-gray-300 text-gray-700'}`}
-                >
-                  {t.nama || t.kode || 'Toko'}
-                </button>
-              )
-            })}
-            <Button variant="outline" size="xs" onClick={() => initSession()} className="ml-auto">
-              Refresh
-            </Button>
-          </div>
+      {(isGod || isLevel1SuperAdmin || isLevel2Admin) && (
+        <div className="px-3 pb-2 flex items-center gap-3 text-xs text-gray-600">
+          <label className="inline-flex items-center gap-1 cursor-pointer select-none">
+            <input type="checkbox" className="h-3 w-3" checked={advancedMode} onChange={e => setAdvancedMode(e.target.checked)} />
+            Mode Advance (Switcher Toko)
+          </label>
+          {advancedMode && <span className="text-[10px] text-blue-600">Aktif: Anda dapat mengganti toko untuk simulasi</span>}
         </div>
       )}
+
+      {((!isGod && !isLevel1SuperAdmin && !isLevel2Admin && showInlineSwitcher) || ((isGod || isLevel1SuperAdmin || isLevel2Admin) && advancedMode && showInlineSwitcher)) ? (
+         <div className="px-3 pb-2">
+           <div className="flex flex-wrap items-center gap-2 rounded border bg-white shadow-sm p-2">
+             <span className="text-xs font-medium text-gray-600">Toko Aktif:</span>
+             {storeList.map((t: any) => {
+               const active = t.id === user?.tokoId
+               return (
+                 <button
+                   key={t.id}
+                   onClick={async () => {
+                     if (active) return
+                     setStore(t.id)
+                     await initSession()
+                     await loadSummary()
+                   }}
+                   className={`text-xs px-2 py-1 rounded border transition ${active ? 'bg-blue-600 text-white border-blue-600 cursor-default' : 'bg-white hover:bg-blue-50 border-gray-300 text-gray-700'}`}
+                 >
+                   {t.nama || t.kode || 'Toko'}
+                 </button>
+               )
+             })}
+             <Button variant="outline" size="sm" onClick={() => initSession()} className="ml-auto">
+               Refresh
+             </Button>
+           </div>
+         </div>
+      ) : null}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
         {/* Kolom kiri: pencarian & keranjang */}

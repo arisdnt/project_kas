@@ -68,7 +68,7 @@ export const ProductDetailSidebar = React.forwardRef<
 
   return (
     <Sidebar open={open} onOpenChange={onOpenChange}>
-      <SidebarContent className={cn("w-full max-w-md", className)} ref={ref}>
+      <SidebarContent size="forty" className={cn("w-full", className)} ref={ref}>
         <SidebarHeader>
           <SidebarTitle>Detail Produk</SidebarTitle>
           <SidebarDescription>

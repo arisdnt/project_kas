@@ -128,28 +128,35 @@ export const useProdukStore = create<ProdukState & ProdukActions>()(
     setFilters: (f) => set({ filters: f }),
 
     loadFirst: async () => {
-      // Abort previous request if any
-      const prev = get().currentAbort
-      if (prev) {
-        try { prev.abort() } catch {}
+      const state: any = get() as any
+      const now = Date.now()
+      if (state._inflightFirst) {
+        return state._inflightFirst
       }
+      if (state._lastFirst && (now - state._lastFirst < 700)) {
+        return
+      }
+      const prev = get().currentAbort
+      if (prev) { try { prev.abort() } catch {} }
       const ctrl = new AbortController()
-      // Clear items immediately to indicate new search/filter is applied
       set({ loading: true, page: 1, error: undefined, currentAbort: ctrl, items: [] })
-      await fetchPage(1, set, get, ctrl)
+      const p = fetchPage(1, set, get, ctrl).finally(() => { (get() as any)._inflightFirst = null; (get() as any)._lastFirst = Date.now() })
+      ;(get() as any)._inflightFirst = p
+      return p
     },
 
     loadNext: async () => {
       const { loading, hasNext, page } = get()
       if (loading || !hasNext) return
-      // Abort previous request if any (we're starting a new page fetch)
+      const state: any = get() as any
+      if (state._inflightNext) return state._inflightNext
       const prev = get().currentAbort
-      if (prev) {
-        try { prev.abort() } catch {}
-      }
+      if (prev) { try { prev.abort() } catch {} }
       const ctrl = new AbortController()
       set({ loading: true, currentAbort: ctrl })
-      await fetchPage(page + 1, set, get, ctrl)
+      const p = fetchPage(page + 1, set, get, ctrl).finally(() => { (get() as any)._inflightNext = null })
+      ;(get() as any)._inflightNext = p
+      return p
     },
 
     createProduk: async (data: ProductFormData) => {

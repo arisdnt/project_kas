@@ -166,9 +166,15 @@ export class AuthService {
         throw new Error('Invalid username or password');
       }
 
-      // Check tenant jika disediakan
+      // Check tenant access berdasarkan level user
       if (loginData.tenantId && user.tenant_id !== loginData.tenantId) {
-        throw new Error('Invalid tenant access');
+        const level = user.level || 5;
+
+        // Level 1 dan 2 bisa akses tenant manapun
+        // Level 3 ke atas hanya bisa akses tenant mereka sendiri
+        if (level > 2) {
+          throw new Error('Invalid tenant access');
+        }
       }
 
       // Jika tenantId tidak disediakan, gunakan tenant dari user
@@ -352,7 +358,8 @@ export class AuthService {
     const connection = await pool.getConnection();
 
     try {
-      const [rows] = await connection.execute<RowDataPacket[]>(
+      // Pertama, coba cari user dengan tenant yang sama
+      let [rows] = await connection.execute<RowDataPacket[]>(
         `SELECT u.id, u.tenant_id, u.username, u.peran_id, u.toko_id, u.status,
                 p.level, p.nama as nama_peran
          FROM users u
@@ -360,6 +367,29 @@ export class AuthService {
          WHERE u.id = ? AND u.tenant_id = ? AND u.status = 'aktif'`,
         [userId, tenantId]
       );
+
+      // Jika tidak ditemukan, coba cari user tanpa filter tenant (untuk level 1-2)
+      if (rows.length === 0) {
+        [rows] = await connection.execute<RowDataPacket[]>(
+          `SELECT u.id, u.tenant_id, u.username, u.peran_id, u.toko_id, u.status,
+                  p.level, p.nama as nama_peran
+           FROM users u
+           LEFT JOIN peran p ON u.peran_id = p.id
+           WHERE u.id = ? AND u.status = 'aktif'`,
+          [userId]
+        );
+
+        // Jika ditemukan, validasi apakah user level 1-2 yang bisa akses cross-tenant
+        if (rows.length > 0) {
+          const foundUser = rows[0];
+          const level = foundUser.level || 5;
+
+          // Hanya level 1-2 yang boleh akses cross-tenant
+          if (level > 2) {
+            return null; // User level 3+ tidak boleh akses tenant lain
+          }
+        }
+      }
 
       if (rows.length === 0) {
         return null;

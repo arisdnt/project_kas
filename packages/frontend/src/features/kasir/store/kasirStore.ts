@@ -297,7 +297,10 @@ export const useKasirStore = create<KasirState & KasirActions>()(
           await authState.ensureStoreContext()
         }
         const refreshedAuth = auth.useAuthStore.getState()
-        if (!refreshedAuth.user?.tokoId) {
+        const user = refreshedAuth.user
+        // Only require store for users level 3+ (manager, cashier)
+        // God users, level 1 (super admin), and level 2 (admin) can proceed without store
+        if (!user?.tokoId && !(user?.isGodUser || user?.level === 1 || user?.level === 2)) {
           // No store resolved automatically; UI should prompt selection
           set({ needsStore: true })
           return
@@ -318,7 +321,9 @@ export const useKasirStore = create<KasirState & KasirActions>()(
     refreshSession: async () => {
       try {
         const auth = (await import('@/core/store/authStore'))
-        if (!auth.useAuthStore.getState().user?.tokoId) {
+        const user = auth.useAuthStore.getState().user
+        // Only require store for users level 3+ (manager, cashier)
+        if (!user?.tokoId && !(user?.isGodUser || user?.level === 1 || user?.level === 2)) {
           set({ needsStore: true })
           return
         }
@@ -336,7 +341,9 @@ export const useKasirStore = create<KasirState & KasirActions>()(
     loadSummary: async () => {
       try {
         const auth = (await import('@/core/store/authStore'))
-        if (!auth.useAuthStore.getState().user?.tokoId) {
+        const user = auth.useAuthStore.getState().user
+        // Only require store for users level 3+ (manager, cashier)
+        if (!user?.tokoId && !(user?.isGodUser || user?.level === 1 || user?.level === 2)) {
           set({ needsStore: true })
           return
         }

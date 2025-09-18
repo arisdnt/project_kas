@@ -162,11 +162,11 @@ export const ProductEditSidebar = React.forwardRef<
 
   return (
     <Sidebar open={open} onOpenChange={onOpenChange}>
-      <SidebarContent className={cn("w-full max-w-md", className)} ref={ref}>
+      <SidebarContent size="forty" className={cn("w-full", className)} ref={ref}>
         <SidebarHeader>
-          <SidebarTitle>Edit Produk</SidebarTitle>
+          <SidebarTitle>{formData.nama ? 'Edit Produk' : 'Tambah Produk'}</SidebarTitle>
           <SidebarDescription>
-            Ubah informasi produk {formData.nama || 'yang dipilih'}
+            {formData.nama ? `Ubah informasi produk ${formData.nama}` : 'Tambah produk baru ke sistem'}
           </SidebarDescription>
         </SidebarHeader>
 
