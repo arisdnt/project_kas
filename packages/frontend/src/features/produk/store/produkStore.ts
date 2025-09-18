@@ -104,6 +104,9 @@ type ProdukActions = {
   removeFromRealtime: (id: number) => void
   // Master data actions
   loadMasterData: () => Promise<void>
+  createCategory: (data: any) => Promise<void>
+  createBrand: (data: any) => Promise<void>
+  createSupplier: (data: any) => Promise<void>
   getDefaultCategoryId: () => string
   getDefaultBrandId: () => string
   getDefaultSupplierId: () => string
@@ -159,7 +162,7 @@ export const useProdukStore = create<ProdukState & ProdukActions>()(
       return p
     },
 
-    createProduk: async (data: ProductFormData) => {
+    createProduk: async (data: any) => {
       // Create produk with proper API schema
       const res = await fetch(`${API_BASE}`, {
         method: 'POST',
@@ -172,15 +175,20 @@ export const useProdukStore = create<ProdukState & ProdukActions>()(
           harga_beli: Number(data.hargaBeli) || 0,
           harga_jual: Number(data.hargaJual) || 0,
           stok_minimum: 0,
-          // Use actual master data IDs
-          kategori_id: get().getDefaultCategoryId(),
-          brand_id: get().getDefaultBrandId(),
+          // Use selected kategori and brand IDs or defaults
+          kategori_id: data.kategoriId || get().getDefaultCategoryId(),
+          brand_id: data.brandId || get().getDefaultBrandId(),
           supplier_id: get().getDefaultSupplierId(),
-          is_aktif: 1,
+          is_aktif: data.status === 'aktif' ? 1 : 0,
           is_dijual_online: false,
           pajak_persen: 0,
           margin_persen: 0,
-          berat: 0
+          berat: 0,
+          // Scope fields (optional) - hanya akan diinterpretasi backend jika endpoint mendukung
+          ...(data.targetTenantId ? { targetTenantId: data.targetTenantId } : {}),
+          ...(data.targetStoreId ? { targetStoreId: data.targetStoreId } : {}),
+          ...(data.applyToAllTenants ? { applyToAllTenants: true } : {}),
+          ...(data.applyToAllStores ? { applyToAllStores: true } : {}),
         }),
       })
       const js = await res.json()
@@ -304,6 +312,49 @@ export const useProdukStore = create<ProdukState & ProdukActions>()(
     getDefaultSupplierId: () => {
       const { suppliers } = get()
       return suppliers.length > 0 ? suppliers[0].id : '00000000-0000-0000-0000-000000000001'
+    },
+
+    // Create master data functions
+    createCategory: async (data: any) => {
+      const res = await fetch(`${config.api.url}:${config.api.port}/api/produk/categories`, {
+        method: 'POST',
+        headers: authHeaders(),
+        body: JSON.stringify(data),
+      })
+      const js = await res.json()
+      if (!res.ok || !js.success) throw new Error(js.message || 'Failed to create category')
+
+      // Reload master data to get updated list
+      await get().loadMasterData()
+      return js.data
+    },
+
+    createBrand: async (data: any) => {
+      const res = await fetch(`${config.api.url}:${config.api.port}/api/produk/brands`, {
+        method: 'POST',
+        headers: authHeaders(),
+        body: JSON.stringify(data),
+      })
+      const js = await res.json()
+      if (!res.ok || !js.success) throw new Error(js.message || 'Failed to create brand')
+
+      // Reload master data to get updated list
+      await get().loadMasterData()
+      return js.data
+    },
+
+    createSupplier: async (data: any) => {
+      const res = await fetch(`${config.api.url}:${config.api.port}/api/produk/suppliers`, {
+        method: 'POST',
+        headers: authHeaders(),
+        body: JSON.stringify(data),
+      })
+      const js = await res.json()
+      if (!res.ok || !js.success) throw new Error(js.message || 'Failed to create supplier')
+
+      // Reload master data to get updated list
+      await get().loadMasterData()
+      return js.data
     },
   }))
 )

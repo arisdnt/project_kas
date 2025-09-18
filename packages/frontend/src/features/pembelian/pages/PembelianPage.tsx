@@ -1,109 +1,146 @@
-import { useEffect, useRef } from 'react'
-import { Card, CardContent } from '@/core/components/ui/card'
-import { PembelianSearchForm } from '@/features/pembelian/components/PembelianSearchForm'
-import { RestockTable } from '@/features/pembelian/components/RestockTable'
-import { RestockSummary } from '@/features/pembelian/components/RestockSummary'
-import { usePembelianStore } from '@/features/pembelian/store/pembelianStore'
-import { useProdukStore } from '@/features/produk/store/produkStore'
-import { useAuthStore } from '@/core/store/authStore'
-import { Barcode } from 'lucide-react'
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Card, CardContent } from '@/core/components/ui/card';
+import { PurchaseFilterBar, SupplierOption } from '@/features/pembelian/components/PurchaseFilterBar';
+import { PurchaseTable } from '@/features/pembelian/components/PurchaseTable';
+import { exportPurchaseCSV } from '@/features/pembelian/utils/exporters';
+import { PurchaseFilters, PurchaseTransaction } from '@/features/pembelian/types';
+import { PembelianService } from '@/features/pembelian/services/pembelianService';
+import { useSupplierStore } from '@/features/supplier/store/supplierStore';
 
-export function PembelianPage() {
-  const containerRef = useRef<HTMLDivElement>(null)
-  const items = usePembelianStore((s) => s.items)
-  const clear = usePembelianStore((s) => s.clear)
-  const loadFirst = useProdukStore((s) => s.loadFirst)
-  const produkLoading = useProdukStore((s) => s.loading)
-  const produkItems = useProdukStore((s) => s.items)
-  const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
-
-  useEffect(() => {
-    if (isAuthenticated && !produkLoading && produkItems.length === 0) {
-      loadFirst().catch(() => {})
-    }
-  }, [isAuthenticated, loadFirst, produkItems.length, produkLoading])
-
-  useEffect(() => {
-    const handleGlobalKeyDown = (e: KeyboardEvent) => {
-      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
-        return
-      }
-
-      switch (e.key) {
-        case 'F1':
-          e.preventDefault()
-          ;(document.querySelector('input[placeholder*="barcode"]') as HTMLInputElement)?.focus()
-          break
-        case 'F2':
-          e.preventDefault()
-          if (isAuthenticated) {
-            loadFirst().catch(() => {})
-          }
-          break
-        case 'F9':
-          e.preventDefault()
-          if (items.length > 0 && confirm('Hapus semua item pembelian?')) {
-            clear()
-          }
-          break
-      }
-    }
-
-    document.addEventListener('keydown', handleGlobalKeyDown)
-    return () => document.removeEventListener('keydown', handleGlobalKeyDown)
-  }, [items.length, clear, loadFirst])
-
-  return (
-    <div 
-      ref={containerRef}
-      tabIndex={-1}
-      className="flex flex-col min-h-0 h-[calc(100vh-4rem-3rem)] py-2 sm:py-3 overflow-hidden focus:outline-none"
-    >
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
-        {/* Kolom kiri: pencarian & daftar pembelian */}
-        <div className="lg:col-span-2 space-y-3 min-h-0">
-          <Card>
-            <CardContent className="p-4 space-y-3">
-              <div className="flex items-center gap-2 text-gray-700">
-                <Barcode className="h-5 w-5" />
-                <span className="font-medium">Cari / Scan Produk untuk Restok</span>
-              </div>
-              <PembelianSearchForm onLoaded={() => {}} />
-            </CardContent>
-          </Card>
-
-          <Card className="min-h-0">
-            <CardContent className="p-0">
-              <div className="px-4 py-3 border-b border-gray-200 flex items-center justify-between">
-                <h3 className="font-semibold text-gray-900">Daftar Pembelian</h3>
-                {items.length > 0 && (
-                  <span className="text-sm text-gray-600">{items.length} item</span>
-                )}
-              </div>
-              <div className="p-4">
-                <RestockTable items={items} />
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Kolom kanan: ringkasan */}
-        <div className="space-y-3">
-          <RestockSummary />
-
-          <Card>
-            <CardContent className="p-3">
-              <h4 className="text-xs font-medium text-gray-700 mb-2">Keyboard Shortcuts</h4>
-              <div className="space-y-1 text-xs text-gray-600">
-                <div className="flex justify-between"><span>F1</span><span>Focus Pencarian</span></div>
-                <div className="flex justify-between"><span>F2</span><span>Reload Produk</span></div>
-                <div className="flex justify-between"><span>F9</span><span>Bersihkan Daftar</span></div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-    </div>
-  )
+function formatDateKey(date: Date) {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 }
 
+export function PembelianPage() {
+  const [filters, setFilters] = useState<PurchaseFilters>({ range: '7d' });
+  const [transactions, setTransactions] = useState<PurchaseTransaction[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [suppliers, setSuppliers] = useState<SupplierOption[]>([]);
+  const [totalTransactions, setTotalTransactions] = useState(0);
+
+  const getActiveSuppliers = useSupplierStore((state) => state.getActiveSuppliers);
+
+  const normalizedFilters = useMemo(() => {
+    const today = new Date();
+    if (filters.range !== 'custom') {
+      let from: string | undefined;
+      if (filters.range === 'today') {
+        from = formatDateKey(today);
+      }
+      if (filters.range === '7d') {
+        const start = new Date(today);
+        start.setDate(today.getDate() - 6);
+        from = formatDateKey(start);
+      }
+      if (filters.range === '30d') {
+        const start = new Date(today);
+        start.setDate(today.getDate() - 29);
+        from = formatDateKey(start);
+      }
+      return {
+        ...filters,
+        from,
+        to: formatDateKey(today),
+      };
+    }
+    return filters;
+  }, [filters]);
+
+  const fetchSuppliers = useCallback(async () => {
+    try {
+      const activeSuppliers = await getActiveSuppliers();
+      setSuppliers(activeSuppliers.map((supplier) => ({ id: supplier.id, name: supplier.nama })));
+    } catch (err) {
+      console.error('Failed to load supplier list', err);
+    }
+  }, [getActiveSuppliers]);
+
+  useEffect(() => {
+    fetchSuppliers();
+  }, [fetchSuppliers]);
+
+  const fetchTransactions = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await PembelianService.searchTransaksi({
+        page: 1,
+        limit: 100,
+        search: normalizedFilters.query,
+        supplier_id: normalizedFilters.supplierId,
+        status: normalizedFilters.status,
+        status_pembayaran: normalizedFilters.paymentStatus,
+        tanggal_dari: normalizedFilters.from,
+        tanggal_sampai: normalizedFilters.to,
+      });
+
+      setTransactions(response.data);
+      setTotalTransactions(response.pagination?.total ?? response.data.length);
+    } catch (err) {
+      console.error('Failed to load purchase transactions', err);
+      setError('Gagal memuat data transaksi pembelian dari server.');
+      setTransactions([]);
+      setTotalTransactions(0);
+    } finally {
+      setLoading(false);
+    }
+  }, [normalizedFilters.from, normalizedFilters.paymentStatus, normalizedFilters.query, normalizedFilters.status, normalizedFilters.supplierId, normalizedFilters.to]);
+
+  useEffect(() => {
+    fetchTransactions();
+  }, [fetchTransactions]);
+
+  const handleExport = useCallback(() => {
+    if (transactions.length === 0) return;
+    exportPurchaseCSV(transactions);
+  }, [transactions]);
+
+  const handleRefresh = useCallback(() => {
+    fetchTransactions();
+  }, [fetchTransactions]);
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-start justify-between">
+        <div>
+          <h2 className="text-xl font-bold text-gray-900">Transaksi Pembelian</h2>
+          <p className="text-sm text-gray-600">Daftar transaksi pembelian berdasarkan filter yang dipilih</p>
+        </div>
+      </div>
+
+      {error && (
+        <div className="bg-red-50 border border-red-200 rounded-md p-4">
+          <p className="text-red-800 text-sm">{error}</p>
+        </div>
+      )}
+
+      <Card>
+        <CardContent className="p-4">
+          <PurchaseFilterBar
+            filters={normalizedFilters}
+            suppliers={suppliers}
+            onChange={(patch) => setFilters((prev) => ({ ...prev, ...patch }))}
+            onExport={transactions.length > 0 ? handleExport : undefined}
+            onRefresh={handleRefresh}
+            loading={loading}
+          />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardContent className="p-4 space-y-3">
+          <div className="flex items-center justify-between text-sm text-gray-600">
+            <span>
+              {loading
+                ? 'Memuat transaksi pembelian...'
+                : `Menampilkan ${transactions.length} dari ${totalTransactions} transaksi`}
+            </span>
+          </div>
+
+          <PurchaseTable transactions={transactions} />
+        </CardContent>
+      </Card>
+    </div>
+  );
+}

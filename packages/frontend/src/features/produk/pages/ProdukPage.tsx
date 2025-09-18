@@ -1,11 +1,9 @@
 import { useMemo, useState, useEffect, useCallback } from 'react'
-import { PackagePlus } from 'lucide-react'
 import { ProdukToolbar } from '@/features/produk/components/ProdukToolbar'
 import { ProdukTable } from '@/features/produk/components/ProdukTable'
 import { useProdukStore, UIProduk } from '@/features/produk/store/produkStore'
 import { ProductDetailSidebar, Product } from '@/core/components/ui/product-detail-sidebar'
 import { ProductEditSidebar, ProductFormData } from '@/core/components/ui/product-edit-sidebar'
-import { Button } from '@/core/components/ui/button'
 import { useProdukRealtime } from '@/features/produk/hooks/useProdukRealtime'
 import { useToast } from '@/core/hooks/use-toast'
 import { useDataRefresh } from '@/core/hooks/useDataRefresh'
@@ -38,7 +36,7 @@ export function ProdukPage() {
 
   const openCreate = () => {
     setEditing({
-      nama: '', kode: '', kategori: '', brand: '',
+      nama: '', kode: '', kategori: '', kategoriId: '', brand: '', brandId: '',
       hargaBeli: 0, hargaJual: 0, stok: 0, satuan: 'pcs', deskripsi: '', status: 'aktif',
     })
     setEditOpen(true)
@@ -55,12 +53,14 @@ export function ProdukPage() {
       nama: p.nama,
       kode: p.sku || '',
       kategori: p.kategori?.nama || '',
+      kategoriId: p.kategori?.id || '',
       brand: p.brand?.nama || '',
+      brandId: p.brand?.id || '',
       hargaBeli: p.hargaBeli || 0,
       hargaJual: p.harga || 0,
       stok: p.stok || 0,
-      satuan: 'pcs',
-      deskripsi: '',
+      satuan: p.satuan || 'pcs',
+      deskripsi: p.deskripsi || '',
       status: 'aktif',
     })
     setEditOpen(true)
@@ -138,6 +138,7 @@ export function ProdukPage() {
         }}
         onSave={onSave}
         isLoading={saving}
+        isCreate={!selected}
       />
     </div>
   )

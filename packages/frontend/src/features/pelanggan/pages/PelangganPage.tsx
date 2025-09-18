@@ -4,6 +4,7 @@ import { PelangganTable } from '@/features/pelanggan/components/PelangganTable'
 import { UIPelanggan } from '@/features/pelanggan/types/pelanggan'
 import { usePelangganStore } from '@/features/pelanggan/store/pelangganStore'
 import { useToast } from '@/core/hooks/use-toast'
+import { PelangganEditSidebar } from '@/features/pelanggan/components/PelangganEditSidebar'
 
 export function PelangganPage() {
   const { createPelanggan, updatePelanggan } = usePelangganStore()
@@ -22,7 +23,8 @@ export function PelangganPage() {
   const [saving, setSaving] = useState(false)
 
   const openCreate = () => {
-    setEditing({ nama: '', email: '', telepon: '', alamat: '', tipe: 'reguler' })
+    // Create mode: set editing to null so sidebar renders ScopeSelector
+    setEditing(null)
     setSelected(null)
     setEditOpen(true)
   }
@@ -98,80 +100,19 @@ export function PelangganPage() {
         </div>
       )}
 
-      {/* TODO: Add PelangganEditSidebar component */}
-      {editOpen && editing && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full m-4">
-            <h2 className="text-lg font-semibold mb-4">
-              {selected ? 'Edit Pelanggan' : 'Tambah Pelanggan'}
-            </h2>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium mb-1">Nama</label>
-                <input
-                  type="text"
-                  value={editing.nama}
-                  onChange={(e) => setEditing({ ...editing, nama: e.target.value })}
-                  className="w-full border rounded px-3 py-2"
-                  placeholder="Nama pelanggan"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">Email</label>
-                <input
-                  type="email"
-                  value={editing.email || ''}
-                  onChange={(e) => setEditing({ ...editing, email: e.target.value })}
-                  className="w-full border rounded px-3 py-2"
-                  placeholder="Email"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">Telepon</label>
-                <input
-                  type="text"
-                  value={editing.telepon || ''}
-                  onChange={(e) => setEditing({ ...editing, telepon: e.target.value })}
-                  className="w-full border rounded px-3 py-2"
-                  placeholder="Telepon"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">Tipe</label>
-                <select
-                  value={editing.tipe}
-                  onChange={(e) => setEditing({ ...editing, tipe: e.target.value as any })}
-                  className="w-full border rounded px-3 py-2"
-                >
-                  <option value="reguler">Reguler</option>
-                  <option value="vip">VIP</option>
-                  <option value="member">Member</option>
-                  <option value="wholesale">Wholesale</option>
-                </select>
-              </div>
-            </div>
-            <div className="flex gap-2 mt-6">
-              <button
-                onClick={() => onSave(editing)}
-                disabled={saving || !editing.nama}
-                className="flex-1 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:opacity-50"
-              >
-                {saving ? 'Menyimpan...' : 'Simpan'}
-              </button>
-              <button
-                onClick={() => {
-                  setEditOpen(false)
-                  setSelected(null)
-                  setEditing(null)
-                }}
-                className="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600"
-              >
-                Batal
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <PelangganEditSidebar
+        value={editing}
+        open={editOpen}
+        onOpenChange={(o) => {
+          setEditOpen(o)
+          if (!o) {
+            setSelected(null)
+            setEditing(null)
+          }
+        }}
+        onSave={onSave as any}
+        isLoading={saving}
+      />
     </div>
   )
 }

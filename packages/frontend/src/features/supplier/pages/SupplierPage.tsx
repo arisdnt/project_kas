@@ -23,7 +23,8 @@ export function SupplierPage() {
   const [saving, setSaving] = useState(false)
 
   const openCreate = () => {
-    setEditing({ nama: '', kontak_person: '', email: '', telepon: '', alamat: '' })
+    // Mode create: set editing to null so sidebar can show ScopeSelector (consistent pattern)
+    setEditing(null)
     setSelected(null)
     setEditOpen(true)
   }
@@ -80,6 +81,7 @@ export function SupplierPage() {
       />
 
       <SupplierEditSidebar
+        // Pass null for create mode so component renders scope selection
         value={editing}
         open={editOpen}
         onOpenChange={(o) => {

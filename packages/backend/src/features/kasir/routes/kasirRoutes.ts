@@ -172,6 +172,7 @@ import { authenticate, requirePermission } from '@/features/auth/middleware/auth
 import { attachAccessScope, requireStoreWhenNeeded } from '@/core/middleware/accessScope';
 import { PERMISSIONS } from '@/features/auth/models/User';
 import { KasirController } from '../controllers/KasirController';
+import { requireKasirLevel } from '@/features/kasir/middleware/kasirAccessMiddleware';
 
 const router = Router();
 
@@ -179,6 +180,7 @@ const router = Router();
 router.use(authenticate);
 router.use(attachAccessScope);
 router.use(requireStoreWhenNeeded); // Kasir operations require store context
+router.use(requireKasirLevel);
 
 /**
  * @swagger

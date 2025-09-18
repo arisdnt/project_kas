@@ -1310,4 +1310,35 @@ router.get('/supplier',
   MasterDataController.getSuppliers
 );
 
+// Enhanced create routes with scope support
+router.get('/categories',
+  requirePermission(PERMISSIONS.PRODUCT_READ),
+  ProdukController.getCategories
+);
+
+router.post('/categories',
+  requirePermission(PERMISSIONS.PRODUCT_CREATE),
+  ProdukController.createCategory
+);
+
+router.get('/brands',
+  requirePermission(PERMISSIONS.PRODUCT_READ),
+  ProdukController.getBrands
+);
+
+router.post('/brands',
+  requirePermission(PERMISSIONS.PRODUCT_CREATE),
+  ProdukController.createBrand
+);
+
+router.get('/suppliers',
+  requirePermission(PERMISSIONS.PRODUCT_READ),
+  ProdukController.getSuppliers
+);
+
+router.post('/suppliers',
+  requirePermission(PERMISSIONS.PRODUCT_CREATE),
+  ProdukController.createSupplier
+);
+
 export default router;

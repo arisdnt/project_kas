@@ -1,14 +1,15 @@
 import { useMemo, useState } from 'react'
-import { TrendingUp } from 'lucide-react'
 import { MutasiStokToolbar } from '@/features/mutasi-stok/components/MutasiStokToolbar'
 import { MutasiStokTable } from '@/features/mutasi-stok/components/MutasiStokTable'
-import { useMutasiStokStore, UIMutasiStok, MutasiStokFormData } from '@/features/mutasi-stok/store/mutasiStokStore'
+import { useMutasiStokStore, UIMutasiStok } from '@/features/mutasi-stok/store/mutasiStokStore'
 import { ProductDetailSidebar, Product } from '@/core/components/ui/product-detail-sidebar'
 import { Button } from '@/core/components/ui/button'
 import { useToast } from '@/core/hooks/use-toast'
 import { Input } from '@/core/components/ui/input'
 import { Label } from '@/core/components/ui/label'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/core/components/ui/dialog'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/core/components/ui/dialog'
+import { ScopeSelector } from '@/core/components/ui/scope-selector'
+import { Separator } from '@/core/components/ui/separator'
 import {
   Select,
   SelectContent,
@@ -18,7 +19,7 @@ import {
 } from '@/core/components/ui/select'
 
 export function MutasiStokPage() {
-  const { createMutasiStok, updateMutasiStok, deleteMutasiStok } = useMutasiStokStore()
+  const { createMutasiStok, updateMutasiStok } = useMutasiStokStore()
   const { toast } = useToast()
 
   const [detailOpen, setDetailOpen] = useState(false)
@@ -34,9 +35,16 @@ export function MutasiStokPage() {
     jumlah: '',
     keterangan: ''
   })
+  const [scopeData, setScopeData] = useState<{
+    targetTenantId?: string
+    targetStoreId?: string
+    applyToAllTenants?: boolean
+    applyToAllStores?: boolean
+  }>({})
 
   const openCreate = () => {
     setFormData({ id_produk: '', jenis_mutasi: 'masuk', jumlah: '', keterangan: '' })
+    setScopeData({})
     setCreateOpen(true)
   }
 
@@ -69,11 +77,13 @@ export function MutasiStokPage() {
         jenis_mutasi: formData.jenis_mutasi,
         jumlah: parseInt(formData.jumlah),
         keterangan: formData.keterangan || undefined,
-        tanggal_mutasi: new Date().toISOString().split('T')[0]
+        tanggal_mutasi: new Date().toISOString().split('T')[0],
+        ...scopeData
       })
       toast({ title: 'Mutasi stok dibuat' })
       setCreateOpen(false)
       setFormData({ id_produk: '', jenis_mutasi: 'masuk', jumlah: '', keterangan: '' })
+      setScopeData({})
     } catch (e: any) {
       toast({ title: 'Gagal membuat', description: e?.message || 'Terjadi kesalahan' })
     } finally {
@@ -146,12 +156,23 @@ export function MutasiStokPage() {
       />
 
       {/* Create Dialog */}
-      <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+      <Dialog open={createOpen} onOpenChange={(o) => {
+        setCreateOpen(o)
+        if (!o) {
+          setFormData({ id_produk: '', jenis_mutasi: 'masuk', jumlah: '', keterangan: '' })
+          setScopeData({})
+        }
+      }}>
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>Buat Mutasi Stok Baru</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4">
+          <div className="space-y-5">
+            <div className="space-y-3">
+              <h3 className="text-sm font-medium">Scope</h3>
+              <ScopeSelector onScopeChange={setScopeData} disabled={saving} compact />
+              <Separator />
+            </div>
             <div className="space-y-2">
               <Label htmlFor="id_produk">ID Produk</Label>
               <Input

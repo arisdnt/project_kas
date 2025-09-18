@@ -1,13 +1,15 @@
-import React, { useState, useEffect } from 'react';
-import { Promo, CreatePromoRequest, UpdatePromoRequest, PromoStats } from '../types/promo';
+import { useState, useEffect } from 'react';
+import { Promo, CreatePromoRequest } from '../types/promo';
 import { usePromos } from '../hooks/usePromos';
 import { Button } from '@/core/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/core/components/ui/card';
+import { Card, CardContent } from '@/core/components/ui/card';
 import { Badge } from '@/core/components/ui/badge';
 import { Input } from '@/core/components/ui/input';
 import { Label } from '@/core/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/core/components/ui/select';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/core/components/ui/dialog';
+import { ScopeSelector } from '@/core/components/ui/scope-selector';
+import { Separator } from '@/core/components/ui/separator';
 import { 
   Plus, 
   Edit, 
@@ -19,7 +21,6 @@ import {
   Package, 
   Users,
   TrendingUp,
-  Clock,
   CheckCircle,
   XCircle,
   AlertCircle
@@ -31,7 +32,7 @@ export function PromoPage() {
   const { promos, stats, loading, error, createPromo, deletePromo, togglePromoStatus } = usePromos();
   const [filteredPromos, setFilteredPromos] = useState<Promo[]>([]);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
-  const [editingPromo, setEditingPromo] = useState<Promo | null>(null);
+  // const [editingPromo, setEditingPromo] = useState<Promo | null>(null); // (Edit functionality not yet implemented)
   const [filterStatus, setFilterStatus] = useState<'all' | 'aktif' | 'nonaktif'>('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [newPromo, setNewPromo] = useState({
@@ -44,6 +45,7 @@ export function PromoPage() {
     mulai_tanggal: '',
     selesai_tanggal: ''
   });
+  const [scopeData, setScopeData] = useState<{ targetTenantId?: string; targetStoreId?: string; applyToAllTenants?: boolean; applyToAllStores?: boolean }>({});
 
   useEffect(() => {
     // Filter promos based on status and search term
@@ -121,7 +123,9 @@ export function PromoPage() {
         syarat_minimum: newPromo.syarat_minimum || undefined,
         kuota: newPromo.kuota || undefined,
         mulai_tanggal: newPromo.mulai_tanggal,
-        selesai_tanggal: newPromo.selesai_tanggal
+        selesai_tanggal: newPromo.selesai_tanggal,
+        // Scope fields (optional, backend should ignore if unsupported)
+        ...(scopeData)
       };
       
       await createPromo(promoRequest);
@@ -136,6 +140,7 @@ export function PromoPage() {
         mulai_tanggal: '',
         selesai_tanggal: ''
       });
+      setScopeData({});
       
       setIsCreateDialogOpen(false);
     } catch (err) {
@@ -171,7 +176,12 @@ export function PromoPage() {
           <h1 className="text-2xl font-bold text-gray-900">Promo & Diskon</h1>
           <p className="text-gray-600 mt-1">Kelola promosi, diskon, dan harga khusus</p>
         </div>
-        <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+        <Dialog open={isCreateDialogOpen} onOpenChange={(o) => {
+          setIsCreateDialogOpen(o);
+          if (!o) {
+            setScopeData({});
+          }
+        }}>
           <DialogTrigger asChild>
             <Button>
               <Plus className="h-4 w-4 mr-2" />
@@ -185,7 +195,12 @@ export function PromoPage() {
                 Buat promo baru untuk meningkatkan penjualan
               </DialogDescription>
             </DialogHeader>
-            <div className="grid gap-4 py-4">
+            <div className="grid gap-5 py-4">
+              <div className="space-y-3">
+                <h3 className="text-sm font-medium">Scope</h3>
+                <ScopeSelector onScopeChange={setScopeData} compact />
+                <Separator />
+              </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="nama">Nama Promo</Label>

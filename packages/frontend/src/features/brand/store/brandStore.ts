@@ -15,16 +15,36 @@ type BrandState = {
   search: string
 }
 
+type BrandCreateData = {
+  nama: string
+  deskripsi?: string
+  logo_url?: string
+  website?: string
+  // Scope parameters
+  targetTenantId?: string
+  targetStoreId?: string
+  applyToAllTenants?: boolean
+  applyToAllStores?: boolean
+}
+
+type BrandUpdateData = {
+  nama?: string
+  deskripsi?: string
+  logo_url?: string
+  website?: string
+}
+
 type BrandActions = {
   setSearch: (v: string) => void
   loadFirst: () => Promise<void>
   loadNext: () => Promise<void>
-  createBrand: (data: { nama: string; deskripsi?: string; logo_url?: string; website?: string }) => Promise<void>
-  updateBrand: (id: string, data: { nama?: string; deskripsi?: string; logo_url?: string; website?: string }) => Promise<void>
+  createBrand: (data: BrandCreateData) => Promise<void>
+  updateBrand: (id: string, data: BrandUpdateData) => Promise<void>
   deleteBrand: (id: string) => Promise<void>
 }
 
 const API_BASE = `${config.api.url}:${config.api.port}/api/produk/master/brands`
+const API_BASE_ENHANCED = `${config.api.url}:${config.api.port}/api/produk/brands`
 
 const authHeaders = () => {
   const token = useAuthStore.getState().token
@@ -79,21 +99,34 @@ export const useBrandStore = create<BrandState & BrandActions>()(
       set({ items: slice, page: nextPage, hasNext: nextHas, loading: false })
     },
 
-    createBrand: async (data: { nama: string; deskripsi?: string; logo_url?: string; website?: string }) => {
-      const res = await fetch(API_BASE, {
+    createBrand: async (data: BrandCreateData) => {
+      // Use enhanced API endpoint that supports scope operations
+      const res = await fetch(API_BASE_ENHANCED, {
         method: 'POST',
         headers: authHeaders(),
         body: JSON.stringify(data),
       })
       const js = await res.json()
       if (!res.ok || !js.success) throw new Error(js.message || 'Gagal membuat brand')
-      const created: UIBrand = js.data
-      const all = [created, ...get().all]
-      const { slice, hasNext } = filterAndSlice(all, get().search, 1, get().limit)
-      set({ all, items: slice, page: 1, hasNext })
+
+      // Handle different response types based on scope operation
+      const result = js.data
+
+      if (result.message) {
+        // Multi-tenant/multi-store operation (God user or Admin)
+        console.log('Brand created with scope:', result.message)
+        // Reload all data to get updated list
+        await get().loadFirst()
+      } else {
+        // Normal single brand creation
+        const created: UIBrand = result
+        const all = [created, ...get().all]
+        const { slice, hasNext } = filterAndSlice(all, get().search, 1, get().limit)
+        set({ all, items: slice, page: 1, hasNext })
+      }
     },
 
-    updateBrand: async (id: string, data: { nama?: string; deskripsi?: string; logo_url?: string; website?: string }) => {
+    updateBrand: async (id: string, data: BrandUpdateData) => {
       const res = await fetch(`${API_BASE}/${id}`, {
         method: 'PUT',
         headers: authHeaders(),

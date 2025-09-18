@@ -109,6 +109,7 @@ app.get('/health/status', async (req, res) => {
 
 // Import routes
 import authRoutes from '@/features/auth/routes/authRoutes';
+import scopeRoutes from '@/features/auth/routes/scopeRoutes';
 import produkRoutes from '@/features/produk/routes/produkRoutes';
 import penjualanRoutes from '@/features/penjualan/routes/penjualanRoutes';
 import pelangganRoutes from '@/features/pelanggan/routes/pelangganRoutes';
@@ -142,6 +143,7 @@ registerSwagger(app);
 
 // API Routes
 app.use('/api/auth', authRateLimiter as any, authRoutes);
+app.use('/api/scope', scopeRoutes);
 app.use('/api/produk', produkRoutes);
 app.use('/api/penjualan', penjualanRoutes);
 app.use('/api/pelanggan', pelangganRoutes);

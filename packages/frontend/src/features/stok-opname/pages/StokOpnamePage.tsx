@@ -1,5 +1,4 @@
 import { useMemo, useState } from 'react'
-import { PackagePlus } from 'lucide-react'
 import { StokOpnameToolbar } from '@/features/stok-opname/components/StokOpnameToolbar'
 import { StokOpnameTable } from '@/features/stok-opname/components/StokOpnameTable'
 import { useStokOpnameStore, UIStokOpname } from '@/features/stok-opname/store/stokOpnameStore'
@@ -8,7 +7,9 @@ import { Button } from '@/core/components/ui/button'
 import { useToast } from '@/core/hooks/use-toast'
 import { Input } from '@/core/components/ui/input'
 import { Label } from '@/core/components/ui/label'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/core/components/ui/dialog'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/core/components/ui/dialog'
+import { ScopeSelector } from '@/core/components/ui/scope-selector'
+import { Separator } from '@/core/components/ui/separator'
 
 export function StokOpnamePage() {
   const { createStokOpname, updateStokOpname, completeStokOpname, cancelStokOpname } = useStokOpnameStore()
@@ -26,9 +27,16 @@ export function StokOpnamePage() {
     stok_fisik: '',
     catatan: ''
   })
+  const [scopeData, setScopeData] = useState<{
+    targetTenantId?: string
+    targetStoreId?: string
+    applyToAllTenants?: boolean
+    applyToAllStores?: boolean
+  }>({})
 
   const openCreate = () => {
     setFormData({ id_produk: '', stok_fisik: '', catatan: '' })
+    setScopeData({})
     setCreateOpen(true)
   }
 
@@ -77,11 +85,13 @@ export function StokOpnamePage() {
         id_produk: parseInt(formData.id_produk),
         stok_fisik: parseInt(formData.stok_fisik),
         catatan: formData.catatan || undefined,
-        tanggal_opname: new Date().toISOString().split('T')[0]
+        tanggal_opname: new Date().toISOString().split('T')[0],
+        ...scopeData
       })
       toast({ title: 'Stok opname dibuat' })
       setCreateOpen(false)
       setFormData({ id_produk: '', stok_fisik: '', catatan: '' })
+      setScopeData({})
     } catch (e: any) {
       toast({ title: 'Gagal membuat', description: e?.message || 'Terjadi kesalahan' })
     } finally {
@@ -155,12 +165,23 @@ export function StokOpnamePage() {
       />
 
       {/* Create Dialog */}
-      <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+      <Dialog open={createOpen} onOpenChange={(o) => {
+        setCreateOpen(o)
+        if (!o) {
+          setFormData({ id_produk: '', stok_fisik: '', catatan: '' })
+          setScopeData({})
+        }
+      }}>
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>Buat Stok Opname Baru</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4">
+          <div className="space-y-5">
+            <div className="space-y-3">
+              <h3 className="text-sm font-medium">Scope</h3>
+              <ScopeSelector onScopeChange={setScopeData} disabled={saving} compact />
+              <Separator />
+            </div>
             <div className="space-y-2">
               <Label htmlFor="id_produk">ID Produk</Label>
               <Input

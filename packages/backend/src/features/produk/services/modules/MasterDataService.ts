@@ -5,7 +5,7 @@
 
 import { RowDataPacket, ResultSetHeader } from 'mysql2/promise';
 import { pool } from '@/core/database/connection';
-import { AccessScope, applyScopeToSql } from '@/core/middleware/accessScope';
+import { AccessScope, applyScopeToSql, getInsertScope } from '@/core/middleware/accessScope';
 import { v4 as uuidv4 } from 'uuid';
 
 export class MasterDataService {
@@ -68,7 +68,19 @@ export class MasterDataService {
   }) {
     const id = uuidv4();
     const now = new Date();
+    const insertScope = getInsertScope(scope);
 
+    // Jika apply to all tenants, buat entry terpisah untuk setiap tenant
+    if (scope.applyToAllTenants) {
+      return await this.createCategoryForAllTenants(id, data, now);
+    }
+
+    // Jika apply to all stores dalam tenant, buat entry dengan toko_id = null
+    if (scope.applyToAllStores) {
+      return await this.createCategoryForAllStores(id, data, insertScope.tenantId, now);
+    }
+
+    // Create normal category
     const sql = `
       INSERT INTO kategori (
         id, tenant_id, toko_id, nama, deskripsi, icon_url, urutan,
@@ -77,7 +89,7 @@ export class MasterDataService {
     `;
 
     const params = [
-      id, scope.tenantId, scope.storeId || null, data.nama,
+      id, insertScope.tenantId, insertScope.storeId, data.nama,
       data.deskripsi || null, data.icon_url || null, data.urutan || 0,
       now, now
     ];
@@ -90,6 +102,51 @@ export class MasterDataService {
       [id]
     );
     return rows[0] as any;
+  }
+
+  private static async createCategoryForAllTenants(id: string, data: any, now: Date) {
+    // Ambil semua tenant aktif
+    const [tenants] = await pool.execute<RowDataPacket[]>(
+      'SELECT id FROM tenants WHERE status = \"aktif\"'
+    );
+
+    const sql = `
+      INSERT INTO kategori (
+        id, tenant_id, toko_id, nama, deskripsi, icon_url, urutan,
+        status, dibuat_pada, diperbarui_pada
+      ) VALUES (?, ?, NULL, ?, ?, ?, ?, 'aktif', ?, ?)
+    `;
+
+    // Insert untuk setiap tenant
+    for (const tenant of tenants) {
+      const categoryId = `${id}-${tenant.id}`;
+      const params = [
+        categoryId, tenant.id, data.nama,
+        data.deskripsi || null, data.icon_url || null, data.urutan || 0,
+        now, now
+      ];
+      await pool.execute<ResultSetHeader>(sql, params);
+    }
+
+    return { id, message: `Category created for ${tenants.length} tenants` };
+  }
+
+  private static async createCategoryForAllStores(id: string, data: any, tenantId: string, now: Date) {
+    const sql = `
+      INSERT INTO kategori (
+        id, tenant_id, toko_id, nama, deskripsi, icon_url, urutan,
+        status, dibuat_pada, diperbarui_pada
+      ) VALUES (?, ?, NULL, ?, ?, ?, ?, 'aktif', ?, ?)
+    `;
+
+    const params = [
+      id, tenantId, data.nama,
+      data.deskripsi || null, data.icon_url || null, data.urutan || 0,
+      now, now
+    ];
+
+    await pool.execute<ResultSetHeader>(sql, params);
+    return { id, message: 'Category created for all stores in tenant' };
   }
 
   static async updateCategory(scope: AccessScope, id: string, data: {
@@ -308,7 +365,19 @@ export class MasterDataService {
   }) {
     const id = uuidv4();
     const now = new Date();
+    const insertScope = getInsertScope(scope);
 
+    // Jika apply to all tenants, buat entry terpisah untuk setiap tenant
+    if (scope.applyToAllTenants) {
+      return await this.createBrandForAllTenants(id, data, now);
+    }
+
+    // Jika apply to all stores dalam tenant, buat entry dengan toko_id = null
+    if (scope.applyToAllStores) {
+      return await this.createBrandForAllStores(id, data, insertScope.tenantId, now);
+    }
+
+    // Create normal brand
     const sql = `
       INSERT INTO brand (
         id, tenant_id, toko_id, nama, deskripsi, logo_url, website,
@@ -317,13 +386,58 @@ export class MasterDataService {
     `;
 
     const params = [
-      id, scope.tenantId, scope.storeId || null, data.nama,
+      id, insertScope.tenantId, insertScope.storeId, data.nama,
       data.deskripsi || null, data.logo_url || null, data.website || null,
       now, now
     ];
 
     await pool.execute<ResultSetHeader>(sql, params);
     return { id, ...data, status: 'aktif' };
+  }
+
+  private static async createBrandForAllTenants(id: string, data: any, now: Date) {
+    // Ambil semua tenant aktif
+    const [tenants] = await pool.execute<RowDataPacket[]>(
+      'SELECT id FROM tenants WHERE status = \"aktif\"'
+    );
+
+    const sql = `
+      INSERT INTO brand (
+        id, tenant_id, toko_id, nama, deskripsi, logo_url, website,
+        status, dibuat_pada, diperbarui_pada
+      ) VALUES (?, ?, NULL, ?, ?, ?, ?, 'aktif', ?, ?)
+    `;
+
+    // Insert untuk setiap tenant
+    for (const tenant of tenants) {
+      const brandId = `${id}-${tenant.id}`;
+      const params = [
+        brandId, tenant.id, data.nama,
+        data.deskripsi || null, data.logo_url || null, data.website || null,
+        now, now
+      ];
+      await pool.execute<ResultSetHeader>(sql, params);
+    }
+
+    return { id, message: `Brand created for ${tenants.length} tenants` };
+  }
+
+  private static async createBrandForAllStores(id: string, data: any, tenantId: string, now: Date) {
+    const sql = `
+      INSERT INTO brand (
+        id, tenant_id, toko_id, nama, deskripsi, logo_url, website,
+        status, dibuat_pada, diperbarui_pada
+      ) VALUES (?, ?, NULL, ?, ?, ?, ?, 'aktif', ?, ?)
+    `;
+
+    const params = [
+      id, tenantId, data.nama,
+      data.deskripsi || null, data.logo_url || null, data.website || null,
+      now, now
+    ];
+
+    await pool.execute<ResultSetHeader>(sql, params);
+    return { id, message: 'Brand created for all stores in tenant' };
   }
 
   static async updateBrand(scope: AccessScope, id: string, data: {
@@ -429,7 +543,19 @@ export class MasterDataService {
   }) {
     const id = uuidv4();
     const now = new Date();
+    const insertScope = getInsertScope(scope);
 
+    // Jika apply to all tenants, buat entry terpisah untuk setiap tenant
+    if (scope.applyToAllTenants) {
+      return await this.createSupplierForAllTenants(id, data, now);
+    }
+
+    // Jika apply to all stores dalam tenant, buat entry dengan toko_id = null
+    if (scope.applyToAllStores) {
+      return await this.createSupplierForAllStores(id, data, insertScope.tenantId, now);
+    }
+
+    // Create normal supplier
     const sql = `
       INSERT INTO supplier (
         id, tenant_id, toko_id, nama, kontak_person, telepon, email, alamat,
@@ -438,12 +564,57 @@ export class MasterDataService {
     `;
 
     const params = [
-      id, scope.tenantId, scope.storeId || null, data.nama,
+      id, insertScope.tenantId, insertScope.storeId, data.nama,
       data.kontak_person || null, data.telepon || null, data.email || null,
       data.alamat || null, now, now
     ];
 
     await pool.execute<ResultSetHeader>(sql, params);
     return { id, ...data };
+  }
+
+  private static async createSupplierForAllTenants(id: string, data: any, now: Date) {
+    // Ambil semua tenant aktif
+    const [tenants] = await pool.execute<RowDataPacket[]>(
+      'SELECT id FROM tenants WHERE status = \"aktif\"'
+    );
+
+    const sql = `
+      INSERT INTO supplier (
+        id, tenant_id, toko_id, nama, kontak_person, telepon, email, alamat,
+        status, dibuat_pada, diperbarui_pada
+      ) VALUES (?, ?, NULL, ?, ?, ?, ?, ?, 'aktif', ?, ?)
+    `;
+
+    // Insert untuk setiap tenant
+    for (const tenant of tenants) {
+      const supplierId = `${id}-${tenant.id}`;
+      const params = [
+        supplierId, tenant.id, data.nama,
+        data.kontak_person || null, data.telepon || null, data.email || null,
+        data.alamat || null, now, now
+      ];
+      await pool.execute<ResultSetHeader>(sql, params);
+    }
+
+    return { id, message: `Supplier created for ${tenants.length} tenants` };
+  }
+
+  private static async createSupplierForAllStores(id: string, data: any, tenantId: string, now: Date) {
+    const sql = `
+      INSERT INTO supplier (
+        id, tenant_id, toko_id, nama, kontak_person, telepon, email, alamat,
+        status, dibuat_pada, diperbarui_pada
+      ) VALUES (?, ?, NULL, ?, ?, ?, ?, ?, 'aktif', ?, ?)
+    `;
+
+    const params = [
+      id, tenantId, data.nama,
+      data.kontak_person || null, data.telepon || null, data.email || null,
+      data.alamat || null, now, now
+    ];
+
+    await pool.execute<ResultSetHeader>(sql, params);
+    return { id, message: 'Supplier created for all stores in tenant' };
   }
 }

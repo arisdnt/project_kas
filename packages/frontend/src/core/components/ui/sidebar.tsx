@@ -43,6 +43,7 @@ const sidebarVariants = cva(
         default: "w-3/4 sm:max-w-sm md:max-w-md lg:max-w-lg",
         full: "w-full max-w-none",
         forty: "w-[90vw] max-w-none md:w-[40%] lg:w-[40%]",
+        fifty: "w-[90vw] max-w-none md:w-[50%] lg:w-[50%]",
       },
     },
     defaultVariants: {

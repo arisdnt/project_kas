@@ -38,13 +38,12 @@ export const ProdukCoreSchema = z.object({
 
 export const CreateProdukSchema = ProdukCoreSchema.omit({
   id: true,
+  tenant_id: true,
   dibuat_pada: true,
   diperbarui_pada: true
 });
 
-export const UpdateProdukSchema = CreateProdukSchema.partial().omit({
-  tenant_id: true
-});
+export const UpdateProdukSchema = CreateProdukSchema.partial();
 
 export const SearchProdukQuerySchema = z.object({
   page: z.string().optional().default('1'),

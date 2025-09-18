@@ -17,7 +17,8 @@ export function BrandPage() {
   const [saving, setSaving] = useState(false)
 
   const openCreate = () => {
-    setEditing({ nama: '' })
+    // Mode create: value harus null agar BrandEditSidebar menampilkan ScopeSelector
+    setEditing(null)
     setSelected(null)
     setEditOpen(true)
   }
@@ -38,13 +39,29 @@ export function BrandPage() {
     setEditOpen(true)
   }
 
-  const onSave = async (data: { nama: string; deskripsi?: string; logo_url?: string; website?: string }) => {
+  const onSave = async (data: {
+    nama: string;
+    deskripsi?: string;
+    logo_url?: string;
+    website?: string;
+    targetTenantId?: string;
+    targetStoreId?: string;
+    applyToAllTenants?: boolean;
+    applyToAllStores?: boolean;
+  }) => {
     setSaving(true)
     try {
       if (selected) {
-        await updateBrand(selected.id, data)
+        // For update operations, we only pass the brand data (scope is not updated)
+        await updateBrand(selected.id, {
+          nama: data.nama,
+          deskripsi: data.deskripsi,
+          logo_url: data.logo_url,
+          website: data.website
+        })
         toast({ title: 'Brand diperbarui' })
       } else {
+        // For create operations, pass all data including scope
         await createBrand(data)
         toast({ title: 'Brand dibuat' })
       }

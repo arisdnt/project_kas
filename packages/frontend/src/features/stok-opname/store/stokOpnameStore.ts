@@ -91,7 +91,7 @@ type StokOpnameActions = {
   setFilters: (f: Filters) => void
   loadFirst: () => Promise<void>
   loadNext: () => Promise<void>
-  createStokOpname: (data: any) => Promise<void>
+  createStokOpname: (data: any & { targetTenantId?: string; targetStoreId?: string; applyToAllTenants?: boolean; applyToAllStores?: boolean }) => Promise<void>
   updateStokOpname: (id: number, data: any) => Promise<void>
   deleteStokOpname: (id: number) => Promise<void>
   completeStokOpname: (id: number) => Promise<void>
@@ -174,11 +174,11 @@ export const useStokOpnameStore = create<StokOpnameState & StokOpnameActions>()(
     },
 
     completeStokOpname: async (id: number) => {
-      await updateStokOpname(id, { status: 'completed' })
+        await get().updateStokOpname(id, { status: 'completed' })
     },
 
     cancelStokOpname: async (id: number) => {
-      await updateStokOpname(id, { status: 'cancelled' })
+        await get().updateStokOpname(id, { status: 'cancelled' })
     },
 
     upsertFromRealtime: (p: UIStokOpname) => {

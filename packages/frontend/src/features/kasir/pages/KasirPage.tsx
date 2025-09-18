@@ -1,6 +1,8 @@
 import { useEffect, useRef, useCallback, useState } from 'react'
 import { Card, CardContent } from '@/core/components/ui/card'
 import { Button } from '@/core/components/ui/button'
+import { Badge } from '@/core/components/ui/badge'
+import { Separator } from '@/core/components/ui/separator'
 import { CartTable } from '@/features/kasir/components/CartTable'
 import { ProductSearchForm } from '@/features/kasir/components/ProductSearchForm'
 import { PaymentSummary } from '@/features/kasir/components/PaymentSummary'
@@ -10,9 +12,10 @@ import { useKasirStore } from '@/features/kasir/store/kasirStore'
 import { useProdukStore } from '@/features/produk/store/produkStore'
 import { useAuthStore } from '@/core/store/authStore'
 import { useTransactionDrafts } from '@/features/kasir/hooks/useTransactionDrafts'
-import { Barcode, Save, FileText, Loader2 } from 'lucide-react'
+import { Barcode, Save, FileText, Loader2, ShieldAlert, Users } from 'lucide-react'
 import { useDataRefresh } from '@/core/hooks/useDataRefresh'
 import { useToast } from '@/core/hooks/use-toast'
+import { useNavigate } from 'react-router-dom'
 
 export function KasirPage() {
   const containerRef = useRef<HTMLDivElement>(null)
@@ -40,6 +43,10 @@ export function KasirPage() {
   const produkLoading = useProdukStore((s) => s.loading)
   const produkItems = useProdukStore((s) => s.items)
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
+  const userLevel = useAuthStore((s) => s.user?.level)
+  const isAllowedLevel = userLevel === 3 || userLevel === 4
+
+  const navigate = useNavigate()
 
   // Draft hooks
   const {
@@ -114,7 +121,7 @@ export function KasirPage() {
   // (One-time init guard moved into existing initialization to avoid duplicate code & lint errors)
   useEffect(() => {
     // Initialize kasir session and load data when authenticated
-    if (isAuthenticated) {
+    if (isAuthenticated && isAllowedLevel) {
       if ((window as any).__kasirInitRan) return
       ;(window as any).__kasirInitRan = true
       const initializeKasir = async () => {
@@ -132,9 +139,13 @@ export function KasirPage() {
       }
       initializeKasir()
     }
-  }, [isAuthenticated])
+  }, [isAuthenticated, isAllowedLevel])
 
   useEffect(() => {
+    if (!isAllowedLevel) {
+      return
+    }
+
     const handleGlobalKeyDown = (e: KeyboardEvent) => {
       // Jangan handle jika sedang mengetik di input
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
@@ -180,10 +191,9 @@ export function KasirPage() {
           break
       }
     }
-
     document.addEventListener('keydown', handleGlobalKeyDown)
     return () => document.removeEventListener('keydown', handleGlobalKeyDown)
-  }, [items.length, clearCart, loadFirst])
+  }, [items.length, clearCart, loadFirst, isAllowedLevel])
 
   const authState = useAuthStore()
   const user = authState.user
@@ -198,6 +208,63 @@ export function KasirPage() {
   const isLevel2Admin = user?.level === 2
   const showInlineSwitcher = (isGod || isLevel1SuperAdmin || isLevel2Admin) && hasStore && storeList.length > 0
   const [advancedMode, setAdvancedMode] = useState(false)
+  
+  if (!isAllowedLevel) {
+    return (
+      <div className="flex min-h-[calc(100vh-4rem-3rem)] w-full flex-col bg-white">
+        <div className="mx-auto flex w-full max-w-5xl flex-1 flex-col justify-center px-6 py-12 sm:px-10 lg:px-16">
+          <div className="flex flex-col gap-6 text-slate-900">
+            <span className="inline-flex w-fit items-center gap-2 rounded-full border border-blue-100 bg-blue-50 px-3 py-1 text-[11px] font-semibold tracking-wide text-blue-600 uppercase">
+              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-blue-100 text-blue-600 animate-pulse">
+                <ShieldAlert className="h-3.5 w-3.5" />
+              </span>
+              Notifikasi Akses
+            </span>
+
+            <div className="space-y-3">
+              <h1 className="text-3xl font-semibold leading-tight text-slate-900 sm:text-4xl">
+                Akses Terbatas untuk Halaman Kasir
+              </h1>
+              <p className="max-w-2xl text-base text-slate-600 sm:text-lg">
+                Halaman kasir hanya tersedia untuk Admin Toko (Level 3) dan Kasir (Level 4). Hubungi administrator untuk memperbarui hak akses Anda atau lanjutkan menggunakan menu lain yang tersedia.
+              </p>
+            </div>
+
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex flex-wrap items-center gap-3 text-sm text-slate-700">
+                <div className="flex items-center gap-2 text-slate-600">
+                  <Users className="h-4 w-4" />
+                  <span>Peran yang diizinkan:</span>
+                </div>
+                <Badge variant="secondary" className="bg-blue-100 text-blue-700 hover:bg-blue-200">
+                  Level 3 · Admin Toko
+                </Badge>
+                <Badge variant="secondary" className="bg-emerald-100 text-emerald-700 hover:bg-emerald-200">
+                  Level 4 · Kasir
+                </Badge>
+              </div>
+              <span className="text-xs text-slate-500">Kode referensi bantuan: <span className="font-semibold text-slate-600">KSR-403</span></span>
+            </div>
+
+            <Separator className="bg-slate-200" />
+
+            <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <span className="text-xs text-slate-500">Hak akses diperlukan: Admin Toko atau Kasir</span>
+              <div className="flex flex-col gap-2 sm:flex-row">
+                <Button variant="outline" className="border-slate-300 text-slate-700 hover:bg-slate-100" onClick={() => navigate('/dashboard')}>
+                  Kembali ke Dashboard
+                </Button>
+                <Button className="bg-blue-600 text-white shadow-sm hover:bg-blue-500" onClick={() => navigate('/dashboard/profilsaya')}>
+                  Lihat Profil Saya
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   const effectiveNeedsStore = (isGod || isLevel1SuperAdmin || isLevel2Admin) ? false : needsStore
 
   // Remove store validation for level 1 and 2 users

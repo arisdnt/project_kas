@@ -1,28 +1,26 @@
-import React, { useMemo, useRef, useState, useEffect, useCallback } from 'react'
-import { uploadFile, getFileUrl, deleteFile as apiDeleteFile, type UploadTarget } from '@/features/storage/services/storageService'
+import { useMemo, useRef, useState, useEffect } from 'react'
+import { uploadFile, type UploadTarget } from '@/features/storage/services/storageService'
 import { dokumenService, type DokumenItem } from '@/features/storage/services/dokumenService'
 import { Button } from '@/core/components/ui/button'
 import { Input } from '@/core/components/ui/input'
 import { Label } from '@/core/components/ui/label'
-import { Card, CardContent, CardHeader } from '@/core/components/ui/card'
+import { Card, CardContent } from '@/core/components/ui/card'
+import { ScopeSelector } from '@/core/components/ui/scope-selector'
+import { Separator } from '@/core/components/ui/separator'
 import { useToast } from '@/core/hooks/use-toast'
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu'
 import { 
   Upload, 
-  Download, 
-  Link as LinkIcon, 
+  
   Copy, 
   Check, 
   FolderOpen,
-  File,
   Image,
   FileText,
   Trash2,
   Eye,
   Search,
   Filter,
-  MoreVertical,
-  FilePlus,
   HardDrive,
   Calendar,
   User,
@@ -60,7 +58,7 @@ export function FileManagerPage() {
   const [isUploading, setIsUploading] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
   const [files, setFiles] = useState<FileItem[]>([])
-  const [resolveKey, setResolveKey] = useState('')
+  // Removed unused resolveKey state
   const [copiedKey, setCopiedKey] = useState<string | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedCategory, setSelectedCategory] = useState<UploadTarget | 'all'>('all')
@@ -71,6 +69,7 @@ export function FileManagerPage() {
   const [isDeleting, setIsDeleting] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false)
+  const [scopeData, setScopeData] = useState<{ targetTenantId?: string; targetStoreId?: string; applyToAllTenants?: boolean; applyToAllStores?: boolean }>({})
   
   // Pagination state
   const [page, setPage] = useState(1)
@@ -181,14 +180,7 @@ export function FileManagerPage() {
     [target]
   )
 
-  const filteredFiles = useMemo(() => {
-    return files.filter(file => {
-      const matchesSearch = file.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           file.key.toLowerCase().includes(searchTerm.toLowerCase())
-      const matchesCategory = selectedCategory === 'all' || file.category === selectedCategory
-      return matchesSearch && matchesCategory
-    })
-  }, [files, searchTerm, selectedCategory])
+  // filteredFiles logic inlined by using search/filter directly in load; kept raw files listing
 
   const stats = useMemo(() => {
     const totalSize = files.reduce((sum, file) => sum + file.size, 0)
@@ -212,7 +204,24 @@ export function FileManagerPage() {
     }
     setIsUploading(true)
     try {
+      // Upload file to storage bucket first
       await uploadFile(file, target)
+      // After successful raw file upload, create dokumen metadata with scope (if backend supports)
+      try {
+        await dokumenService.create({
+          status: 'aktif',
+          kunci_objek: file.name, // assuming file name as key; adapt if service returns a key
+          nama_file_asli: file.name,
+          ukuran_file: file.size,
+            tipe_mime: file.type || 'application/octet-stream',
+          kategori: target,
+          deskripsi: undefined,
+          ...(scopeData)
+        } as any)
+      } catch (metaErr) {
+        // Non-fatal if backend belum dukung scope fields; log silently
+        console.warn('Dokumen metadata create (with scope) failed or skipped:', metaErr)
+      }
       toast({ title: 'Berhasil unggah', description: file.name })
       
       // Reload files from database to get updated list
@@ -221,6 +230,7 @@ export function FileManagerPage() {
       // Clear file input and close dialog
       if (fileRef.current) fileRef.current.value = ''
       setUploadDialogOpen(false)
+      setScopeData({})
     } catch (e: any) {
       toast({ title: 'Gagal unggah', description: e?.message || 'Terjadi kesalahan', variant: 'destructive' })
     } finally {
@@ -402,6 +412,7 @@ export function FileManagerPage() {
                   // Reset form when dialog opens
                   setTarget('umum')
                   if (fileRef.current) fileRef.current.value = ''
+                  setScopeData({})
                 }
               }}>
                 <DialogTrigger asChild>
@@ -414,7 +425,12 @@ export function FileManagerPage() {
                   <DialogHeader>
                     <DialogTitle>Upload File Baru</DialogTitle>
                   </DialogHeader>
-                  <div className="space-y-4">
+                  <div className="space-y-5">
+                    <div className="space-y-3">
+                      <h3 className="text-sm font-medium">Scope</h3>
+                      <ScopeSelector onScopeChange={setScopeData} compact disabled={isUploading} />
+                      <Separator />
+                    </div>
                     <div className="space-y-2">
                       <Label htmlFor="file">Pilih File</Label>
                       <Input id="file" type="file" ref={fileRef} className="cursor-pointer" />

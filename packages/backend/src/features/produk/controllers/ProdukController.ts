@@ -395,4 +395,107 @@ export class ProdukController {
       });
     }
   }
+
+  // Master Data Endpoints
+  static async getCategories(req: Request, res: Response) {
+    try {
+      if (!req.user || !req.accessScope) {
+        return res.status(401).json({ success: false, message: 'Unauthorized' });
+      }
+
+      const categories = await ProdukService.getCategories(req.accessScope);
+      return res.json({ success: true, data: categories });
+    } catch (error: any) {
+      console.error('Get categories error:', error);
+      return res.status(500).json({
+        success: false,
+        message: error.message || 'Failed to get categories'
+      });
+    }
+  }
+
+  static async createCategory(req: Request, res: Response) {
+    try {
+      if (!req.user || !req.accessScope) {
+        return res.status(401).json({ success: false, message: 'Unauthorized' });
+      }
+
+      const category = await ProdukService.createCategory(req.accessScope, req.body);
+      return res.status(201).json({ success: true, data: category });
+    } catch (error: any) {
+      console.error('Create category error:', error);
+      return res.status(400).json({
+        success: false,
+        message: error.message || 'Failed to create category'
+      });
+    }
+  }
+
+  static async getBrands(req: Request, res: Response) {
+    try {
+      if (!req.user || !req.accessScope) {
+        return res.status(401).json({ success: false, message: 'Unauthorized' });
+      }
+
+      const brands = await ProdukService.getBrands(req.accessScope);
+      return res.json({ success: true, data: brands });
+    } catch (error: any) {
+      console.error('Get brands error:', error);
+      return res.status(500).json({
+        success: false,
+        message: error.message || 'Failed to get brands'
+      });
+    }
+  }
+
+  static async createBrand(req: Request, res: Response) {
+    try {
+      if (!req.user || !req.accessScope) {
+        return res.status(401).json({ success: false, message: 'Unauthorized' });
+      }
+
+      const brand = await ProdukService.createBrand(req.accessScope, req.body);
+      return res.status(201).json({ success: true, data: brand });
+    } catch (error: any) {
+      console.error('Create brand error:', error);
+      return res.status(400).json({
+        success: false,
+        message: error.message || 'Failed to create brand'
+      });
+    }
+  }
+
+  static async getSuppliers(req: Request, res: Response) {
+    try {
+      if (!req.user || !req.accessScope) {
+        return res.status(401).json({ success: false, message: 'Unauthorized' });
+      }
+
+      const suppliers = await ProdukService.getSuppliers(req.accessScope);
+      return res.json({ success: true, data: suppliers });
+    } catch (error: any) {
+      console.error('Get suppliers error:', error);
+      return res.status(500).json({
+        success: false,
+        message: error.message || 'Failed to get suppliers'
+      });
+    }
+  }
+
+  static async createSupplier(req: Request, res: Response) {
+    try {
+      if (!req.user || !req.accessScope) {
+        return res.status(401).json({ success: false, message: 'Unauthorized' });
+      }
+
+      const supplier = await ProdukService.createSupplier(req.accessScope, req.body);
+      return res.status(201).json({ success: true, data: supplier });
+    } catch (error: any) {
+      console.error('Create supplier error:', error);
+      return res.status(400).json({
+        success: false,
+        message: error.message || 'Failed to create supplier'
+      });
+    }
+  }
 }

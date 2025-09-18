@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { KategoriToolbar } from '@/features/kategori/components/KategoriToolbar'
 import { KategoriTable } from '@/features/kategori/components/KategoriTable'
 import { useKategoriStore } from '@/features/kategori/store/kategoriStore'
-import { UIKategori, CreateKategoriRequest, UpdateKategoriRequest } from '@/features/kategori/types/kategori'
+import { UIKategori, CreateKategoriRequest } from '@/features/kategori/types/kategori'
 import { KategoriDetailSidebar } from '@/features/kategori/components/KategoriDetailSidebar'
 import { KategoriEditSidebar } from '@/features/kategori/components/KategoriEditSidebar'
 import { ProductsByCategoryModal } from '@/features/kategori/components/ProductsByCategoryModal'
@@ -21,7 +21,8 @@ export function KategoriPage() {
   const [saving, setSaving] = useState(false)
 
   const openCreate = () => {
-    setEditing({ nama: '' })
+    // Mode create: pass null supaya KategoriEditSidebar tahu menampilkan ScopeSelector
+    setEditing(null)
     setSelected(null)
     setEditOpen(true)
   }
