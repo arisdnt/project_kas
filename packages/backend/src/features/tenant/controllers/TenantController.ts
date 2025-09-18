@@ -10,18 +10,7 @@ import { SearchTenantQuerySchema, CreateTenantSchema, UpdateTenantSchema } from 
 export class TenantController {
   static async search(req: Request, res: Response) {
     try {
-      if (!req.user) {
-        return res.status(401).json({ success: false, message: 'Unauthorized' });
-      }
-
-      // Only God users (level 1) can manage tenants
-      if ((req.user.level || 5) !== 1) {
-        return res.status(403).json({
-          success: false,
-          message: 'Only God users can access tenant management'
-        });
-      }
-
+      // Access control handled by middleware
       const query = SearchTenantQuerySchema.parse(req.query);
       const result = await TenantService.search(query);
 
@@ -46,18 +35,7 @@ export class TenantController {
 
   static async findById(req: Request, res: Response) {
     try {
-      if (!req.user) {
-        return res.status(401).json({ success: false, message: 'Unauthorized' });
-      }
-
-      // Only God users can view tenant details
-      if ((req.user.level || 5) !== 1) {
-        return res.status(403).json({
-          success: false,
-          message: 'Only God users can access tenant details'
-        });
-      }
-
+      // Access control handled by middleware
       const { id } = req.params;
       const tenant = await TenantService.findById(id);
 
@@ -73,18 +51,7 @@ export class TenantController {
 
   static async getTenantStats(req: Request, res: Response) {
     try {
-      if (!req.user) {
-        return res.status(401).json({ success: false, message: 'Unauthorized' });
-      }
-
-      // Only God users can view tenant statistics
-      if ((req.user.level || 5) !== 1) {
-        return res.status(403).json({
-          success: false,
-          message: 'Only God users can access tenant statistics'
-        });
-      }
-
+      // Access control handled by middleware
       const stats = await TenantService.getTenantStats();
 
       return res.json({ success: true, data: stats });
@@ -96,18 +63,7 @@ export class TenantController {
 
   static async create(req: Request, res: Response) {
     try {
-      if (!req.user) {
-        return res.status(401).json({ success: false, message: 'Unauthorized' });
-      }
-
-      // Only God users can create tenants
-      if ((req.user.level || 5) !== 1) {
-        return res.status(403).json({
-          success: false,
-          message: 'Only God users can create tenants'
-        });
-      }
-
+      // Access control handled by middleware
       const data = CreateTenantSchema.parse(req.body);
       const tenant = await TenantService.createTenant(data);
 
@@ -123,18 +79,7 @@ export class TenantController {
 
   static async update(req: Request, res: Response) {
     try {
-      if (!req.user) {
-        return res.status(401).json({ success: false, message: 'Unauthorized' });
-      }
-
-      // Only God users can update tenants
-      if ((req.user.level || 5) !== 1) {
-        return res.status(403).json({
-          success: false,
-          message: 'Only God users can update tenants'
-        });
-      }
-
+      // Access control handled by middleware
       const { id } = req.params;
       const data = UpdateTenantSchema.parse(req.body);
       const result = await TenantService.updateTenant(id, data);
@@ -173,6 +118,57 @@ export class TenantController {
       return res.status(400).json({
         success: false,
         message: error.message || 'Failed to check tenant limits'
+      });
+    }
+  }
+
+  static async delete(req: Request, res: Response) {
+    const { id } = req.params;
+    const user = req.user;
+
+    console.log(`🔴 [TENANT CONTROLLER] Delete request received for tenant: ${id} by user: ${user?.username} (ID: ${user?.id})`);
+
+    try {
+      // Access control handled by middleware
+      console.log(`🔍 [TENANT CONTROLLER] Calling TenantService.deleteTenant for ID: ${id}`);
+
+      const result = await TenantService.deleteTenant(id);
+
+      console.log(`✅ [TENANT CONTROLLER] Successfully deleted tenant ${id}, result:`, result);
+
+      return res.json({
+        success: true,
+        message: 'Tenant deleted successfully',
+        data: result
+      });
+
+    } catch (err: any) {
+      const errorMsg = err.message || 'Unknown error';
+      console.log(`❌ [TENANT CONTROLLER] Error deleting tenant ${id}: ${errorMsg}`);
+      console.error(`🔥 [TENANT CONTROLLER] Full error details:`, err);
+
+      if (err.message === 'Tenant not found' || err.message === 'Tenant not found or already deleted') {
+        console.log(`🚫 [TENANT CONTROLLER] Returning 404 for tenant ${id}`);
+        return res.status(404).json({
+          success: false,
+          message: 'Tenant not found'
+        });
+      }
+
+      if (err.message.includes('Cannot delete tenant with active')) {
+        console.log(`⚠️ [TENANT CONTROLLER] Returning 400 - dependency error for tenant ${id}`);
+        return res.status(400).json({
+          success: false,
+          message: err.message,
+          error: 'DEPENDENCY_EXISTS'
+        });
+      }
+
+      console.log(`💥 [TENANT CONTROLLER] Returning 500 - unexpected error for tenant ${id}`);
+      return res.status(500).json({
+        success: false,
+        message: 'Internal server error while deleting tenant',
+        error: errorMsg
       });
     }
   }

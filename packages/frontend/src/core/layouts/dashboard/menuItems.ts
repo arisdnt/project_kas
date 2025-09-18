@@ -64,7 +64,7 @@ export const laporanItems: MenuItem[] = [
 
 export const pengaturanItems: MenuItem[] = [
   { name: 'Pengaturan Umum', href: '/dashboard/pengaturan', icon: Settings },
-  { name: 'Toko/Tenant', href: '/dashboard/pengaturan/toko', icon: Factory },
+  { name: 'Manajemen Toko', href: '/dashboard/pengaturan/toko', icon: Factory },
   { name: 'Manajemen Tenan', href: '/dashboard/pengaturan/tenan', icon: Factory },
   { name: 'Pengguna', href: '/dashboard/pengaturan/pengguna', icon: Users },
   { name: 'Peran & Izin', href: '/dashboard/pengaturan/peran', icon: Users },

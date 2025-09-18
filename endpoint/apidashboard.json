@@ -1,0 +1,273 @@
+{
+  "dashboard_endpoints": {
+    "description": "Daftar endpoint API Dashboard untuk analytics dan KPI sistem kasir",
+    "base_url": "/api/dashboard",
+    "authentication": "Bearer Token Required",
+    "permission_required": "REPORT_READ",
+    "endpoints": [
+      {
+        "method": "GET",
+        "path": "/api/dashboard/kpis/overview",
+        "name": "Overview KPIs",
+        "description": "Mendapatkan KPI overview dashboard dengan data penjualan, transaksi, pelanggan, dan tingkat pertumbuhan",
+        "parameters": {
+          "required": [
+            {
+              "name": "start_date",
+              "type": "string",
+              "format": "date (YYYY-MM-DD)",
+              "description": "Tanggal mulai periode",
+              "example": "2024-01-01"
+            },
+            {
+              "name": "end_date", 
+              "type": "string",
+              "format": "date (YYYY-MM-DD)",
+              "description": "Tanggal akhir periode",
+              "example": "2024-01-31"
+            }
+          ]
+        },
+        "response_schema": {
+          "total_sales": "number - Total penjualan dalam periode",
+          "total_transactions": "integer - Total transaksi dalam periode", 
+          "total_customers": "integer - Total pelanggan unik dalam periode",
+          "average_transaction": "number - Rata-rata nilai transaksi",
+          "growth_rate": "number - Tingkat pertumbuhan (%)"
+        }
+      },
+      {
+        "method": "GET",
+        "path": "/api/dashboard/analytics/sales-chart",
+        "name": "Sales Chart Data",
+        "description": "Mengambil data penjualan harian untuk chart dalam periode tertentu",
+        "parameters": {
+          "required": [
+            {
+              "name": "start_date",
+              "type": "string", 
+              "format": "date (YYYY-MM-DD)",
+              "description": "Tanggal mulai periode",
+              "example": "2024-01-01"
+            },
+            {
+              "name": "end_date",
+              "type": "string",
+              "format": "date (YYYY-MM-DD)", 
+              "description": "Tanggal akhir periode",
+              "example": "2024-01-31"
+            }
+          ],
+          "optional": [
+            {
+              "name": "interval",
+              "type": "string",
+              "enum": ["daily", "weekly", "monthly"],
+              "default": "daily",
+              "description": "Interval data chart"
+            }
+          ]
+        },
+        "response_schema": {
+          "date": "string - Tanggal",
+          "sales": "number - Total penjualan pada tanggal tersebut",
+          "transactions": "integer - Jumlah transaksi pada tanggal tersebut"
+        }
+      },
+      {
+        "method": "GET",
+        "path": "/api/dashboard/analytics/top-products",
+        "name": "Top Products",
+        "description": "Mengambil daftar produk dengan penjualan tertinggi dalam periode tertentu",
+        "parameters": {
+          "required": [
+            {
+              "name": "start_date",
+              "type": "string",
+              "format": "date (YYYY-MM-DD)",
+              "description": "Tanggal mulai periode",
+              "example": "2024-01-01"
+            },
+            {
+              "name": "end_date",
+              "type": "string", 
+              "format": "date (YYYY-MM-DD)",
+              "description": "Tanggal akhir periode",
+              "example": "2024-01-31"
+            }
+          ],
+          "optional": [
+            {
+              "name": "limit",
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50,
+              "default": 10,
+              "description": "Jumlah produk yang ditampilkan"
+            }
+          ]
+        },
+        "response_schema": {
+          "product_id": "string (uuid) - ID produk",
+          "product_name": "string - Nama produk",
+          "total_sold": "integer - Total terjual",
+          "total_revenue": "number - Total pendapatan dari produk",
+          "category": "string - Kategori produk"
+        }
+      },
+      {
+        "method": "GET",
+        "path": "/api/dashboard/analytics/top-customers",
+        "name": "Top Customers",
+        "description": "Mengambil daftar pelanggan dengan transaksi tertinggi dalam periode tertentu",
+        "parameters": {
+          "required": [
+            {
+              "name": "start_date",
+              "type": "string",
+              "format": "date (YYYY-MM-DD)",
+              "description": "Tanggal mulai periode",
+              "example": "2024-01-01"
+            },
+            {
+              "name": "end_date",
+              "type": "string",
+              "format": "date (YYYY-MM-DD)",
+              "description": "Tanggal akhir periode", 
+              "example": "2024-01-31"
+            }
+          ],
+          "optional": [
+            {
+              "name": "limit",
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50,
+              "default": 10,
+              "description": "Jumlah pelanggan yang ditampilkan"
+            }
+          ]
+        },
+        "response_schema": {
+          "customer_id": "string (uuid) - ID pelanggan",
+          "customer_name": "string - Nama pelanggan",
+          "total_transactions": "integer - Total transaksi",
+          "total_spent": "number - Total pengeluaran",
+          "last_transaction": "string (datetime) - Transaksi terakhir"
+        }
+      },
+      {
+        "method": "GET",
+        "path": "/api/dashboard/analytics/payment-methods",
+        "name": "Payment Method Distribution",
+        "description": "Mengambil data distribusi penggunaan metode pembayaran dalam periode tertentu",
+        "parameters": {
+          "required": [
+            {
+              "name": "start_date",
+              "type": "string",
+              "format": "date (YYYY-MM-DD)",
+              "description": "Tanggal mulai periode",
+              "example": "2024-01-01"
+            },
+            {
+              "name": "end_date",
+              "type": "string",
+              "format": "date (YYYY-MM-DD)",
+              "description": "Tanggal akhir periode",
+              "example": "2024-01-31"
+            }
+          ]
+        },
+        "response_schema": {
+          "payment_method": "string - Metode pembayaran (contoh: cash)",
+          "count": "integer - Jumlah transaksi",
+          "percentage": "number - Persentase dari total transaksi",
+          "total_amount": "number - Total nilai transaksi"
+        }
+      },
+      {
+        "method": "GET",
+        "path": "/api/dashboard/analytics/category-performance",
+        "name": "Category Performance",
+        "description": "Mengambil data performa penjualan berdasarkan kategori produk dalam periode tertentu",
+        "parameters": {
+          "required": [
+            {
+              "name": "start_date",
+              "type": "string",
+              "format": "date (YYYY-MM-DD)",
+              "description": "Tanggal mulai periode",
+              "example": "2024-01-01"
+            },
+            {
+              "name": "end_date",
+              "type": "string",
+              "format": "date (YYYY-MM-DD)",
+              "description": "Tanggal akhir periode",
+              "example": "2024-01-31"
+            }
+          ],
+          "optional": [
+            {
+              "name": "sort_by",
+              "type": "string",
+              "enum": ["revenue", "quantity", "growth"],
+              "default": "revenue",
+              "description": "Kriteria pengurutan data"
+            }
+          ]
+        },
+        "response_schema": {
+          "category_id": "string (uuid) - ID kategori",
+          "category_name": "string - Nama kategori",
+          "total_products": "integer - Jumlah produk dalam kategori",
+          "total_sold": "integer - Total produk terjual",
+          "total_revenue": "number - Total pendapatan kategori",
+          "growth_rate": "number - Tingkat pertumbuhan (%)"
+        }
+      }
+    ],
+    "common_responses": {
+      "200": {
+        "description": "Berhasil mengambil data",
+        "structure": {
+          "success": "boolean - Status keberhasilan",
+          "data": "object/array - Data hasil query"
+        }
+      },
+      "400": {
+        "description": "Parameter tidak valid",
+        "structure": {
+          "success": false,
+          "error": "string - Pesan error"
+        }
+      },
+      "401": {
+        "description": "Tidak terautentikasi",
+        "structure": {
+          "success": false,
+          "error": "Unauthorized"
+        }
+      },
+      "403": {
+        "description": "Tidak memiliki permission REPORT_READ",
+        "structure": {
+          "success": false,
+          "error": "Forbidden"
+        }
+      }
+    },
+    "usage_notes": {
+      "authentication": "Semua endpoint memerlukan Bearer token dalam header Authorization",
+      "permission": "User harus memiliki permission REPORT_READ untuk mengakses semua endpoint",
+      "date_format": "Semua parameter tanggal menggunakan format YYYY-MM-DD",
+      "pagination": "Beberapa endpoint mendukung parameter limit untuk membatasi jumlah hasil",
+      "filtering": "Data dapat difilter berdasarkan periode tanggal yang ditentukan"
+    },
+    "example_usage": {
+      "curl_example": "curl -X GET 'http://localhost:3000/api/dashboard/kpis/overview?start_date=2024-01-01&end_date=2024-01-31' -H 'Authorization: Bearer YOUR_TOKEN'",
+      "javascript_example": "fetch('/api/dashboard/analytics/sales-chart?start_date=2024-01-01&end_date=2024-01-31&interval=daily', { headers: { 'Authorization': 'Bearer ' + token } })"
+    }
+  }
+}

@@ -5,7 +5,7 @@
 
 import { SearchTenantQuery, CreateTenant, UpdateTenant, CreateToko, UpdateToko } from '../models/TenantCore';
 import { TenantQueryService } from './modules/TenantQueryService';
-import { TenantMutationService } from './modules/TenantMutationService';
+import { TenantMutationService, deleteTenantMutation } from './modules/TenantMutationService';
 
 export class TenantService {
   // Tenant operations
@@ -35,6 +35,10 @@ export class TenantService {
       throw new Error('No data to update');
     }
     return TenantMutationService.updateTenant(id, data);
+  }
+
+  static async deleteTenant(id: string) {
+    return deleteTenantMutation(id);
   }
 
   // Store operations

@@ -191,7 +191,10 @@ export class KasirService {
 
       const whereCondition = conditions.join(' AND ');
 
-      // Query utama
+      // Query utama - menggunakan string interpolation untuk LIMIT/OFFSET
+      const queryLimit = params.limit || 20;
+      const queryOffset = params.offset || 0;
+      
       const query = `
         SELECT
           p.id,
@@ -221,10 +224,8 @@ export class KasirService {
         LEFT JOIN brand b ON p.brand_id = b.id
         ${whereCondition}
         ORDER BY p.nama ASC
-        LIMIT ? OFFSET ?
+        LIMIT ${queryLimit} OFFSET ${queryOffset}
       `;
-
-      queryParams.push(params.limit || 20, params.offset || 0);
 
       const [rows] = await connection.execute(query, queryParams) as [any[], any];
 
@@ -240,7 +241,8 @@ export class KasirService {
 
       const [countRows] = await connection.execute(
         countQuery,
-        queryParams.slice(0, -2) // Remove limit and offset
+        // Gunakan queryParams penuh karena LIMIT/OFFSET tidak menggunakan placeholder
+        queryParams
       ) as [any[], any];
 
       const products: ProdukKasir[] = rows.map((row: any) => ({
@@ -268,17 +270,72 @@ export class KasirService {
       }));
 
       const total = countRows[0]?.total || 0;
-      const limit = params.limit || 20;
-      const offset = params.offset || 0;
+      const responseLimit = params.limit || 20;
+      const responseOffset = params.offset || 0;
 
       return {
         products,
         total,
-        limit,
-        offset,
-        has_more: offset + limit < total
+        limit: responseLimit,
+        offset: responseOffset,
+        has_more: responseOffset + responseLimit < total
       };
 
+    } finally {
+      connection.release();
+    }
+  }
+
+  /**
+   * Ambil satu produk by ID (UUID) dengan inventory toko
+   */
+  static async getProdukById(produkId: string, scope: AccessScope): Promise<ProdukKasir | null> {
+    const connection = await this.db.getConnection();
+    try {
+      const [rows] = await connection.execute(`
+        SELECT
+          p.id,
+          p.tenant_id,
+          p.kode,
+          p.barcode,
+          p.nama,
+          p.deskripsi,
+            p.satuan,
+          p.harga_jual,
+          p.pajak_persen,
+          p.gambar_url,
+          p.is_aktif,
+          p.stok_minimum,
+          i.toko_id,
+          COALESCE(i.stok_tersedia, 0) as stok_tersedia,
+          COALESCE(i.stok_reserved, 0) as stok_reserved,
+          COALESCE(i.harga_jual_toko, p.harga_jual) as harga_jual_toko
+        FROM produk p
+        LEFT JOIN inventaris i ON p.id = i.produk_id AND i.toko_id = ?
+        WHERE p.id = ? AND p.tenant_id = ? AND p.is_aktif = 1
+        LIMIT 1
+      `, [scope.storeId, produkId, scope.tenantId]) as [any[], any];
+      if (rows.length === 0) return null;
+      const r = rows[0];
+      return {
+        id: r.id,
+        tenant_id: r.tenant_id,
+        toko_id: r.toko_id,
+        kode: r.kode,
+        barcode: r.barcode,
+        nama: r.nama,
+        deskripsi: r.deskripsi,
+        satuan: r.satuan,
+        harga_jual: Number(r.harga_jual),
+        pajak_persen: Number(r.pajak_persen || 0),
+        gambar_url: r.gambar_url,
+        is_aktif: !!r.is_aktif,
+        stok_minimum: Number(r.stok_minimum || 0),
+        stok_tersedia: Number(r.stok_tersedia || 0),
+        stok_reserved: Number(r.stok_reserved || 0),
+        harga_jual_toko: Number(r.harga_jual_toko || r.harga_jual),
+        lokasi_rak: r.lokasi_rak
+      } as any;
     } finally {
       connection.release();
     }
@@ -835,6 +892,63 @@ export class KasirService {
 
     } finally {
       connection.release();
+    }
+  }
+
+  /**
+   * Cari pelanggan berdasarkan nama atau telepon
+   */
+  static async searchPelanggan(
+    searchTerm: string,
+    limitParam: number,
+    scope: AccessScope
+  ): Promise<PelangganKasir[]> {
+    try {
+      const connection = await this.db.getConnection();
+      
+      try {
+        const searchPattern = `%${searchTerm}%`;
+        const limitValue = Math.min(limitParam, 50); // Maksimal 50 hasil
+        
+        const [rows] = await connection.execute(`
+          SELECT 
+            id,
+            kode,
+            nama,
+            telepon,
+            email,
+            tipe,
+            diskon_persen,
+            limit_kredit,
+            saldo_poin,
+            status
+          FROM pelanggan
+          WHERE tenant_id = ? 
+            AND (nama LIKE ? OR telepon LIKE ?)
+            AND status = 'aktif'
+          ORDER BY nama ASC
+          LIMIT ${limitValue}
+        `, [scope.tenantId, searchPattern, searchPattern]) as [any[], any];
+
+        return rows.map(row => ({
+          id: row.id,
+          kode: row.kode,
+          nama: row.nama,
+          telepon: row.telepon,
+          email: row.email,
+          tipe: row.tipe || 'reguler',
+          diskon_persen: row.diskon_persen || 0,
+          limit_kredit: row.limit_kredit || 0,
+          saldo_poin: row.saldo_poin || 0,
+          status: row.status || 'aktif'
+        }));
+
+      } finally {
+        connection.release();
+      }
+    } catch (error) {
+      console.error('Error searching pelanggan:', error);
+      throw new Error('Gagal mencari pelanggan');
     }
   }
 }

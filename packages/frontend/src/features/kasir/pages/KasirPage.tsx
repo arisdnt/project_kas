@@ -10,7 +10,7 @@ import { useKasirStore } from '@/features/kasir/store/kasirStore'
 import { useProdukStore } from '@/features/produk/store/produkStore'
 import { useAuthStore } from '@/core/store/authStore'
 import { useTransactionDrafts } from '@/features/kasir/hooks/useTransactionDrafts'
-import { Barcode, Save, FileText } from 'lucide-react'
+import { Barcode, Save, FileText, Loader2 } from 'lucide-react'
 import { useDataRefresh } from '@/core/hooks/useDataRefresh'
 import { useToast } from '@/core/hooks/use-toast'
 
@@ -19,14 +19,22 @@ export function KasirPage() {
   const [showDraftsModal, setShowDraftsModal] = useState(false)
   const [showSaveDraftModal, setShowSaveDraftModal] = useState(false)
 
-  const items = useKasirStore((s) => s.items)
-  const clearCart = useKasirStore((s) => s.clear)
-  const pelanggan = useKasirStore((s) => s.pelanggan)
-  const metode = useKasirStore((s) => s.metode)
-  const bayar = useKasirStore((s) => s.bayar)
-  const discountType = useKasirStore((s) => s.discountType)
-  const discountValue = useKasirStore((s) => s.discountValue)
-  const loadDraftState = useKasirStore((s) => s.loadDraftState)
+  const {
+    items,
+    clear: clearCart,
+    pelanggan,
+    metode,
+    bayar,
+    discountType,
+    discountValue,
+    loadDraftState,
+    initSession,
+    refreshSession,
+    loadSummary,
+    isLoading: kasirLoading,
+    summary,
+    needsStore
+  } = useKasirStore()
 
   const loadFirst = useProdukStore((s) => s.loadFirst)
   const produkLoading = useProdukStore((s) => s.loading)
@@ -46,8 +54,12 @@ export function KasirPage() {
 
   // Refresh handler untuk navbar refresh button
   const handleRefresh = useCallback(async () => {
-    await loadFirst()
-  }, [loadFirst])
+    await Promise.all([
+      loadFirst(),
+      refreshSession(),
+      loadSummary()
+    ])
+  }, [loadFirst, refreshSession, loadSummary])
 
   // Hook untuk menangani refresh data
   useDataRefresh(handleRefresh)
@@ -57,8 +69,8 @@ export function KasirPage() {
     try {
       saveDraft({
         name: data.name,
-        items: items,
-        pelanggan: pelanggan,
+        items: items.map(i => ({ id: String(i.id), nama: i.nama, harga: i.harga, qty: i.qty })) as any,
+        pelanggan: pelanggan ? { id: Number(pelanggan.id), nama: pelanggan.nama } : null,
         metode: metode,
         bayar: bayar,
         discountType: discountType,
@@ -100,11 +112,27 @@ export function KasirPage() {
   }
 
   useEffect(() => {
-    // Load produk minimal untuk kebutuhan pencarian lokal (nama/SKU)
-    if (isAuthenticated && !produkLoading && produkItems.length === 0) {
-      loadFirst().catch(() => {})
+    // Initialize kasir session and load data when authenticated
+    if (isAuthenticated) {
+      const initializeKasir = async () => {
+        try {
+          await Promise.all([
+            initSession(),
+            loadSummary()
+          ])
+
+          // Load produk minimal untuk kebutuhan pencarian lokal (nama/SKU)
+          if (!produkLoading && produkItems.length === 0) {
+            await loadFirst()
+          }
+        } catch (error) {
+          console.error('Failed to initialize kasir:', error)
+        }
+      }
+
+      initializeKasir()
     }
-  }, [isAuthenticated, loadFirst, produkItems.length, produkLoading])
+  }, [isAuthenticated, initSession, loadSummary, loadFirst, produkItems.length, produkLoading])
 
   useEffect(() => {
     const handleGlobalKeyDown = (e: KeyboardEvent) => {
@@ -157,12 +185,98 @@ export function KasirPage() {
     return () => document.removeEventListener('keydown', handleGlobalKeyDown)
   }, [items.length, clearCart, loadFirst])
 
+  const authState = useAuthStore()
+  const user = authState.user
+  // @ts-ignore internal cache from ensureStoreContext
+  const storeList: any[] = (useAuthStore as any).lastStoreList || []
+  const setStore = authState.setStore
+  const isGod = !!user?.isGodUser
+  const hasStore = !!user?.tokoId
+  const showInlineSwitcher = isGod && hasStore && storeList.length > 0
+
+  if (needsStore) {
+    return (
+      <div className="p-6 space-y-6">
+        <h2 className="text-xl font-semibold">Pilih Toko</h2>
+        <p className="text-sm text-gray-600 max-w-xl">
+          Anda belum memiliki konteks toko aktif. {user?.isGodUser ? 'Sebagai God User Anda bisa memilih toko mana saja untuk melakukan transaksi.' : 'Hubungi administrator untuk diberikan akses ke toko.'}
+        </p>
+        {storeList.length === 0 && (
+          <div className="p-4 border rounded bg-yellow-50 text-yellow-700 text-sm">
+            {user?.isGodUser ? 'Tidak ada toko yang tersedia saat ini.' : 'Tidak ada toko yang dapat diakses.'}
+          </div>
+        )}
+        {storeList.length > 0 && (
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {storeList.map((t: any) => (
+              <button
+                key={t.id}
+                onClick={async () => {
+                  setStore(t.id)
+                  await initSession()
+                  await loadSummary()
+                }}
+                className="border rounded p-4 text-left hover:border-blue-500 hover:shadow focus:outline-none focus:ring transition group"
+              >
+                <div className="flex items-center justify-between mb-2">
+                  <span className="font-medium group-hover:text-blue-600">{t.nama || t.kode || 'Toko'}</span>
+                  {t.status && <span className="text-xs px-2 py-0.5 rounded bg-gray-100 text-gray-600">{t.status}</span>}
+                </div>
+                <div className="text-xs text-gray-500 space-y-1">
+                  {t.kode && <div>Kode: {t.kode}</div>}
+                  {t.alamat && <div className="truncate">{t.alamat}</div>}
+                </div>
+              </button>
+            ))}
+          </div>
+        )}
+        <div>
+          <Button
+            variant="outline"
+            onClick={() => initSession()}
+            disabled={kasirLoading}
+          >
+            Refresh Daftar Toko {kasirLoading && <Loader2 className="h-4 w-4 animate-spin ml-2" />}
+          </Button>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div 
       ref={containerRef}
       tabIndex={-1}
       className="flex flex-col min-h-0 h-[calc(100vh-4rem-3rem)] py-2 sm:py-3 overflow-hidden focus:outline-none"
     >
+      {showInlineSwitcher && (
+        <div className="px-3 pb-2">
+          <div className="flex flex-wrap items-center gap-2 rounded border bg-white shadow-sm p-2">
+            <span className="text-xs font-medium text-gray-600">Toko Aktif:</span>
+            {storeList.map((t: any) => {
+              const active = t.id === user?.tokoId
+              return (
+                <button
+                  key={t.id}
+                  onClick={async () => {
+                    if (active) return
+                    setStore(t.id)
+                    await initSession()
+                    await loadSummary()
+                  }}
+                  className={`text-xs px-2 py-1 rounded border transition ${active ? 'bg-blue-600 text-white border-blue-600 cursor-default' : 'bg-white hover:bg-blue-50 border-gray-300 text-gray-700'}`}
+                >
+                  {t.nama || t.kode || 'Toko'}
+                </button>
+              )
+            })}
+            <Button variant="outline" size="xs" onClick={() => initSession()} className="ml-auto">
+              Refresh
+            </Button>
+          </div>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
         {/* Kolom kiri: pencarian & keranjang */}
         <div className="lg:col-span-2 space-y-3 min-h-0">
@@ -172,6 +286,9 @@ export function KasirPage() {
                 <div className="flex items-center gap-2 text-gray-700">
                   <Barcode className="h-5 w-5" />
                   <span className="font-medium">Cari / Scan Produk</span>
+                  {kasirLoading && (
+                    <Loader2 className="h-4 w-4 animate-spin text-blue-500" />
+                  )}
                 </div>
 
                 {/* Draft buttons */}
@@ -203,13 +320,20 @@ export function KasirPage() {
           <Card className="min-h-0">
             <CardContent className="p-0">
               <div className="px-4 py-3 border-b border-gray-200 flex items-center justify-between">
-                <h3 className="font-semibold text-gray-900">Keranjang</h3>
+                <div className="flex items-center gap-2">
+                  <h3 className="font-semibold text-gray-900">Keranjang</h3>
+                  {summary && (
+                    <span className="text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded">
+                      Hari ini: {summary.total_transaksi} transaksi
+                    </span>
+                  )}
+                </div>
                 {items.length > 0 && (
                   <span className="text-sm text-gray-600">{items.length} item</span>
                 )}
               </div>
               <div className="p-4">
-                <CartTable items={items} />
+                <CartTable items={items as any} />
               </div>
             </CardContent>
           </Card>

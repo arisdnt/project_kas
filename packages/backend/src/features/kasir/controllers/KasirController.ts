@@ -120,23 +120,20 @@ export class KasirController {
 
   /**
    * Scan barcode produk
-   * POST /api/kasir/produk/scan
+   * GET /api/kasir/produk/scan/:barcode
    */
   static async scanBarcode(req: Request, res: Response): Promise<Response> {
     try {
       const scope = req.accessScope as AccessScope;
+      const { barcode } = req.params;
 
-      // Validasi request body
-      const validation = ScanBarcodeSchema.safeParse(req.body);
-      if (!validation.success) {
+      if (!barcode) {
         return res.status(400).json({
           success: false,
-          message: 'Data scan barcode tidak valid',
-          error: validation.error.errors.map(e => e.message).join(', ')
+          message: 'Barcode diperlukan'
         } as ApiResponse);
       }
 
-      const { barcode } = validation.data;
       const produk = await KasirService.getProdukByBarcode(barcode, scope);
 
       if (!produk) {
@@ -172,6 +169,44 @@ export class KasirController {
   }
 
   /**
+   * Cari pelanggan berdasarkan nama/telepon
+   * GET /api/kasir/pelanggan
+   */
+  static async searchPelanggan(req: Request, res: Response): Promise<Response> {
+    try {
+      const scope = req.accessScope as AccessScope;
+      const { search, limit = 10 } = req.query;
+
+      if (!search || typeof search !== 'string') {
+        return res.status(400).json({
+          success: false,
+          message: 'Parameter search diperlukan'
+        } as ApiResponse);
+      }
+
+      const pelanggan = await KasirService.searchPelanggan(
+        search,
+        parseInt(limit as string) || 10,
+        scope
+      );
+
+      return res.json({
+        success: true,
+        message: 'Pencarian pelanggan berhasil',
+        data: pelanggan
+      } as ApiResponse);
+
+    } catch (error: any) {
+      console.error('Error searching pelanggan:', error);
+      return res.status(500).json({
+        success: false,
+        message: 'Gagal mencari pelanggan',
+        error: error.message
+      } as ApiResponse);
+    }
+  }
+
+  /**
    * Tambah item ke cart
    * POST /api/kasir/cart/add
    */
@@ -181,8 +216,19 @@ export class KasirController {
       const scope = req.accessScope as AccessScope;
 
       // Validasi request body
-      const validation = AddCartItemSchema.safeParse(req.body);
+      const rawBody = req.body;
+      console.info('[Kasir][Cart][Add] Incoming', {
+        userId: user?.id,
+        tenantId: scope?.tenantId,
+        storeId: scope?.storeId,
+        body: rawBody
+      });
+      const validation = AddCartItemSchema.safeParse(rawBody);
       if (!validation.success) {
+        console.warn('[Kasir][Cart][Add] Validation failed', {
+          errors: validation.error.errors,
+          body: rawBody
+        });
         return res.status(400).json({
           success: false,
           message: 'Data item tidak valid',
@@ -214,7 +260,7 @@ export class KasirController {
 
       // Real-time update ke socket room
       const roomId = `kasir_${scope.tenantId}_${scope.storeId}_${user.id}`;
-      this.emitToRoom(roomId, 'cart:item_added', {
+  KasirController.emitToRoom(roomId, 'cart:item_added', {
         session_id: sessionId,
         item: cartItem
       });
@@ -226,7 +272,11 @@ export class KasirController {
       } as ApiResponse);
 
     } catch (error: any) {
-      console.error('Error adding item to cart:', error);
+      console.error('Error adding item to cart:', {
+        message: error?.message,
+        stack: error?.stack,
+        name: error?.name
+      });
       return res.status(400).json({
         success: false,
         message: error.message || 'Gagal menambah item ke cart',
@@ -246,8 +296,18 @@ export class KasirController {
       const { produkId } = req.params;
 
       // Validasi request body
-      const validation = UpdateCartItemSchema.safeParse(req.body);
+      const rawBody = req.body;
+      console.info('[Kasir][Cart][Update] Incoming', {
+        userId: user?.id,
+        produkId,
+        body: rawBody
+      });
+      const validation = UpdateCartItemSchema.safeParse(rawBody);
       if (!validation.success) {
+        console.warn('[Kasir][Cart][Update] Validation failed', {
+          errors: validation.error.errors,
+          body: rawBody
+        });
         return res.status(400).json({
           success: false,
           message: 'Data update item tidak valid',
@@ -264,7 +324,7 @@ export class KasirController {
 
         // Real-time update
         const roomId = `kasir_${scope.tenantId}_${scope.storeId}_${user.id}`;
-        this.emitToRoom(roomId, 'cart:item_removed', {
+  KasirController.emitToRoom(roomId, 'cart:item_removed', {
           session_id: sessionId,
           produk_id: produkId
         });
@@ -284,7 +344,7 @@ export class KasirController {
 
       // Real-time update
       const roomId = `kasir_${scope.tenantId}_${scope.storeId}_${user.id}`;
-      this.emitToRoom(roomId, 'cart:item_updated', {
+  KasirController.emitToRoom(roomId, 'cart:item_updated', {
         session_id: sessionId,
         produk_id: produkId,
         item: updatedItem
@@ -297,7 +357,11 @@ export class KasirController {
       } as ApiResponse);
 
     } catch (error: any) {
-      console.error('Error updating cart item:', error);
+      console.error('Error updating cart item:', {
+        message: error?.message,
+        stack: error?.stack,
+        name: error?.name
+      });
       return res.status(400).json({
         success: false,
         message: error.message || 'Gagal update item',
@@ -321,7 +385,7 @@ export class KasirController {
 
       // Real-time update
       const roomId = `kasir_${scope.tenantId}_${scope.storeId}_${user.id}`;
-      this.emitToRoom(roomId, 'cart:item_removed', {
+  KasirController.emitToRoom(roomId, 'cart:item_removed', {
         session_id: sessionId,
         produk_id: produkId
       });
@@ -355,7 +419,7 @@ export class KasirController {
 
       // Real-time update
       const roomId = `kasir_${scope.tenantId}_${scope.storeId}_${user.id}`;
-      this.emitToRoom(roomId, 'cart:cleared', {
+  KasirController.emitToRoom(roomId, 'cart:cleared', {
         session_id: sessionId
       });
 
@@ -432,8 +496,22 @@ export class KasirController {
       const scope = req.accessScope as AccessScope;
 
       // Validasi request body
-      const validation = PembayaranSchema.safeParse(req.body);
+      const rawBody = req.body;
+      console.info('[Kasir][Bayar] Incoming payment request', {
+        tenantId: scope?.tenantId,
+        storeId: scope?.storeId,
+        userId: user?.id,
+        bodyKeys: Object.keys(rawBody || {}),
+        metode_bayar: rawBody?.metode_bayar,
+        cart_items_length: Array.isArray(rawBody?.cart_items) ? rawBody.cart_items.length : 0
+      });
+
+      const validation = PembayaranSchema.safeParse(rawBody);
       if (!validation.success) {
+        console.warn('[Kasir][Bayar] Validation failed', {
+          errors: validation.error.errors,
+          sampleItem: rawBody?.cart_items?.[0]
+        });
         return res.status(400).json({
           success: false,
           message: 'Data pembayaran tidak valid',
@@ -441,32 +519,70 @@ export class KasirController {
         } as ApiResponse);
       }
 
-      const { metode_bayar, jumlah_bayar, catatan } = validation.data;
+      const { 
+        metode_bayar, 
+        jumlah_bayar, 
+        cart_items,
+        pelanggan_id,
+        diskon_persen = 0,
+        diskon_nominal = 0,
+        catatan 
+      } = validation.data;
+      
       const sessionId = req.headers['x-kasir-session'] as string || `session_${user.id}`;
 
-      // Get additional data from headers or body
-      const cartItems = req.body.cart_items || [];
-      const pelangganId = req.body.pelanggan_id;
-      const diskonPersen = Number(req.body.diskon_persen || 0);
-      const diskonNominal = Number(req.body.diskon_nominal || 0);
+      // Convert cart items dari request ke format KasirCartItem
+      const kasirCartItems: any[] = [];
+      for (const item of cart_items) {
+        console.debug('[Kasir][Bayar] Resolving produk for cart item', {
+          produk_id: item.produk_id,
+          kuantitas: item.kuantitas,
+          harga_satuan: item.harga_satuan
+        });
 
-      if (cartItems.length === 0) {
-        return res.status(400).json({
-          success: false,
-          message: 'Keranjang kosong, tidak dapat melakukan transaksi'
-        } as ApiResponse);
+        const produkData = await KasirService.getProdukById(item.produk_id, scope);
+        if (!produkData) {
+          console.warn('[Kasir][Bayar] Produk tidak ditemukan', { produk_id: item.produk_id });
+          return res.status(400).json({
+            success: false,
+            message: `Produk dengan ID ${item.produk_id} tidak ditemukan`
+          } as ApiResponse);
+        }
+
+        kasirCartItems.push({
+          produk_id: produkData.id,
+          nama_produk: produkData.nama,
+          kode_produk: produkData.kode,
+          barcode: produkData.barcode,
+          harga_satuan: item.harga_satuan,
+          kuantitas: item.kuantitas,
+          subtotal: item.harga_satuan * item.kuantitas,
+          diskon_persen: item.diskon_persen || 0,
+          diskon_nominal: item.diskon_nominal || 0,
+          stok_tersedia: produkData.stok_tersedia,
+          stok_reserved: produkData.stok_reserved
+        });
       }
+
+      console.info('[Kasir][Bayar] Process transaction begin', {
+        total_cart_items: kasirCartItems.length,
+        metode_bayar,
+        jumlah_bayar,
+        pelanggan_id,
+        diskon_persen,
+        diskon_nominal
+      });
 
       const transaksi = await KasirService.prosesTransaksi(
         sessionId,
         user,
         scope,
-        cartItems,
-        pelangganId,
+        kasirCartItems,
+        pelanggan_id,
         metode_bayar as MetodeBayar,
         jumlah_bayar,
-        diskonPersen,
-        diskonNominal,
+        diskon_persen,
+        diskon_nominal,
         catatan
       );
 
@@ -474,7 +590,7 @@ export class KasirController {
       const roomId = `kasir_${scope.tenantId}_${scope.storeId}_${user.id}`;
 
       // Notify transaction completed
-      this.emitToRoom(roomId, 'transaction:completed', {
+  KasirController.emitToRoom(roomId, 'transaction:completed', {
         session_id: sessionId,
         transaksi: transaksi
       });
@@ -483,28 +599,29 @@ export class KasirController {
       for (const item of transaksi.items) {
         this.emitToRoom(`inventory_${scope.tenantId}`, 'inventory:stock_updated', {
           produk_id: item.produk_id,
-          // Would need actual stock values from updated inventory
-          stok_tersedia: 0, // Get from inventory after update
+          stok_tersedia: 0, // Will be updated by inventory service
           stok_reserved: 0
         });
       }
 
-      // Clear cart after successful transaction
-      this.emitToRoom(roomId, 'cart:cleared', {
-        session_id: sessionId
-      });
-
       return res.status(201).json({
         success: true,
-        message: `Transaksi berhasil. Nomor: ${transaksi.nomor_transaksi}`,
-        data: transaksi
+        message: 'Transaksi berhasil diproses',
+        data: {
+          transaksi,
+          kembalian: transaksi.kembalian
+        }
       } as ApiResponse);
 
     } catch (error: any) {
-      console.error('Error processing transaction:', error);
-      return res.status(400).json({
+      console.error('Error processing transaction:', {
+        message: error?.message,
+        stack: error?.stack,
+        name: error?.name
+      });
+      return res.status(500).json({
         success: false,
-        message: error.message || 'Gagal memproses transaksi',
+        message: 'Gagal memproses transaksi',
         error: error.message
       } as ApiResponse);
     }

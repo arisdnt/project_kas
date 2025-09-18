@@ -1,9 +1,10 @@
-import { useState } from 'react'
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/core/components/ui/dialog'
+import { useEffect, useState } from 'react'
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/core/components/ui/sheet'
 import { Button } from '@/core/components/ui/button'
 import { Badge } from '@/core/components/ui/badge'
 import { Input } from '@/core/components/ui/input'
 import { ScrollArea } from '@/core/components/ui/scroll-area'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/core/components/ui/table'
 import {
   FileText,
   Clock,
@@ -11,12 +12,11 @@ import {
   DollarSign,
   Trash2,
   Copy,
-  Edit3,
   Search,
   Calendar,
   User,
-  AlertTriangle,
-  CheckCircle2
+  CheckCircle2,
+  X
 } from 'lucide-react'
 import { TransactionDraft } from '../hooks/useTransactionDrafts'
 import { useToast } from '@/core/hooks/use-toast'
@@ -43,6 +43,14 @@ export function TransactionDraftsModal({
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedDraft, setSelectedDraft] = useState<TransactionDraft | null>(null)
   const { toast } = useToast()
+
+  useEffect(() => {
+    if (!selectedDraft) return
+    const exists = drafts.some(draft => draft.id === selectedDraft.id)
+    if (!exists) {
+      setSelectedDraft(null)
+    }
+  }, [drafts, selectedDraft])
 
   // Filter drafts berdasarkan pencarian
   const filteredDrafts = drafts.filter(draft =>
@@ -101,7 +109,7 @@ export function TransactionDraftsModal({
 
   const handleDuplicateDraft = (draftId: string, draftName: string) => {
     try {
-      const newDraftId = onDuplicateDraft(draftId)
+      onDuplicateDraft(draftId)
       toast({
         title: '📄 Draft diduplikasi',
         description: `Salinan dari "${draftName}" berhasil dibuat`,
@@ -116,230 +124,247 @@ export function TransactionDraftsModal({
       })
     }
   }
+  const totalNominal = filteredDrafts.reduce((sum, draft) => sum + draft.totalAmount, 0)
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[80vh]">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <FileText className="h-5 w-5" />
-            Draft Transaksi
-          </DialogTitle>
-          <DialogDescription>
-            Kelola dan muat draft transaksi yang telah disimpan sebelumnya
-          </DialogDescription>
-        </DialogHeader>
-
-        <div className="space-y-4">
-          {/* Search Bar */}
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-            <Input
-              placeholder="Cari draft berdasarkan nama, catatan, atau pelanggan..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10"
-            />
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent
+        side="right"
+        className="flex h-full w-full flex-col gap-6 overflow-hidden p-0 sm:w-[480px] sm:max-w-[480px] lg:w-[40vw] lg:max-w-[40vw] lg:min-w-[360px]"
+      >
+        <div className="flex h-full flex-col overflow-hidden">
+          <div className="px-6 pt-6">
+            <SheetHeader className="space-y-1 text-left">
+              <SheetTitle className="flex items-center gap-2 text-lg font-semibold text-gray-900">
+                <FileText className="h-5 w-5" />
+                Draft Transaksi
+              </SheetTitle>
+              <SheetDescription className="text-sm text-gray-600">
+                Kelola draft yang tersimpan dan lanjutkan transaksi kapan saja.
+              </SheetDescription>
+            </SheetHeader>
           </div>
 
-          {/* Stats */}
-          <div className="flex gap-4 text-sm text-gray-600">
-            <div className="flex items-center gap-1">
-              <FileText className="h-4 w-4" />
-              <span>{filteredDrafts.length} draft</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <DollarSign className="h-4 w-4" />
-              <span>
-                Total: {formatCurrency(filteredDrafts.reduce((sum, d) => sum + d.totalAmount, 0))}
-              </span>
-            </div>
-          </div>
+          <div className="flex-1 overflow-hidden px-6 pb-6">
+            <div className="flex h-full flex-col gap-5">
+              <div className="space-y-3">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                  <Input
+                    placeholder="Cari draft berdasarkan nama, catatan, atau pelanggan..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-10"
+                  />
+                </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 h-96">
-            {/* Draft List */}
-            <div className="space-y-2">
-              <h3 className="font-medium text-gray-900">Daftar Draft</h3>
-              <ScrollArea className="h-80">
-                {isLoading ? (
-                  <div className="flex items-center justify-center py-8">
-                    <div className="text-gray-500">Memuat draft...</div>
+                <div className="grid grid-cols-2 gap-3 text-sm text-gray-600">
+                  <div className="flex items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2">
+                    <FileText className="h-4 w-4 text-blue-500" />
+                    <div className="flex flex-col">
+                      <span className="text-xs uppercase tracking-wide text-gray-500">Total Draft</span>
+                      <span className="font-semibold text-gray-900">{filteredDrafts.length}</span>
+                    </div>
                   </div>
-                ) : filteredDrafts.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center py-8 text-gray-500">
-                    <FileText className="h-12 w-12 mb-2 text-gray-300" />
-                    <p className="text-sm">
-                      {searchTerm ? 'Tidak ada draft yang ditemukan' : 'Belum ada draft transaksi'}
-                    </p>
+                  <div className="flex items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2">
+                    <DollarSign className="h-4 w-4 text-emerald-500" />
+                    <div className="flex flex-col">
+                      <span className="text-xs uppercase tracking-wide text-gray-500">Potensi Penjualan</span>
+                      <span className="font-semibold text-gray-900">{formatCurrency(totalNominal)}</span>
+                    </div>
                   </div>
-                ) : (
-                  <div className="space-y-2">
-                    {filteredDrafts.map((draft) => (
-                      <div
-                        key={draft.id}
-                        onClick={() => setSelectedDraft(draft)}
-                        className={`p-3 border rounded-lg cursor-pointer transition-colors hover:bg-gray-50 ${
-                          selectedDraft?.id === draft.id ? 'border-blue-500 bg-blue-50' : 'border-gray-200'
-                        }`}
-                      >
-                        <div className="flex justify-between items-start mb-2">
-                          <h4 className="font-medium text-gray-900 text-sm line-clamp-1">
-                            {draft.name}
-                          </h4>
-                          <Badge variant="secondary" className="text-xs">
-                            {draft.metode}
-                          </Badge>
-                        </div>
+                </div>
+              </div>
 
-                        <div className="space-y-1 text-xs text-gray-600">
-                          <div className="flex items-center gap-1">
-                            <ShoppingCart className="h-3 w-3" />
-                            <span>{draft.totalItems} item</span>
-                          </div>
-                          <div className="flex items-center gap-1">
-                            <DollarSign className="h-3 w-3" />
-                            <span className="font-medium">{formatCurrency(draft.totalAmount)}</span>
-                          </div>
-                          <div className="flex items-center gap-1">
-                            <Clock className="h-3 w-3" />
-                            <span>{formatDate(draft.updatedAt)}</span>
-                          </div>
-                          {draft.pelanggan && (
-                            <div className="flex items-center gap-1">
-                              <User className="h-3 w-3" />
-                              <span>{draft.pelanggan.nama || 'Member'}</span>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    ))}
+              <div className="flex-1 overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
+                <div className="flex items-center justify-between border-b border-gray-200 px-4 py-3">
+                  <div>
+                    <h3 className="text-sm font-semibold text-gray-900">Daftar Draft</h3>
+                    <p className="text-xs text-gray-500">Klik salah satu draft untuk melihat detail lebih lengkap.</p>
                   </div>
-                )}
-              </ScrollArea>
-            </div>
+                  <Badge variant="secondary" className="text-xs font-medium">
+                    {filteredDrafts.length} draft
+                  </Badge>
+                </div>
+                <div className="h-60 overflow-y-auto sm:h-72">
+                  {isLoading ? (
+                    <div className="flex h-full flex-col items-center justify-center gap-2 text-gray-500">
+                      <Clock className="h-5 w-5 animate-spin text-gray-400" />
+                      <span className="text-sm">Memuat draft...</span>
+                    </div>
+                  ) : filteredDrafts.length === 0 ? (
+                    <div className="flex h-full flex-col items-center justify-center gap-2 text-gray-500 px-4 text-center">
+                      <FileText className="h-10 w-10 text-gray-300" />
+                      <p className="text-sm">
+                        {searchTerm ? 'Tidak ada draft yang sesuai pencarian.' : 'Belum ada draft transaksi yang tersimpan.'}
+                      </p>
+                    </div>
+                  ) : (
+                    <Table className="min-w-full">
+                      <TableHeader>
+                        <TableRow className="bg-gray-50">
+                          <TableHead className="w-1/3 text-xs uppercase tracking-wide text-gray-500">Nama Draft</TableHead>
+                          <TableHead className="text-xs uppercase tracking-wide text-gray-500">Metode</TableHead>
+                          <TableHead className="text-xs uppercase tracking-wide text-gray-500">Item</TableHead>
+                          <TableHead className="text-xs uppercase tracking-wide text-gray-500">Total</TableHead>
+                          <TableHead className="text-xs uppercase tracking-wide text-gray-500">Update</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {filteredDrafts.map((draft) => {
+                          const isSelected = selectedDraft?.id === draft.id
+                          return (
+                            <TableRow
+                              key={draft.id}
+                              onClick={() => setSelectedDraft(draft)}
+                              className={`cursor-pointer transition-colors ${
+                                isSelected ? 'bg-blue-50/80 hover:bg-blue-50' : 'hover:bg-gray-50'
+                              }`}
+                            >
+                              <TableCell className="align-top">
+                                <div className="flex flex-col gap-1">
+                                  <span className="font-medium text-gray-900 line-clamp-1">{draft.name}</span>
+                                  {draft.pelanggan?.nama && (
+                                    <span className="text-xs text-gray-500">{draft.pelanggan.nama}</span>
+                                  )}
+                                </div>
+                              </TableCell>
+                              <TableCell className="align-top">
+                                <Badge variant="outline" className="text-xs font-medium">
+                                  {draft.metode}
+                                </Badge>
+                              </TableCell>
+                              <TableCell className="align-top text-sm text-gray-700">{draft.totalItems} item</TableCell>
+                              <TableCell className="align-top text-sm font-semibold text-gray-900">
+                                {formatCurrency(draft.totalAmount)}
+                              </TableCell>
+                              <TableCell className="align-top text-xs text-gray-500">{formatDate(draft.updatedAt)}</TableCell>
+                            </TableRow>
+                          )
+                        })}
+                      </TableBody>
+                    </Table>
+                  )}
+                </div>
+              </div>
 
-            {/* Draft Detail & Actions */}
-            <div className="space-y-2">
-              <h3 className="font-medium text-gray-900">Detail Draft</h3>
-              <div className="h-80 border border-gray-200 rounded-lg p-4">
+              <div className="rounded-xl border border-gray-200 bg-gray-50 p-3">
                 {selectedDraft ? (
-                  <ScrollArea className="h-full">
-                    <div className="space-y-4">
-                      {/* Header Info */}
-                      <div className="space-y-2">
-                        <h4 className="font-semibold text-lg text-gray-900">
-                          {selectedDraft.name}
-                        </h4>
-
-                        <div className="grid grid-cols-2 gap-4 text-sm">
-                          <div className="space-y-1">
-                            <div className="flex items-center gap-1 text-gray-600">
-                              <Calendar className="h-4 w-4" />
-                              <span>Dibuat: {formatDate(selectedDraft.createdAt)}</span>
-                            </div>
-                            <div className="flex items-center gap-1 text-gray-600">
-                              <Clock className="h-4 w-4" />
-                              <span>Diperbarui: {formatDate(selectedDraft.updatedAt)}</span>
-                            </div>
-                          </div>
-                          <div className="space-y-1">
-                            <div className="flex items-center gap-1 text-gray-600">
-                              <ShoppingCart className="h-4 w-4" />
-                              <span>{selectedDraft.totalItems} item</span>
-                            </div>
-                            <div className="flex items-center gap-1 text-gray-600">
-                              <DollarSign className="h-4 w-4" />
-                              <span className="font-semibold">{formatCurrency(selectedDraft.totalAmount)}</span>
-                            </div>
-                          </div>
-                        </div>
+                  <div className="flex h-full flex-col gap-3">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex-1">
+                        <h4 className="text-sm font-semibold text-gray-900 line-clamp-1">{selectedDraft.name}</h4>
+                        <p className="text-[11px] text-gray-500">Terakhir diperbarui {formatDate(selectedDraft.updatedAt)}</p>
                       </div>
-
-                      {/* Items Preview */}
-                      <div className="space-y-2">
-                        <h5 className="font-medium text-gray-800">Item Produk</h5>
-                        <div className="space-y-1">
-                          {selectedDraft.items.slice(0, 5).map((item, index) => (
-                            <div key={index} className="flex justify-between text-sm py-1 border-b border-gray-100">
-                              <div className="flex-1">
-                                <span className="font-medium">{item.nama}</span>
-                                <span className="text-gray-500 ml-2">x{item.qty}</span>
-                              </div>
-                              <span className="font-medium">{formatCurrency(item.harga * item.qty)}</span>
-                            </div>
-                          ))}
-                          {selectedDraft.items.length > 5 && (
-                            <div className="text-xs text-gray-500 text-center py-1">
-                              ... dan {selectedDraft.items.length - 5} item lainnya
-                            </div>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Notes */}
-                      {selectedDraft.notes && (
-                        <div className="space-y-1">
-                          <h5 className="font-medium text-gray-800">Catatan</h5>
-                          <p className="text-sm text-gray-600 bg-gray-50 p-2 rounded">
-                            {selectedDraft.notes}
-                          </p>
-                        </div>
-                      )}
-
-                      {/* Customer Info */}
-                      {selectedDraft.pelanggan && (
-                        <div className="space-y-1">
-                          <h5 className="font-medium text-gray-800">Pelanggan</h5>
-                          <div className="flex items-center gap-2 text-sm">
-                            <User className="h-4 w-4 text-gray-500" />
-                            <span>{selectedDraft.pelanggan.nama || 'Member'}</span>
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Actions */}
-                      <div className="flex flex-col gap-2 pt-4 border-t border-gray-200">
+                      <div className="flex items-center gap-2">
+                        <Badge variant="secondary" className="text-[11px] font-medium px-2 py-0.5">
+                          {selectedDraft.metode}
+                        </Badge>
                         <Button
-                          onClick={() => handleLoadDraft(selectedDraft)}
-                          className="w-full"
+                          size="icon"
+                          variant="ghost"
+                          onClick={() => setSelectedDraft(null)}
+                          className="h-7 w-7 text-gray-500 hover:text-gray-700"
                         >
-                          <CheckCircle2 className="h-4 w-4 mr-2" />
-                          Muat Draft ke Keranjang
+                          <X className="h-3.5 w-3.5" />
+                          <span className="sr-only">Tutup detail draft</span>
                         </Button>
+                      </div>
+                    </div>
 
-                        <div className="flex gap-2">
-                          <Button
-                            variant="outline"
-                            onClick={() => handleDuplicateDraft(selectedDraft.id, selectedDraft.name)}
-                            className="flex-1"
-                          >
-                            <Copy className="h-4 w-4 mr-2" />
-                            Duplikasi
-                          </Button>
-
-                          <Button
-                            variant="destructive"
-                            onClick={() => handleDeleteDraft(selectedDraft.id, selectedDraft.name)}
-                            className="flex-1"
-                          >
-                            <Trash2 className="h-4 w-4 mr-2" />
-                            Hapus
-                          </Button>
+                    <div className="grid grid-cols-2 gap-2 text-xs text-gray-700">
+                      <div className="flex items-center gap-2 rounded-md bg-white px-3 py-2 shadow-sm">
+                        <ShoppingCart className="h-3.5 w-3.5 text-indigo-500" />
+                        <div className="leading-tight">
+                          <p className="text-[11px] text-gray-500">Jumlah Item</p>
+                          <p className="text-sm font-semibold text-gray-900">{selectedDraft.totalItems}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2 rounded-md bg-white px-3 py-2 shadow-sm">
+                        <DollarSign className="h-3.5 w-3.5 text-emerald-500" />
+                        <div className="leading-tight">
+                          <p className="text-[11px] text-gray-500">Total</p>
+                          <p className="text-sm font-semibold text-gray-900">{formatCurrency(selectedDraft.totalAmount)}</p>
                         </div>
                       </div>
                     </div>
-                  </ScrollArea>
+
+                    <div className="rounded-md bg-white px-3 py-2 shadow-sm">
+                      <div className="flex items-center gap-2 text-xs text-gray-600">
+                        <Calendar className="h-3.5 w-3.5" />
+                        <span>Dibuat {formatDate(selectedDraft.createdAt)}</span>
+                      </div>
+                      {selectedDraft.notes && (
+                        <div className="mt-2 rounded-md bg-gray-50 px-3 py-2 text-xs text-gray-600">
+                          <p className="font-medium text-gray-800">Catatan</p>
+                          <p className="mt-1 leading-relaxed">{selectedDraft.notes}</p>
+                        </div>
+                      )}
+                      {selectedDraft.pelanggan && (
+                        <div className="mt-2 flex items-center gap-2 text-xs text-gray-600">
+                          <User className="h-3.5 w-3.5" />
+                          <span>Pelanggan: {selectedDraft.pelanggan.nama || 'Member'}</span>
+                        </div>
+                      )}
+                    </div>
+
+                    <div>
+                      <h5 className="mb-1 text-xs font-semibold text-gray-900 uppercase tracking-wide">Item Produk</h5>
+                      <ScrollArea className="h-28 rounded-md border border-dashed border-gray-200 bg-white px-3 py-2">
+                        <div className="space-y-1.5">
+                          {selectedDraft.items.map((item, index) => (
+                            <div key={`${item.id}-${index}`} className="flex items-start justify-between text-xs text-gray-700">
+                              <div className="flex-1 pr-2">
+                                <p className="font-semibold text-gray-900 line-clamp-1">{item.nama}</p>
+                                <p className="text-[11px] text-gray-500">Qty {item.qty} × {formatCurrency(item.harga)}</p>
+                              </div>
+                              <span className="text-xs font-semibold text-gray-900 whitespace-nowrap">{formatCurrency(item.harga * item.qty)}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </ScrollArea>
+                    </div>
+
+                    <div className="flex flex-col gap-2 pt-1">
+                      <Button onClick={() => handleLoadDraft(selectedDraft)} className="w-full h-9 text-sm">
+                        <CheckCircle2 className="mr-2 h-4 w-4" />
+                        Muat Draft ke Keranjang
+                      </Button>
+
+                      <div className="flex flex-col gap-2 sm:flex-row">
+                        <Button
+                          variant="outline"
+                          onClick={() => handleDuplicateDraft(selectedDraft.id, selectedDraft.name)}
+                          className="flex-1 h-9 text-sm"
+                        >
+                          <Copy className="mr-2 h-4 w-4" />
+                          Duplikasi
+                        </Button>
+                        <Button
+                          variant="destructive"
+                          onClick={() => handleDeleteDraft(selectedDraft.id, selectedDraft.name)}
+                          className="flex-1 h-9 text-sm"
+                        >
+                          <Trash2 className="mr-2 h-4 w-4" />
+                          Hapus
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
                 ) : (
-                  <div className="flex flex-col items-center justify-center h-full text-gray-500">
-                    <FileText className="h-12 w-12 mb-2 text-gray-300" />
-                    <p className="text-sm">Pilih draft untuk melihat detail</p>
+                  <div className="flex h-full flex-col items-center justify-center gap-3 text-center text-gray-500">
+                    <FileText className="h-10 w-10 text-gray-300" />
+                    <div>
+                      <p className="text-sm font-medium text-gray-700">Pilih draft untuk melihat detail</p>
+                      <p className="text-xs text-gray-500">Klik salah satu baris pada tabel di atas untuk memuat informasi lengkap.</p>
+                    </div>
                   </div>
                 )}
               </div>
             </div>
           </div>
         </div>
-      </DialogContent>
-    </Dialog>
+      </SheetContent>
+    </Sheet>
   )
 }

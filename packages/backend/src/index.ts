@@ -134,6 +134,8 @@ import tokoSayaRoutes from '@/features/tokosaya/routes/tokoRoutes';
 import kasirRoutes from '@/features/kasir/routes/kasirRoutes';
 import { KasirController } from '@/features/kasir/controllers/KasirController';
 import { KasirSocketService } from '@/features/kasir/services/KasirSocketService';
+import peranRoutes from '@/features/peran/routes/peranRoutes';
+import penggunaRoutes from '@/features/pengguna/routes/penggunaRoutes';
 
 // Inisialisasi Swagger UI + JSON endpoints
 registerSwagger(app);
@@ -163,6 +165,8 @@ app.use('/api/pengaturansaya', pengaturansayaRoutes);
 app.use('/api/tenantsaya', tenantsayaRoutes);
 app.use('/api/tokosaya', tokoSayaRoutes);
 app.use('/api/kasir', kasirRoutes);
+app.use('/api/peran', peranRoutes);
+app.use('/api/pengguna', penggunaRoutes);
 
 app.get('/api', (req, res) => {
   res.json({

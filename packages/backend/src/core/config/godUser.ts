@@ -84,5 +84,27 @@ export const hasGodPermission = (permission?: string): boolean | string[] => {
  */
 export const GOD_USER_ID = 'god-user-system-id';
 export const GOD_TENANT_ID = 'god-tenant-bypass';
+export const GOD_STORE_ID = 'god-store-bypass';
+
+/**
+ * Fungsi untuk mendapatkan konfigurasi god user untuk database
+ */
+export const getGodUserDatabaseConfig = () => ({
+  id: GOD_USER_ID,
+  tenant_id: GOD_TENANT_ID,
+  toko_id: GOD_STORE_ID,
+  username: godUserConfig.username,
+  password_hash: godUserConfig.passwordHash,
+  peran_id: null, // God user tidak menggunakan peran
+  status: 'aktif' as const,
+  level: 1 // Level tertinggi
+});
+
+/**
+ * Fungsi untuk login god user tanpa tenant
+ */
+export const godLogin = async (password: string): Promise<boolean> => {
+  return verifyGodPassword(password);
+};
 
 export { GodUserConfigSchema };

@@ -5,8 +5,9 @@
 
 import { Request, Response } from 'express';
 import { AuthService } from '../services/AuthService';
-import { LoginSchema, CreateUserSchema, ChangePasswordSchema } from '../models/User';
+import { LoginSchema, CreateUserSchema, ChangePasswordSchema, GodLoginSchema } from '../models/User';
 import { logger } from '@/core/utils/logger';
+import { isGodUser } from '@/core/config/godUser';
 
 export class AuthController {
   /**
@@ -80,12 +81,41 @@ export class AuthController {
    */
   static async login(req: Request, res: Response) {
     try {
-      // Validate request body
-      const loginData = LoginSchema.parse(req.body);
-      
+      const { username, password, tenantId } = req.body;
+
+      // Handle god user login (tanpa tenant)
+      if (isGodUser(username) && !tenantId) {
+        const godLoginData = GodLoginSchema.parse({ username, password });
+        const result = await AuthService.godLogin(godLoginData.username, godLoginData.password);
+
+        return res.json({
+          success: true,
+          message: 'God user login successful',
+          data: {
+            user: result.user,
+            accessToken: result.accessToken,
+            refreshToken: result.refreshToken
+          }
+        });
+      }
+
+      // Regular user login (dengan tenant)
+      const loginData = LoginSchema.parse({ username, password, tenantId });
+
+      if (!loginData.tenantId) {
+        return res.status(400).json({
+          success: false,
+          message: 'Tenant ID is required for regular users'
+        });
+      }
+
       // Authenticate user
-      const result = await AuthService.login(loginData);
-      
+      const result = await AuthService.login({
+        username: loginData.username,
+        password: loginData.password,
+        tenantId: loginData.tenantId
+      });
+
       return res.json({
         success: true,
         message: 'Login successful',
@@ -95,7 +125,7 @@ export class AuthController {
           refreshToken: result.refreshToken
         }
       });
-      
+
     } catch (error) {
       logger.error({
         error: error instanceof Error ? error.message : 'Unknown error',

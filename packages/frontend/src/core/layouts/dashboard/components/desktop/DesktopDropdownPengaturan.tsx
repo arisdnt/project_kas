@@ -2,13 +2,18 @@ import { Link } from 'react-router-dom';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import { ChevronDown, ChevronRight, Settings } from 'lucide-react';
 import { pengaturanItems } from '@/core/layouts/dashboard/menuItems';
+import { useAuthStore } from '@/core/store/authStore';
 
 export function DesktopDropdownPengaturan({ pathname }: { pathname: string }) {
+  const { user } = useAuthStore();
+  const isGodUser = user?.isGodUser || user?.level === 1;
+
   type GroupItem = {
     name: string;
     href: string;
     description: string;
     submenu?: { name: string; href: string }[];
+    requireGod?: boolean;
   };
   type GroupDef = { label: string; items: GroupItem[] };
 
@@ -36,7 +41,7 @@ export function DesktopDropdownPengaturan({ pathname }: { pathname: string }) {
       label: 'Organisasi',
       items: [
         { name: 'Toko/Tenant', href: '/dashboard/pengaturan/toko', description: 'Profil toko dan cabang.' },
-        { name: 'Manajemen Tenan', href: '/dashboard/pengaturan/tenan', description: 'Kelola multi-tenant/gerai.' },
+        { name: 'Manajemen Tenan', href: '/dashboard/pengaturan/tenan', description: 'Kelola multi-tenant/gerai.', requireGod: true },
       ],
     },
     {
@@ -77,7 +82,9 @@ export function DesktopDropdownPengaturan({ pathname }: { pathname: string }) {
                 {group.label}
               </DropdownMenu.Label>
               <div className="mb-1" />
-              {group.items.map((gitem) => {
+              {group.items
+                .filter(gitem => !gitem.requireGod || isGodUser) // Filter based on god user requirement
+                .map((gitem) => {
                 const iconFromBase = pengaturanItems.find((i) => i.name === gitem.name)?.icon;
                 const Icon = iconFromBase ?? Settings;
                 const getIconColor = (name: string) => {

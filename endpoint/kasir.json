@@ -1,0 +1,593 @@
+{
+  "title": "API Kasir - Point of Sales System",
+  "description": "Dokumentasi lengkap endpoint API untuk sistem kasir/point of sales yang mendukung operasi real-time, cart management, dan transaksi penjualan",
+  "version": "1.0.0",
+  "base_url": "http://localhost:3000/api/kasir",
+  "authentication": {
+    "type": "Bearer Token",
+    "header": "Authorization: Bearer <token>",
+    "description": "Semua endpoint memerlukan autentikasi dengan JWT token"
+  },
+  "common_headers": {
+    "Content-Type": "application/json",
+    "Authorization": "Bearer <token>",
+    "x-kasir-session": "session_id (opsional untuk beberapa endpoint)"
+  },
+  "endpoints": [
+    {
+      "name": "Health Check",
+      "method": "GET",
+      "path": "/health",
+      "description": "Memeriksa status kesehatan sistem kasir",
+      "permission": "TRANSACTION_READ",
+      "parameters": {},
+      "request_body": null,
+      "response": {
+        "success_200": {
+          "success": true,
+          "message": "Sistem kasir berjalan normal",
+          "data": {
+            "status": "healthy",
+            "timestamp": "2024-01-15T10:30:00Z"
+          }
+        },
+        "error_401": {
+          "success": false,
+          "message": "Tidak terotorisasi"
+        }
+      }
+    },
+    {
+      "name": "Buat/Ambil Session Kasir",
+      "method": "GET", 
+      "path": "/session",
+      "description": "Membuat session kasir baru atau mendapatkan session aktif untuk user",
+      "permission": "TRANSACTION_CREATE",
+      "parameters": {},
+      "request_body": null,
+      "response": {
+        "success_200": {
+          "success": true,
+          "message": "Session kasir berhasil dibuat/diambil",
+          "data": {
+            "session": {
+              "id": "session_user123",
+              "user_id": "user123",
+              "store_id": "store456",
+              "cart_items": [],
+              "pelanggan": null,
+              "total_amount": 0,
+              "created_at": "2024-01-15T10:30:00Z"
+            },
+            "socket_room": "kasir_tenant_store_user"
+          }
+        },
+        "error_400": {
+          "success": false,
+          "message": "Store ID diperlukan"
+        },
+        "error_401": {
+          "success": false,
+          "message": "Tidak terotorisasi"
+        }
+      }
+    },
+    {
+      "name": "Ringkasan Penjualan",
+      "method": "GET",
+      "path": "/summary", 
+      "description": "Mendapatkan ringkasan penjualan kasir hari ini",
+      "permission": "TRANSACTION_READ",
+      "parameters": {},
+      "request_body": null,
+      "response": {
+        "success_200": {
+          "success": true,
+          "data": {
+            "total_transaksi": 25,
+            "total_penjualan": 1500000,
+            "rata_rata_transaksi": 60000
+          }
+        },
+        "error_401": {
+          "success": false,
+          "message": "Tidak terotorisasi"
+        }
+      }
+    },
+    {
+      "name": "Pencarian Produk",
+      "method": "GET",
+      "path": "/produk/search",
+      "description": "Mencari produk berdasarkan nama atau barcode untuk kasir",
+      "permission": "PRODUCT_READ",
+      "parameters": {
+        "query": {
+          "q": {
+            "type": "string",
+            "description": "Kata kunci pencarian",
+            "required": false
+          },
+          "kategori": {
+            "type": "string", 
+            "description": "Filter berdasarkan kategori",
+            "required": false
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Jumlah hasil maksimal",
+            "default": 20,
+            "required": false
+          }
+        }
+      },
+      "request_body": null,
+      "response": {
+        "success_200": {
+          "success": true,
+          "data": [
+            {
+              "id": "prod123",
+              "nama": "Indomie Goreng",
+              "barcode": "8992388123456",
+              "harga": 3500,
+              "stok": 100,
+              "kategori": "Makanan Instan",
+              "satuan": "pcs"
+            }
+          ]
+        },
+        "error_400": {
+          "success": false,
+          "message": "Parameter pencarian tidak valid"
+        },
+        "error_401": {
+          "success": false,
+          "message": "Tidak terotorisasi"
+        }
+      }
+    },
+    {
+      "name": "Scan Barcode",
+      "method": "POST",
+      "path": "/produk/scan",
+      "description": "Mencari produk berdasarkan barcode yang discan",
+      "permission": "PRODUCT_READ",
+      "parameters": {},
+      "request_body": {
+        "barcode": {
+          "type": "string",
+          "description": "Barcode produk",
+          "required": true,
+          "example": "8992388123456"
+        }
+      },
+      "response": {
+        "success_200": {
+          "success": true,
+          "data": {
+            "id": "prod123",
+            "nama": "Indomie Goreng",
+            "barcode": "8992388123456",
+            "harga": 3500,
+            "stok": 100,
+            "kategori": "Makanan Instan"
+          }
+        },
+        "error_404": {
+          "success": false,
+          "message": "Produk tidak ditemukan"
+        },
+        "error_401": {
+          "success": false,
+          "message": "Tidak terotorisasi"
+        }
+      }
+    },
+    {
+      "name": "Tambah Item ke Keranjang",
+      "method": "POST",
+      "path": "/cart/add",
+      "description": "Menambahkan produk ke keranjang kasir",
+      "permission": "TRANSACTION_CREATE",
+      "parameters": {},
+      "request_body": {
+        "produk_id": {
+          "type": "string",
+          "description": "ID produk",
+          "required": true,
+          "example": "prod123"
+        },
+        "quantity": {
+          "type": "integer",
+          "description": "Jumlah item",
+          "minimum": 1,
+          "required": true,
+          "example": 2
+        }
+      },
+      "response": {
+        "success_200": {
+          "success": true,
+          "message": "Item berhasil ditambahkan ke keranjang",
+          "data": {
+            "id": "session_user123",
+            "cart_items": [
+              {
+                "produk_id": "prod123",
+                "nama_produk": "Indomie Goreng",
+                "harga": 3500,
+                "quantity": 2,
+                "subtotal": 7000
+              }
+            ],
+            "total_amount": 7000
+          }
+        },
+        "error_400": {
+          "success": false,
+          "message": "Data tidak valid atau stok tidak mencukupi"
+        },
+        "error_401": {
+          "success": false,
+          "message": "Tidak terotorisasi"
+        }
+      }
+    },
+    {
+      "name": "Update Item Keranjang",
+      "method": "PUT",
+      "path": "/cart/{produkId}",
+      "description": "Mengupdate quantity item di keranjang",
+      "permission": "TRANSACTION_CREATE",
+      "parameters": {
+        "path": {
+          "produkId": {
+            "type": "string",
+            "description": "ID produk",
+            "required": true
+          }
+        }
+      },
+      "request_body": {
+        "quantity": {
+          "type": "integer",
+          "description": "Jumlah item baru",
+          "minimum": 1,
+          "required": true,
+          "example": 3
+        }
+      },
+      "response": {
+        "success_200": {
+          "success": true,
+          "message": "Item berhasil diupdate",
+          "data": {
+            "id": "session_user123",
+            "cart_items": [
+              {
+                "produk_id": "prod123",
+                "nama_produk": "Indomie Goreng",
+                "harga": 3500,
+                "quantity": 3,
+                "subtotal": 10500
+              }
+            ],
+            "total_amount": 10500
+          }
+        },
+        "error_400": {
+          "success": false,
+          "message": "Data tidak valid atau stok tidak mencukupi"
+        },
+        "error_401": {
+          "success": false,
+          "message": "Tidak terotorisasi"
+        },
+        "error_404": {
+          "success": false,
+          "message": "Item tidak ditemukan di keranjang"
+        }
+      }
+    },
+    {
+      "name": "Hapus Item dari Keranjang",
+      "method": "DELETE",
+      "path": "/cart/{produkId}",
+      "description": "Menghapus item dari keranjang kasir",
+      "permission": "TRANSACTION_CREATE",
+      "parameters": {
+        "path": {
+          "produkId": {
+            "type": "string",
+            "description": "ID produk",
+            "required": true
+          }
+        }
+      },
+      "request_body": null,
+      "response": {
+        "success_200": {
+          "success": true,
+          "message": "Item berhasil dihapus dari keranjang",
+          "data": {
+            "id": "session_user123",
+            "cart_items": [],
+            "total_amount": 0
+          }
+        },
+        "error_401": {
+          "success": false,
+          "message": "Tidak terotorisasi"
+        },
+        "error_404": {
+          "success": false,
+          "message": "Item tidak ditemukan di keranjang"
+        }
+      }
+    },
+    {
+      "name": "Kosongkan Keranjang",
+      "method": "DELETE",
+      "path": "/cart",
+      "description": "Menghapus semua item dari keranjang kasir",
+      "permission": "TRANSACTION_CREATE",
+      "parameters": {},
+      "request_body": null,
+      "response": {
+        "success_200": {
+          "success": true,
+          "message": "Keranjang berhasil dikosongkan",
+          "data": {
+            "id": "session_user123",
+            "cart_items": [],
+            "total_amount": 0
+          }
+        },
+        "error_401": {
+          "success": false,
+          "message": "Tidak terotorisasi"
+        }
+      }
+    },
+    {
+      "name": "Set Pelanggan",
+      "method": "POST",
+      "path": "/pelanggan",
+      "description": "Mengatur pelanggan untuk transaksi saat ini",
+      "permission": "CUSTOMER_READ",
+      "parameters": {},
+      "request_body": {
+        "pelanggan_id": {
+          "type": "string",
+          "description": "ID pelanggan (opsional untuk guest)",
+          "required": false,
+          "example": "cust123"
+        }
+      },
+      "response": {
+        "success_200": {
+          "success": true,
+          "message": "Pelanggan berhasil diatur",
+          "data": {
+            "id": "session_user123",
+            "pelanggan": {
+              "id": "cust123",
+              "nama": "John Doe",
+              "email": "john@example.com",
+              "telepon": "081234567890"
+            }
+          }
+        },
+        "error_400": {
+          "success": false,
+          "message": "Data tidak valid"
+        },
+        "error_401": {
+          "success": false,
+          "message": "Tidak terotorisasi"
+        },
+        "error_404": {
+          "success": false,
+          "message": "Pelanggan tidak ditemukan"
+        }
+      }
+    },
+    {
+      "name": "Proses Pembayaran",
+      "method": "POST",
+      "path": "/bayar",
+      "description": "Memproses pembayaran dan menyelesaikan transaksi",
+      "permission": "TRANSACTION_CREATE",
+      "parameters": {},
+      "request_body": {
+        "metode_bayar": {
+          "type": "string",
+          "enum": ["cash", "card", "transfer", "ewallet"],
+          "description": "Metode pembayaran",
+          "required": true,
+          "example": "cash"
+        },
+        "jumlah_bayar": {
+          "type": "number",
+          "description": "Jumlah pembayaran",
+          "minimum": 0,
+          "required": true,
+          "example": 15000
+        },
+        "catatan": {
+          "type": "string",
+          "description": "Catatan transaksi",
+          "required": false,
+          "example": "Pembayaran tunai"
+        },
+        "cart_items": {
+          "type": "array",
+          "description": "Item keranjang (jika tidak menggunakan session)",
+          "required": false
+        },
+        "pelanggan_id": {
+          "type": "string",
+          "description": "ID pelanggan",
+          "required": false
+        },
+        "diskon_persen": {
+          "type": "number",
+          "description": "Diskon dalam persen",
+          "default": 0,
+          "required": false
+        },
+        "diskon_nominal": {
+          "type": "number",
+          "description": "Diskon dalam nominal",
+          "default": 0,
+          "required": false
+        }
+      },
+      "response": {
+        "success_201": {
+          "success": true,
+          "message": "Transaksi berhasil. Nomor: TRX-20240115-001",
+          "data": {
+            "transaksi": {
+              "id": "trx123",
+              "nomor_transaksi": "TRX-20240115-001",
+              "total_amount": 10500,
+              "status": "completed",
+              "created_at": "2024-01-15T10:30:00Z",
+              "items": [
+                {
+                  "produk_id": "prod123",
+                  "nama_produk": "Indomie Goreng",
+                  "quantity": 3,
+                  "harga_satuan": 3500,
+                  "subtotal": 10500
+                }
+              ]
+            },
+            "kembalian": 4500
+          }
+        },
+        "error_400": {
+          "success": false,
+          "message": "Data tidak valid atau keranjang kosong"
+        },
+        "error_401": {
+          "success": false,
+          "message": "Tidak terotorisasi"
+        }
+      }
+    },
+    {
+      "name": "Detail Transaksi",
+      "method": "GET",
+      "path": "/transaksi/{transaksiId}",
+      "description": "Mendapatkan detail transaksi berdasarkan ID",
+      "permission": "TRANSACTION_READ",
+      "parameters": {
+        "path": {
+          "transaksiId": {
+            "type": "string",
+            "description": "ID transaksi",
+            "required": true
+          }
+        }
+      },
+      "request_body": null,
+      "response": {
+        "success_200": {
+          "success": true,
+          "data": {
+            "id": "trx123",
+            "nomor_transaksi": "TRX-20240115-001",
+            "total_amount": 10500,
+            "status": "completed",
+            "metode_bayar": "cash",
+            "created_at": "2024-01-15T10:30:00Z",
+            "items": [
+              {
+                "produk_id": "prod123",
+                "nama_produk": "Indomie Goreng",
+                "quantity": 3,
+                "harga_satuan": 3500,
+                "subtotal": 10500
+              }
+            ],
+            "pelanggan": {
+              "id": "cust123",
+              "nama": "John Doe"
+            }
+          }
+        },
+        "error_401": {
+          "success": false,
+          "message": "Tidak terotorisasi"
+        },
+        "error_404": {
+          "success": false,
+          "message": "Transaksi tidak ditemukan"
+        }
+      }
+    }
+  ],
+  "schemas": {
+    "KasirSession": {
+      "type": "object",
+      "properties": {
+        "id": "string - ID session kasir",
+        "user_id": "string - ID user kasir",
+        "store_id": "string - ID toko",
+        "cart_items": "array - Daftar item di keranjang",
+        "pelanggan": "object - Data pelanggan",
+        "total_amount": "number - Total amount",
+        "created_at": "string - Tanggal dibuat"
+      }
+    },
+    "CartItem": {
+      "type": "object",
+      "properties": {
+        "produk_id": "string - ID produk",
+        "nama_produk": "string - Nama produk",
+        "harga": "number - Harga produk",
+        "quantity": "integer - Jumlah item",
+        "subtotal": "number - Subtotal item"
+      }
+    },
+    "Produk": {
+      "type": "object",
+      "properties": {
+        "id": "string - ID produk",
+        "nama": "string - Nama produk",
+        "barcode": "string - Barcode produk",
+        "harga": "number - Harga produk",
+        "stok": "integer - Stok tersedia",
+        "kategori": "string - Kategori produk"
+      }
+    },
+    "Transaksi": {
+      "type": "object",
+      "properties": {
+        "id": "string - ID transaksi",
+        "nomor_transaksi": "string - Nomor transaksi",
+        "total_amount": "number - Total amount",
+        "status": "string - Status transaksi",
+        "created_at": "string - Tanggal transaksi"
+      }
+    }
+  },
+  "error_codes": {
+    "400": "Bad Request - Data tidak valid",
+    "401": "Unauthorized - Tidak terotorisasi",
+    "403": "Forbidden - Tidak memiliki izin",
+    "404": "Not Found - Resource tidak ditemukan",
+    "500": "Internal Server Error - Kesalahan server"
+  },
+  "notes": [
+    "Semua endpoint memerlukan autentikasi dengan Bearer token",
+    "Beberapa endpoint memerlukan header x-kasir-session untuk session management",
+    "Sistem mendukung real-time updates via Socket.IO",
+    "Semua response menggunakan format JSON dengan struktur standar",
+    "Parameter LIMIT dan OFFSET menggunakan string interpolation untuk MySQL",
+    "Sistem menggunakan bcryptjs dengan salt rounds 12 untuk password hashing"
+  ]
+}

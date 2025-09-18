@@ -53,7 +53,13 @@ export const UpdateUserSchema = CreateUserSchema.partial().omit({
 export const LoginSchema = z.object({
   username: z.string().min(1, 'Username is required'),
   password: z.string().min(1, 'Password is required'),
-  tenantId: z.string().uuid('Valid tenant ID is required')
+  tenantId: z.string().uuid('Valid tenant ID is required').optional()
+});
+
+// Schema untuk god login (tanpa tenant)
+export const GodLoginSchema = z.object({
+  username: z.string().min(1, 'Username is required'),
+  password: z.string().min(1, 'Password is required')
 });
 
 // Schema untuk change password
@@ -71,6 +77,7 @@ export type User = z.infer<typeof UserSchema>;
 export type CreateUser = z.infer<typeof CreateUserSchema>;
 export type UpdateUser = z.infer<typeof UpdateUserSchema>;
 export type LoginRequest = z.infer<typeof LoginSchema>;
+export type GodLoginRequest = z.infer<typeof GodLoginSchema>;
 export type ChangePasswordRequest = z.infer<typeof ChangePasswordSchema>;
 
 // Interface untuk JWT payload

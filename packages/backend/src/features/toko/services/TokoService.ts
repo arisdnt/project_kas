@@ -60,13 +60,13 @@ export class TokoService {
       throw new Error('Insufficient permissions to create stores');
     }
 
-    // Auto-set tenant if not provided
+    // Auto-set tenant if tidak dikirim dan scope masih dipaksa tenant-nya
     if (!data.tenant_id) {
       data.tenant_id = scope.tenantId;
     }
 
-    // Validate tenant match
-    if (data.tenant_id !== scope.tenantId) {
+    // Validasi tenant hanya berlaku jika scope masih menegakkan batas tenant
+    if (scope.enforceTenant && data.tenant_id !== scope.tenantId) {
       throw new Error('Cannot create store for different tenant');
     }
 

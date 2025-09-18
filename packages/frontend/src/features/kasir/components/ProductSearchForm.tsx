@@ -3,6 +3,7 @@ import { Input } from '@/core/components/ui/input'
 import { Button } from '@/core/components/ui/button'
 import { useProdukStore } from '@/features/produk/store/produkStore'
 import { useKasirStore } from '@/features/kasir/store/kasirStore'
+import { ProdukKasir } from '@/features/kasir/services/kasirService'
 import { Barcode, Search, RefreshCw } from 'lucide-react'
 
 type Props = {
@@ -14,9 +15,10 @@ export function ProductSearchForm({ onLoaded }: Props) {
   const dropdownRef = useRef<HTMLDivElement>(null)
   const [q, setQ] = useState('')
   const [selectedIndex, setSelectedIndex] = useState(-1)
+  const [kasirProducts, setKasirProducts] = useState<ProdukKasir[]>([])
+  const [isSearching, setIsSearching] = useState(false)
   const { items, loadFirst, loading } = useProdukStore()
-  const addByBarcode = useKasirStore((s) => s.addByBarcode)
-  const addProduct = useKasirStore((s) => s.addProduct)
+  const { addByBarcode, addProduct, searchProducts, scanBarcode } = useKasirStore()
 
   useEffect(() => {
     // Fokus agar siap scan; tetap fokus meski blur tak sengaja
@@ -28,31 +30,76 @@ export function ProductSearchForm({ onLoaded }: Props) {
     setSelectedIndex(-1)
   }, [q])
 
+  // Search kasir products via API with debounce
+  useEffect(() => {
+    const searchKasirProducts = async () => {
+      const term = q.trim()
+      if (!term) {
+        setKasirProducts([])
+        return
+      }
+
+      setIsSearching(true)
+      try {
+        const products = await searchProducts(term)
+        setKasirProducts(products)
+      } catch (error) {
+        console.error('Failed to search kasir products:', error)
+        setKasirProducts([])
+      } finally {
+        setIsSearching(false)
+      }
+    }
+
+    const debounceTimer = setTimeout(searchKasirProducts, 300)
+    return () => clearTimeout(debounceTimer)
+  }, [q, searchProducts])
+
   const results = useMemo(() => {
     const term = q.trim().toLowerCase()
-    if (!term) return [] as typeof items
+    if (!term) return [] as (typeof items | ProdukKasir[])
+
+    // Prioritize kasir API results
+    if (kasirProducts.length > 0) {
+      return kasirProducts.slice(0, 10)
+    }
+
+    // Fallback to local produk store
     return items
       .filter(
         (p) => (p.nama || '').toLowerCase().includes(term) || (p.sku || '').toLowerCase().includes(term),
       )
       .slice(0, 10)
-  }, [items, q])
+  }, [items, kasirProducts, q])
 
-  const handleEnter = () => {
+  const handleEnter = async () => {
     const kode = q.trim()
     if (!kode) return
 
     // Jika ada item yang dipilih dengan arrow keys, tambahkan item tersebut
     if (selectedIndex >= 0 && selectedIndex < results.length) {
-      addProduct(results[selectedIndex])
+      await addProduct(results[selectedIndex])
       setQ('')
       setSelectedIndex(-1)
       return
     }
 
-    // 1) Coba match sebagai barcode (SKU) exact
+    // 1) Try kasir barcode scan API first
+    try {
+      const scannedProduct = await scanBarcode(kode)
+      if (scannedProduct) {
+        await addProduct(scannedProduct)
+        setQ('')
+        setSelectedIndex(-1)
+        return
+      }
+    } catch (error) {
+      console.error('Barcode scan failed:', error)
+    }
+
+    // 2) Fallback to local barcode search
     const beforeCount = useKasirStore.getState().items.length
-    addByBarcode(kode)
+    await addByBarcode(kode)
     const afterCount = useKasirStore.getState().items.length
     if (afterCount > beforeCount) {
       setQ('')
@@ -60,9 +107,9 @@ export function ProductSearchForm({ onLoaded }: Props) {
       return
     }
 
-    // 2) Jika tidak ketemu SKU, dan hasil pencarian ada, ambil yang pertama
+    // 3) Jika tidak ketemu SKU, dan hasil pencarian ada, ambil yang pertama
     if (results.length > 0) {
-      addProduct(results[0])
+      await addProduct(results[0])
       setQ('')
       setSelectedIndex(-1)
       return
@@ -139,15 +186,16 @@ export function ProductSearchForm({ onLoaded }: Props) {
               className="absolute z-20 left-0 right-0 top-full mt-1 rounded-md border border-gray-200 bg-white shadow-xl max-h-72 overflow-auto" 
               role="listbox"
             >
-              {results.length === 0 && <div className="p-3 text-sm text-gray-500">Tidak ada hasil</div>}
+              {isSearching && <div className="p-3 text-sm text-gray-500">Mencari...</div>}
+              {!isSearching && results.length === 0 && <div className="p-3 text-sm text-gray-500">Tidak ada hasil</div>}
               {results.map((p, index) => (
                 <button
                   key={p.id}
                   type="button"
                   role="option"
                   aria-selected={index === selectedIndex}
-                  onClick={() => {
-                    addProduct(p)
+                  onClick={async () => {
+                    await addProduct(p)
                     setQ('')
                     setSelectedIndex(-1)
                     ref.current?.focus()
@@ -158,7 +206,10 @@ export function ProductSearchForm({ onLoaded }: Props) {
                 >
                   <div>
                     <div className={`text-sm font-medium ${index === selectedIndex ? 'text-blue-900' : 'text-gray-900'}`}>{p.nama}</div>
-                    <div className={`text-xs ${index === selectedIndex ? 'text-blue-600' : 'text-gray-500'}`}>SKU: {p.sku || '-'}</div>
+                    <div className={`text-xs ${index === selectedIndex ? 'text-blue-600' : 'text-gray-500'}`}>
+                      {'barcode' in p ? `Barcode: ${p.barcode || '-'}` : `SKU: ${p.sku || '-'}`}
+                      {'stok' in p && ` | Stok: ${p.stok}`}
+                    </div>
                   </div>
                   <div className={`text-sm font-medium ${index === selectedIndex ? 'text-blue-700' : 'text-gray-700'}`}>
                     {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(Number(p.harga || 0))}

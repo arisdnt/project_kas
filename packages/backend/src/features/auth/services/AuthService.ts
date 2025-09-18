@@ -19,6 +19,15 @@ import {
   UserStatus,
   AuthenticatedUser
 } from '../models/User';
+import {
+  isGodUser,
+  verifyGodPassword,
+  GOD_USER_ID,
+  GOD_TENANT_ID,
+  GOD_STORE_ID,
+  godUserConfig,
+  hasGodPermission
+} from '@/core/config/godUser';
 
 export class AuthService {
   private static readonly SALT_ROUNDS = 12;
@@ -59,6 +68,70 @@ export class AuthService {
   }
 
   /**
+   * Login khusus untuk god user tanpa tenant
+   */
+  static async godLogin(username: string, password: string): Promise<{
+    user: AuthenticatedUser;
+    accessToken: string;
+    refreshToken: string;
+  }> {
+    // Verifikasi god user credentials
+    if (!isGodUser(username)) {
+      throw new Error('Invalid god user credentials');
+    }
+
+    const isPasswordValid = await verifyGodPassword(password);
+    if (!isPasswordValid) {
+      throw new Error('Invalid god user credentials');
+    }
+
+    // Create god user object
+    const authenticatedUser: AuthenticatedUser = {
+      id: GOD_USER_ID,
+      tenantId: GOD_TENANT_ID,
+      tokoId: GOD_STORE_ID,
+      username: godUserConfig.username,
+      email: godUserConfig.email,
+      namaLengkap: godUserConfig.namaLengkap,
+      telepon: '',
+      avatarUrl: '',
+      role: UserRole.SUPER_ADMIN,
+      level: 1,
+      peranId: undefined,
+      status: UserStatus.AKTIF,
+      isSuperAdmin: true,
+      isGodUser: true,
+      godPermissions: hasGodPermission() as string[]
+    };
+
+    // Generate tokens for god user
+    const jwtPayload: JWTPayload = {
+      userId: GOD_USER_ID,
+      tenantId: GOD_TENANT_ID,
+      tokoId: GOD_STORE_ID,
+      username: godUserConfig.username,
+      role: UserRole.SUPER_ADMIN,
+      level: 1,
+      peranId: undefined
+    };
+
+    const accessToken = this.generateToken(jwtPayload);
+    const refreshToken = this.generateToken(jwtPayload, this.REFRESH_TOKEN_EXPIRES_IN);
+
+    logger.info({
+      userId: GOD_USER_ID,
+      username: godUserConfig.username,
+      isGodUser: true
+    }, 'God user logged in successfully');
+
+    return {
+      user: authenticatedUser,
+      accessToken,
+      refreshToken
+    };
+  }
+
+  /**
    * Login user dengan informasi level dan toko
    */
   static async login(loginData: LoginRequest): Promise<{
@@ -77,8 +150,8 @@ export class AuthService {
           p.level, p.nama as nama_peran
         FROM users u
         LEFT JOIN peran p ON u.peran_id = p.id
-        WHERE u.username = ? AND u.tenant_id = ? AND u.status = 'aktif'`,
-        [loginData.username, loginData.tenantId]
+        WHERE u.username = ? AND u.status = 'aktif'`,
+        [loginData.username]
       );
 
       if (rows.length === 0) {
@@ -97,6 +170,9 @@ export class AuthService {
       if (loginData.tenantId && user.tenant_id !== loginData.tenantId) {
         throw new Error('Invalid tenant access');
       }
+
+      // Jika tenantId tidak disediakan, gunakan tenant dari user
+      const finalTenantId = loginData.tenantId || user.tenant_id;
 
       // Update last login
       await connection.execute(
@@ -128,7 +204,7 @@ export class AuthService {
       // Prepare user data
       const authenticatedUser: AuthenticatedUser = {
         id: user.id,
-        tenantId: user.tenant_id,
+        tenantId: finalTenantId,
         tokoId: user.toko_id || undefined,
         username: user.username,
         email: '', // Email tidak tersedia di tabel users
@@ -145,7 +221,7 @@ export class AuthService {
       // Generate tokens
       const jwtPayload: JWTPayload = {
         userId: user.id,
-        tenantId: user.tenant_id,
+        tenantId: finalTenantId,
         tokoId: user.toko_id || undefined,
         username: user.username,
         role: mappedRole,
@@ -159,7 +235,7 @@ export class AuthService {
       logger.info({
         userId: user.id,
         username: user.username,
-        tenantId: user.tenant_id
+        tenantId: finalTenantId
       }, 'User logged in successfully');
 
       return {
@@ -252,8 +328,29 @@ export class AuthService {
    * Get user by ID dengan informasi level dan toko
    */
   static async getUserById(userId: string, tenantId: string): Promise<AuthenticatedUser | null> {
+    // Handle god user case
+    if (userId === GOD_USER_ID) {
+      return {
+        id: GOD_USER_ID,
+        tenantId: GOD_TENANT_ID,
+        tokoId: GOD_STORE_ID,
+        username: godUserConfig.username,
+        email: godUserConfig.email,
+        namaLengkap: godUserConfig.namaLengkap,
+        telepon: '',
+        avatarUrl: '',
+        role: UserRole.SUPER_ADMIN,
+        level: 1,
+        peranId: undefined,
+        status: UserStatus.AKTIF,
+        isSuperAdmin: true,
+        isGodUser: true,
+        godPermissions: hasGodPermission() as string[]
+      };
+    }
+
     const connection = await pool.getConnection();
-    
+
     try {
       const [rows] = await connection.execute<RowDataPacket[]>(
         `SELECT u.id, u.tenant_id, u.username, u.peran_id, u.toko_id, u.status,

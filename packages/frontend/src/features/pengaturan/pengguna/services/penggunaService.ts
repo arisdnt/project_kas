@@ -85,6 +85,34 @@ const handleResponse = async (response: Response): Promise<PenggunaResponse> => 
   const data = await response.json()
   
   if (!response.ok) {
+    // Tangani error validasi dengan lebih baik
+    if (response.status === 400 && data.errors && typeof data.errors === 'object') {
+      // Buat pesan error yang lebih user-friendly
+      const errorMessages = Object.entries(data.errors)
+        .map(([field, message]) => {
+          // Terjemahkan nama field ke bahasa Indonesia
+          const fieldTranslations: Record<string, string> = {
+            'nama': 'Nama',
+            'username': 'Username',
+            'email': 'Email',
+            'peran_id': 'Peran',
+            'tenant_id': 'Tenant',
+            'toko_id': 'Toko',
+            'password': 'Password',
+            'nama_lengkap': 'Nama Lengkap',
+            'id_peran': 'Peran',
+            'aktif': 'Status Aktif'
+          };
+          
+          const translatedField = fieldTranslations[field] || field;
+          return `${translatedField}: ${message}`;
+        })
+        .join('\n');
+      
+      throw new Error(`Validasi gagal:\n${errorMessages}`);
+    }
+    
+    // Error lainnya
     throw new Error(data.message || 'Terjadi kesalahan pada server')
   }
   

@@ -40,7 +40,7 @@ export function SalesOverviewChart({ title = 'Ringkasan Penjualan' }: SalesOverv
 
   useEffect(() => {
     const loadChartData = async () => {
-      if (!user?.tokoId) return;
+      if (!user) return;
 
       try {
         setLoading(true);
@@ -48,12 +48,10 @@ export function SalesOverviewChart({ title = 'Ringkasan Penjualan' }: SalesOverv
         // Load data for both ranges
         const [sevenDayData, thirtyDayData] = await Promise.all([
           DashboardService.getChartPenjualan({
-            tipeFilter: 'minggu_ini',
-            storeId: user.tokoId
+            tipeFilter: 'minggu_ini'
           }),
           DashboardService.getChartPenjualan({
-            tipeFilter: 'bulan_berjalan',
-            storeId: user.tokoId
+            tipeFilter: 'bulan_berjalan'
           })
         ]);
 
@@ -71,7 +69,7 @@ export function SalesOverviewChart({ title = 'Ringkasan Penjualan' }: SalesOverv
     };
 
     loadChartData();
-  }, [user?.tokoId]);
+  }, [user]);
 
   const data = chartData[range];
 
@@ -170,18 +168,17 @@ export function CategorySalesChart() {
 
   useEffect(() => {
     const loadCategoryData = async () => {
-      if (!user?.tokoId) return;
+      if (!user) return;
 
       try {
         setLoading(true);
         const data = await DashboardService.getCategoryPerformance({
-          tipeFilter: 'bulan_berjalan',
-          storeId: user.tokoId
+          tipeFilter: 'bulan_berjalan'
         });
 
         const formattedData = data.map(item => ({
           category: item.category_name,
-          value: item.quantity_sold
+          value: item.total_sold
         }));
 
         setCategoryData(formattedData);
@@ -195,7 +192,7 @@ export function CategorySalesChart() {
     };
 
     loadCategoryData();
-  }, [user?.tokoId]);
+  }, [user]);
 
   if (loading) {
     return (

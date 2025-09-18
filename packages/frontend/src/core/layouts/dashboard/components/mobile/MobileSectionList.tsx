@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import { MenuItem } from '@/core/layouts/dashboard/menuItems';
+import { useAuthStore } from '@/core/store/authStore';
 
 type Props = {
   title: string;
@@ -10,13 +11,21 @@ type Props = {
 };
 
 export function MobileSectionList({ title, titleIcon, items, pathname, onClose }: Props) {
+  const { user } = useAuthStore();
+  const isGodUser = user?.isGodUser || user?.level === 1;
+
+  // Filter items for pengaturan menu - hide "Manajemen Tenan" from non-god users
+  const filteredItems = title === 'Pengaturan'
+    ? items.filter(item => item.name !== 'Manajemen Tenan' || isGodUser)
+    : items;
+
   return (
     <div className="border-t border-gray-100 pt-2 mt-2">
       <div className="flex items-center space-x-3 px-4 py-2 text-gray-500 text-sm font-medium">
         {titleIcon}
         <span>{title}</span>
       </div>
-      {items.map((item) => {
+      {filteredItems.map((item) => {
         const Icon = item.icon;
         const isActive = pathname === item.href;
         return (

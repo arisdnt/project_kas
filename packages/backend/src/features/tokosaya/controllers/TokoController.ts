@@ -35,7 +35,6 @@ export class TokoController {
    */
   static async getTokoSaya(req: AuthenticatedRequest, res: Response): Promise<void> {
     try {
-      // Validasi autentikasi user
       if (!req.user || !req.user.id) {
         res.status(401).json(createErrorResponse(
           'User tidak terautentikasi',
@@ -44,7 +43,33 @@ export class TokoController {
         return;
       }
 
-      // Validasi access scope
+      // GOD USER BYPASS: jika god user, izinkan ambil semua toko tanpa validateUserAccess strict
+      if (req.user.isGodUser) {
+        try {
+          // Jika tenantId tersedia pada accessScope gunakan filter tenant itu; jika tidak, ambil semua (service harus mendukung)
+          let tokoList: Toko[] = []
+          if (req.accessScope?.tenantId) {
+            tokoList = await TokoService.getTokoByTenantId(req.accessScope.tenantId, {})
+          } else {
+            // Fallback: coba service khusus (jika tidak ada akan tangkap error)
+            if ((TokoService as any).getAllToko) {
+              tokoList = await (TokoService as any).getAllToko()
+            } else {
+              // tanpa tenantId kita tidak bisa lanjutkan; kembalikan array kosong agar frontend bisa lakukan pemilihan manual
+              tokoList = []
+            }
+          }
+          res.status(200).json(createSuccessResponse(
+            tokoList,
+            'Data toko (god bypass) berhasil diambil'
+          ))
+          return
+        } catch (inner) {
+          console.error('God bypass gagal, lanjutkan ke alur normal:', inner)
+          // lanjut ke alur normal di bawah
+        }
+      }
+
       if (!req.accessScope || !req.accessScope.tenantId) {
         res.status(401).json(createErrorResponse(
           'Access scope tidak valid',
@@ -56,7 +81,6 @@ export class TokoController {
       const tenantId = req.accessScope.tenantId;
       const userId = req.user.id;
 
-      // Validasi akses user ke tenant
       const hasAccess = await TokoService.validateUserAccess(userId, tenantId);
       if (!hasAccess) {
         res.status(403).json(createErrorResponse(
@@ -66,25 +90,19 @@ export class TokoController {
         return;
       }
 
-      // Ambil filter dari query parameters
       const filter: TokoFilter = {};
-      
       if (req.query.status && typeof req.query.status === 'string') {
         filter.status = req.query.status as any;
       }
-      
       if (req.query.nama && typeof req.query.nama === 'string') {
         filter.nama = req.query.nama;
       }
-      
       if (req.query.kode && typeof req.query.kode === 'string') {
         filter.kode = req.query.kode;
       }
 
-      // Ambil data toko dari service
       const tokoList = await TokoService.getTokoByTenantId(tenantId, filter);
 
-      // Return response sukses
       res.status(200).json(createSuccessResponse(
         tokoList,
         'Data toko berhasil diambil'
@@ -92,8 +110,6 @@ export class TokoController {
 
     } catch (error) {
       console.error('Error dalam TokoController.getTokoSaya:', error);
-      
-      // Return response error
       res.status(500).json(createErrorResponse(
         'Terjadi kesalahan saat mengambil data toko',
         error instanceof Error ? error.message : 'Internal server error'

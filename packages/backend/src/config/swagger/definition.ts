@@ -15,7 +15,7 @@ export const swaggerDefinition: swaggerJSDoc.OAS3Definition = {
   },
   servers: [
     {
-      url: 'http://localhost:3000/api',
+      url: 'http://localhost:3000',
       description: 'Development API Server'
     }
   ],

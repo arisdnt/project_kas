@@ -2,12 +2,15 @@ import { useState } from 'react'
 import { Card, CardContent } from '@/core/components/ui/card'
 import { Button } from '@/core/components/ui/button'
 import { PaymentModal } from './PaymentModal'
+import { PaymentInvoiceModal, type PaymentInvoiceData } from './PaymentInvoiceModal'
 import { useKasirStore, useKasirTotals } from '@/features/kasir/store/kasirStore'
 import { CreditCard, Store } from 'lucide-react'
 import { config } from '@/core/config'
 
 export function PaymentSummary() {
   const [showPaymentModal, setShowPaymentModal] = useState(false)
+  const [showInvoiceModal, setShowInvoiceModal] = useState(false)
+  const [invoiceData, setInvoiceData] = useState<PaymentInvoiceData | null>(null)
 
   const items = useKasirStore((s) => s.items)
   const clear = useKasirStore((s) => s.clear)
@@ -22,9 +25,18 @@ export function PaymentSummary() {
     }).format(amount)
   }
 
-  const handlePaymentSuccess = () => {
-    clear()
+  const handlePaymentSuccess = (invoice: PaymentInvoiceData) => {
+    setInvoiceData(invoice)
     setShowPaymentModal(false)
+    setShowInvoiceModal(true)
+    clear()
+  }
+
+  const handleInvoiceOpenChange = (open: boolean) => {
+    setShowInvoiceModal(open)
+    if (!open) {
+      setInvoiceData(null)
+    }
   }
 
   return (
@@ -147,6 +159,12 @@ export function PaymentSummary() {
         onOpenChange={setShowPaymentModal}
         onSuccess={handlePaymentSuccess}
       />
+      <PaymentInvoiceModal
+        open={showInvoiceModal}
+        onOpenChange={handleInvoiceOpenChange}
+        data={invoiceData}
+      />
     </>
   )
 }
+

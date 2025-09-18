@@ -11,7 +11,7 @@ const sendSwaggerJson = (req: Request, res: Response) => {
   const document = JSON.parse(JSON.stringify(spec));
   document.servers = [
     {
-      url: `${req.protocol}://${req.get('host')}/api`,
+      url: `${req.protocol}://${req.get('host')}`,
       description: 'Runtime environment'
     }
   ];
@@ -35,7 +35,7 @@ export const registerSwagger = (app: Express) => {
     const document = JSON.parse(JSON.stringify(spec));
     document.servers = [
       {
-        url: `${req.protocol}://${req.get('host')}/api`,
+        url: `${req.protocol}://${req.get('host')}`,
         description: 'Runtime environment'
       }
     ];

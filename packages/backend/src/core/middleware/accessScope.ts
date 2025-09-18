@@ -6,6 +6,7 @@
 
 import { NextFunction, Request, Response } from 'express';
 import { AuthenticatedUser, UserRole } from '@/features/auth/models/User';
+import { GOD_TENANT_ID, GOD_STORE_ID } from '@/core/config/godUser';
 
 export interface AccessScope {
   tenantId: string;
@@ -72,6 +73,11 @@ export function scopeWhereClause(scope: AccessScope, options: ScopeSqlOptions = 
 
   const tenantCol = options.tenantColumn || 'tenant_id';
   const storeCol = options.storeColumn || 'toko_id';
+
+  // God user melewati semua filter tenant dan store
+  if (scope.isGod) {
+    return { clause: '', params: [] };
+  }
 
   if (scope.enforceTenant) {
     clauses.push(`${tenantCol} = ?`);

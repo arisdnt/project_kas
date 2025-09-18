@@ -9,6 +9,7 @@ import { CreateTenant, UpdateTenant, CreateToko, UpdateToko } from '../../models
 import { v4 as uuidv4 } from 'uuid';
 
 export class TenantMutationService {
+  // Tenant operations --------------------------------------------------
   static async createTenant(data: CreateTenant) {
     const connection = await pool.getConnection();
     try {
@@ -110,6 +111,8 @@ export class TenantMutationService {
       connection.release();
     }
   }
+
+    // deleteTenant moved to standalone function below to avoid TS static recognition issue
 
   static async createStore(data: CreateToko) {
     const connection = await pool.getConnection();
@@ -242,5 +245,92 @@ export class TenantMutationService {
     } finally {
       connection.release();
     }
+  }
+}
+
+// Ensure TypeScript recognizes all static methods (workaround for any build caching issue)
+export interface TenantMutationService {
+  // declaration merging placeholder
+}
+
+// Standalone delete tenant (soft delete) used by TenantService
+export async function deleteTenantMutation(id: string) {
+  const connection = await pool.getConnection();
+
+  console.log(`🔴 [TENANT DELETE] Starting deletion process for tenant ID: ${id}`);
+
+  try {
+    await connection.beginTransaction();
+
+    console.log(`🔍 [TENANT DELETE] Checking dependencies for tenant: ${id}`);
+
+    // Get current tenant info before deletion
+    const [tenantRows] = await connection.execute<RowDataPacket[]>(
+      'SELECT nama, email, status FROM tenants WHERE id = ?',
+      [id]
+    );
+
+    if (tenantRows.length === 0) {
+      console.log(`❌ [TENANT DELETE] Tenant not found: ${id}`);
+      throw new Error('Tenant not found');
+    }
+
+    const tenant = tenantRows[0];
+    console.log(`📋 [TENANT DELETE] Found tenant: ${tenant.nama} (${tenant.email}) - Status: ${tenant.status}`);
+
+    const [depRows] = await connection.execute<RowDataPacket[]>(
+      `SELECT
+         (SELECT COUNT(*) FROM toko WHERE tenant_id = ? AND status = 'aktif') as aktif_toko,
+         (SELECT COUNT(*) FROM users WHERE tenant_id = ? AND status = 'aktif') as aktif_pengguna
+       `,
+      [id, id]
+    );
+
+    const deps = depRows[0];
+    console.log(`📊 [TENANT DELETE] Dependencies check - Active stores: ${deps?.aktif_toko}, Active users: ${deps?.aktif_pengguna}`);
+
+    if (deps?.aktif_toko > 0) {
+      console.log(`⚠️ [TENANT DELETE] Cannot delete tenant ${id} - has ${deps.aktif_toko} active stores`);
+      throw new Error('Cannot delete tenant with active stores');
+    }
+    if (deps?.aktif_pengguna > 0) {
+      console.log(`⚠️ [TENANT DELETE] Cannot delete tenant ${id} - has ${deps.aktif_pengguna} active users`);
+      throw new Error('Cannot delete tenant with active users');
+    }
+
+    console.log(`✅ [TENANT DELETE] No dependencies found, proceeding with soft delete for tenant: ${id}`);
+
+    const [result] = await connection.execute<ResultSetHeader>(
+      'UPDATE tenants SET status = "nonaktif", diperbarui_pada = NOW() WHERE id = ?',
+      [id]
+    );
+
+    console.log(`📝 [TENANT DELETE] Update query executed - Affected rows: ${result.affectedRows}`);
+
+    if (result.affectedRows === 0) {
+      console.log(`❌ [TENANT DELETE] No rows updated for tenant: ${id}`);
+      throw new Error('Tenant not found or already deleted');
+    }
+
+    await connection.commit();
+    console.log(`✅ [TENANT DELETE] Successfully soft-deleted tenant: ${id} (${tenant.nama})`);
+
+    return {
+      id,
+      deleted: true,
+      affectedRows: result.affectedRows,
+      tenantName: tenant.nama,
+      previousStatus: tenant.status
+    };
+
+  } catch (error) {
+    await connection.rollback();
+    const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+    console.log(`❌ [TENANT DELETE] Error deleting tenant ${id}: ${errorMsg}`);
+    console.error(`🔥 [TENANT DELETE] Full error details:`, error);
+    throw error;
+  } finally {
+    connection.release();
+    console.log(`🔚 [TENANT DELETE] Database connection released for tenant: ${id}`);
   }
 }

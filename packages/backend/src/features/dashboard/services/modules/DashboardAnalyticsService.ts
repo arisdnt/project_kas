@@ -63,22 +63,13 @@ export class DashboardAnalyticsService {
     const [inventoryRows] = await pool.execute<RowDataPacket[]>(scopedInventoryQuery.sql, scopedInventoryQuery.params);
     const inventoryData = inventoryRows[0];
 
+    // Return format that matches apidashboard.json specification
     return {
-      sales: {
-        total_transactions: Number(salesData?.total_transactions || 0),
-        total_sales: Number(salesData?.total_sales || 0),
-        average_order_value: Number(salesData?.average_order_value || 0),
-        unique_customers: Number(salesData?.unique_customers || 0)
-      },
-      products: {
-        total_products: Number(productData?.total_products || 0),
-        active_products: Number(productData?.active_products || 0),
-        total_categories: Number(productData?.total_categories || 0)
-      },
-      inventory: {
-        total_stock: Number(inventoryData?.total_stock || 0),
-        low_stock_items: Number(inventoryData?.low_stock_items || 0)
-      }
+      total_sales: Number(salesData?.total_sales || 0),
+      total_transactions: Number(salesData?.total_transactions || 0),
+      total_customers: Number(salesData?.unique_customers || 0),
+      average_transaction: Number(salesData?.average_order_value || 0),
+      growth_rate: 0 // Calculate growth rate in a separate query if needed
     };
   }
 
@@ -125,11 +116,11 @@ export class DashboardAnalyticsService {
   const finalSql = `${scopedQuery.sql} GROUP BY period ORDER BY period ASC`;
     const [rows] = await pool.execute<RowDataPacket[]>(finalSql, scopedQuery.params);
 
+    // Return format that matches apidashboard.json specification
     return rows.map(row => ({
       date: row.period,
-      label: row.label,
-      transaction_count: Number(row.transaction_count),
-      total_sales: Number(row.total_sales)
+      sales: Number(row.total_sales),
+      transactions: Number(row.transaction_count)
     }));
   }
 
@@ -137,12 +128,13 @@ export class DashboardAnalyticsService {
     const sql = `
       SELECT
         p.id, p.nama, p.kode,
-        SUM(itp.kuantitas) as quantity_sold,
-        COALESCE(SUM(itp.subtotal), 0) as revenue,
-        COUNT(DISTINCT tp.id) as order_count
+        COALESCE(k.nama, 'Uncategorized') as category_name,
+        SUM(itp.kuantitas) as total_sold,
+        COALESCE(SUM(itp.subtotal), 0) as total_revenue
       FROM item_transaksi_penjualan itp
       JOIN transaksi_penjualan tp ON itp.transaksi_penjualan_id = tp.id
       JOIN produk p ON itp.produk_id = p.id
+      LEFT JOIN kategori k ON p.kategori_id = k.id
       WHERE tp.status = 'completed' AND DATE(tp.tanggal) BETWEEN ? AND ?
     `;
 
@@ -151,16 +143,16 @@ export class DashboardAnalyticsService {
       storeColumn: 'tp.toko_id'
     });
 
-    const finalSql = `${scopedQuery.sql} GROUP BY p.id ORDER BY quantity_sold DESC LIMIT ${limit}`;
+    const finalSql = `${scopedQuery.sql} GROUP BY p.id ORDER BY total_sold DESC LIMIT ${limit}`;
     const [rows] = await pool.execute<RowDataPacket[]>(finalSql, scopedQuery.params);
 
+    // Return format that matches apidashboard.json specification
     return rows.map(row => ({
       product_id: row.id,
       product_name: row.nama,
-      product_code: row.kode,
-      quantity_sold: Number(row.quantity_sold),
-      revenue: Number(row.revenue),
-      order_count: Number(row.order_count)
+      total_sold: Number(row.total_sold),
+      total_revenue: Number(row.total_revenue),
+      category: row.category_name || 'Uncategorized'
     }));
   }
 
@@ -247,12 +239,14 @@ export class DashboardAnalyticsService {
     const finalSql = `${scopedQuery.sql} GROUP BY k.id ORDER BY revenue DESC`;
     const [rows] = await pool.execute<RowDataPacket[]>(finalSql, scopedQuery.params);
 
+    // Return format that matches apidashboard.json specification
     return rows.map(row => ({
       category_id: row.id,
       category_name: row.kategori_nama,
-      product_count: Number(row.product_count),
-      quantity_sold: Number(row.quantity_sold),
-      revenue: Number(row.revenue)
+      total_products: Number(row.product_count),
+      total_sold: Number(row.quantity_sold),
+      total_revenue: Number(row.revenue),
+      growth_rate: 0 // Calculate growth rate in a separate query if needed
     }));
   }
 }

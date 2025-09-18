@@ -36,7 +36,7 @@ export class TokoApiService {
         totalPages: number
         limit: number
       }
-    }>(`/stores?${queryParams.toString()}`)
+    }>(`/toko?${queryParams.toString()}`)
 
     return response
   }
@@ -45,7 +45,7 @@ export class TokoApiService {
     const response = await api.get<{
       success: boolean
       data: Toko[]
-    }>('/stores/active')
+    }>('/toko/active')
     return response.data
   }
 
@@ -53,7 +53,7 @@ export class TokoApiService {
     const response = await api.get<{
       success: boolean
       data: Toko
-    }>(`/stores/${id}`)
+    }>(`/toko/${id}`)
     return response.data
   }
 
@@ -61,7 +61,7 @@ export class TokoApiService {
     const response = await api.get<{
       success: boolean
       data: Toko
-    }>(`/stores/code/${kode}`)
+    }>(`/toko/code/${kode}`)
     return response.data
   }
 
@@ -74,7 +74,7 @@ export class TokoApiService {
         operatingHours: TokoOperatingHours[]
         stats: TokoStats
       }
-    }>(`/stores/${id}/full-info`)
+    }>(`/toko/${id}/full-info`)
     return response.data
   }
 
@@ -82,7 +82,7 @@ export class TokoApiService {
     const response = await api.post<{
       success: boolean
       data: Toko
-    }>('/stores', data)
+    }>('/toko', data)
     return response.data
   }
 
@@ -90,7 +90,7 @@ export class TokoApiService {
     const response = await api.put<{
       success: boolean
       data: Toko
-    }>(`/stores/${id}`, data)
+    }>(`/toko/${id}`, data)
     return response.data
   }
 
@@ -98,7 +98,7 @@ export class TokoApiService {
     const response = await api.delete<{
       success: boolean
       data: { affected: number }
-    }>(`/stores/${id}`)
+    }>(`/toko/${id}`)
     return response.data
   }
 
@@ -107,7 +107,7 @@ export class TokoApiService {
     const response = await api.get<{
       success: boolean
       data: TokoConfig[]
-    }>(`/stores/${id}/configs`)
+    }>(`/toko/${id}/configs`)
     return response.data
   }
 
@@ -115,7 +115,7 @@ export class TokoApiService {
     const response = await api.get<{
       success: boolean
       data: TokoConfig
-    }>(`/stores/${id}/configs/${key}`)
+    }>(`/toko/${id}/configs/${key}`)
     return response.data
   }
 
@@ -123,7 +123,7 @@ export class TokoApiService {
     const response = await api.post<{
       success: boolean
       data: TokoConfig
-    }>(`/stores/${id}/configs`, data)
+    }>(`/toko/${id}/configs`, data)
     return response.data
   }
 
@@ -131,7 +131,7 @@ export class TokoApiService {
     const response = await api.put<{
       success: boolean
       data: TokoConfig
-    }>(`/stores/${id}/configs/${key}`, data)
+    }>(`/toko/${id}/configs/${key}`, data)
     return response.data
   }
 
@@ -139,7 +139,7 @@ export class TokoApiService {
     const response = await api.delete<{
       success: boolean
       data: { affected: number }
-    }>(`/stores/${id}/configs/${key}`)
+    }>(`/toko/${id}/configs/${key}`)
     return response.data
   }
 
@@ -148,7 +148,7 @@ export class TokoApiService {
     const response = await api.get<{
       success: boolean
       data: TokoOperatingHours[]
-    }>(`/stores/${id}/operating-hours`)
+    }>(`/toko/${id}/operating-hours`)
     return response.data
   }
 
@@ -156,7 +156,7 @@ export class TokoApiService {
     const response = await api.put<{
       success: boolean
       data: TokoOperatingHours[]
-    }>(`/stores/${id}/operating-hours`, data)
+    }>(`/toko/${id}/operating-hours`, data)
     return response.data
   }
 
@@ -165,7 +165,7 @@ export class TokoApiService {
     const response = await api.get<{
       success: boolean
       data: TokoStats
-    }>(`/stores/${id}/stats`)
+    }>(`/toko/${id}/stats`)
     return response.data
   }
 }

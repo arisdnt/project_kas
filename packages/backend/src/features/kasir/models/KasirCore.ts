@@ -234,11 +234,21 @@ export const SetDiskonSchema = z.object({
 });
 
 /**
- * Schema validasi untuk pembayaran
+ * Schema validasi untuk pembayaran transaksi
  */
 export const PembayaranSchema = z.object({
   metode_bayar: z.enum(['tunai', 'transfer', 'kartu', 'kredit', 'poin']),
   jumlah_bayar: z.number().min(0, 'Jumlah bayar tidak boleh negatif'),
+  cart_items: z.array(z.object({
+    produk_id: z.string().uuid('ID produk harus berformat UUID yang valid'),
+    kuantitas: z.number().int().min(1, 'Kuantitas minimal 1'),
+    harga_satuan: z.number().min(0, 'Harga satuan tidak boleh negatif'),
+    diskon_persen: z.number().min(0).max(100).optional(),
+    diskon_nominal: z.number().min(0).optional()
+  })).min(1, 'Cart items tidak boleh kosong'),
+  pelanggan_id: z.string().uuid().optional(),
+  diskon_persen: z.number().min(0).max(100).optional(),
+  diskon_nominal: z.number().min(0).optional(),
   catatan: z.string().max(500).optional()
 });
 
@@ -246,14 +256,15 @@ export const PembayaranSchema = z.object({
  * Schema validasi untuk pencarian produk
  */
 export const SearchProdukSchema = z.object({
+  q: z.string().min(1, 'Query pencarian minimal 1 karakter').optional(),
   query: z.string().min(1, 'Query pencarian minimal 1 karakter').optional(),
   kategori_id: z.string().uuid().optional(),
   brand_id: z.string().uuid().optional(),
   barcode: z.string().optional(),
-  stok_minimum: z.boolean().optional(),
-  aktif_only: z.boolean().default(true),
-  limit: z.number().int().min(1).max(100).default(20),
-  offset: z.number().int().min(0).default(0)
+  stok_minimum: z.string().transform(val => val === 'true').optional(),
+  aktif_only: z.string().transform(val => val !== 'false').default('true'),
+  limit: z.string().transform(val => parseInt(val) || 20).pipe(z.number().int().min(1).max(100)).default('20'),
+  offset: z.string().transform(val => parseInt(val) || 0).pipe(z.number().int().min(0)).default('0')
 });
 
 /**

@@ -23,41 +23,8 @@ export function DashboardPage() {
 
   // Fungsi untuk memuat data dashboard
   const loadDashboardData = useCallback(async () => {
-     // Untuk user god (super admin), tidak perlu tokoId karena bisa akses semua data
-     if (user?.isSuperAdmin || user?.role === 'super_admin') {
-       setLoading(true);
-       setError(null);
-
-       try {
-         const filterData: FilterPeriode = {
-           tipeFilter: filter,
-           limit: 10,
-           // Untuk god user, tidak perlu storeId karena bisa akses semua toko
-           storeId: undefined
-         };
-
-         // Ambil data KPI, transaksi terbaru, dan produk terlaris secara paralel
-         const [kpiResponse, transaksiResponse, produkResponse] = await Promise.all([
-           DashboardService.getKPI(filterData),
-           DashboardService.getTransaksiTerbaru(filterData),
-           DashboardService.getProdukTerlaris(filterData)
-         ]);
-
-         setKpiData(kpiResponse);
-         setTransaksiTerbaru(transaksiResponse);
-         setProdukTerlaris(produkResponse);
-       } catch (err) {
-         console.error('Error loading dashboard data for god user:', err);
-         setError('Gagal memuat data dashboard');
-       } finally {
-         setLoading(false);
-       }
-       return;
-     }
-
-     // Untuk user biasa, pastikan memiliki tokoId
-     if (!user?.tokoId) {
-       setError('Data toko tidak tersedia. Silakan login ulang.');
+     if (!user) {
+       setError('User tidak tersedia. Silakan login ulang.');
        return;
      }
 
@@ -67,8 +34,7 @@ export function DashboardPage() {
      try {
        const filterData: FilterPeriode = {
          tipeFilter: filter,
-         limit: 10,
-         storeId: user.tokoId // ID toko dari auth store
+         limit: 10
        };
 
       // Ambil data KPI, transaksi terbaru, dan produk terlaris secara paralel
@@ -87,18 +53,18 @@ export function DashboardPage() {
     } finally {
       setLoading(false);
     }
-  }, [filter, user?.tokoId, user?.isSuperAdmin, user?.role]);
+  }, [filter, user]);
 
   // Hook untuk menangani refresh data
   useDataRefresh(loadDashboardData);
 
   // Load data saat komponen mount, filter berubah, atau user berubah
   useEffect(() => {
-    // Load data jika user adalah god/super admin atau memiliki tokoId
-    if (user && (user.isSuperAdmin || user.role === 'super_admin' || user.tokoId)) {
+    // Load data jika user sudah login
+    if (user) {
       loadDashboardData();
     }
-  }, [loadDashboardData, user?.tokoId, user?.isSuperAdmin, user?.role]);
+  }, [loadDashboardData, user]);
 
   // Format currency untuk tampilan
   const formatCurrency = (amount: number): string => {

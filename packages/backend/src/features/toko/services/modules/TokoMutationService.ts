@@ -57,11 +57,13 @@ export class TokoMutationService {
 
   static async update(scope: AccessScope, id: string, data: UpdateToko) {
     // Check if store exists and user has access
+    const tenantFilter = scope.enforceTenant ? ' AND tenant_id = ?' : '';
     const checkSql = `
       SELECT id FROM toko
-      WHERE id = ? AND tenant_id = ?
+      WHERE id = ?${tenantFilter}
     `;
-    const [checkRows] = await pool.execute<RowDataPacket[]>(checkSql, [id, scope.tenantId]);
+    const checkParams = scope.enforceTenant ? [id, scope.tenantId] : [id];
+    const [checkRows] = await pool.execute<RowDataPacket[]>(checkSql, checkParams);
 
     if (checkRows.length === 0) {
       throw new Error('Store not found or access denied');
@@ -69,10 +71,10 @@ export class TokoMutationService {
 
     // Check if code already exists (if updating code)
     if (data.kode) {
-      const [existingRows] = await pool.execute<RowDataPacket[]>(
-        'SELECT id FROM toko WHERE kode = ? AND tenant_id = ? AND id != ?',
-        [data.kode, scope.tenantId, id]
-      );
+      const codeTenantFilter = scope.enforceTenant ? ' AND tenant_id = ?' : '';
+      const codeSql = `SELECT id FROM toko WHERE kode = ?${codeTenantFilter} AND id != ?`;
+      const codeParams = scope.enforceTenant ? [data.kode, scope.tenantId, id] : [data.kode, id];
+      const [existingRows] = await pool.execute<RowDataPacket[]>(codeSql, codeParams);
 
       if (existingRows.length > 0) {
         throw new Error('Store code already exists');
@@ -166,10 +168,10 @@ export class TokoMutationService {
 
   static async setConfig(scope: AccessScope, tokoId: string, data: CreateTokoConfig) {
     // Verify store access
-    const [storeRows] = await pool.execute<RowDataPacket[]>(
-      'SELECT id FROM toko WHERE id = ? AND tenant_id = ?',
-      [tokoId, scope.tenantId]
-    );
+    const tenantFilter = scope.enforceTenant ? ' AND tenant_id = ?' : '';
+    const storeSql = `SELECT id FROM toko WHERE id = ?${tenantFilter}`;
+    const storeParams = scope.enforceTenant ? [tokoId, scope.tenantId] : [tokoId];
+    const [storeRows] = await pool.execute<RowDataPacket[]>(storeSql, storeParams);
 
     if (storeRows.length === 0) {
       throw new Error('Store not found or access denied');
@@ -215,12 +217,12 @@ export class TokoMutationService {
 
   static async updateConfig(scope: AccessScope, tokoId: string, key: string, data: UpdateTokoConfig) {
     // Verify store access and config exists
-    const [configRows] = await pool.execute<RowDataPacket[]>(
-      `SELECT tc.id FROM toko_config tc
+    const tenantJoin = scope.enforceTenant ? ' AND t.tenant_id = ?' : '';
+    const configSql = `SELECT tc.id FROM toko_config tc
        JOIN toko t ON tc.toko_id = t.id
-       WHERE tc.toko_id = ? AND tc.key = ? AND t.tenant_id = ?`,
-      [tokoId, key, scope.tenantId]
-    );
+       WHERE tc.toko_id = ? AND tc.key = ?${tenantJoin}`;
+    const configParams = scope.enforceTenant ? [tokoId, key, scope.tenantId] : [tokoId, key];
+    const [configRows] = await pool.execute<RowDataPacket[]>(configSql, configParams);
 
     if (configRows.length === 0) {
       throw new Error('Store configuration not found or access denied');
@@ -245,12 +247,12 @@ export class TokoMutationService {
 
   static async deleteConfig(scope: AccessScope, tokoId: string, key: string) {
     // Verify store access and config exists
-    const [configRows] = await pool.execute<RowDataPacket[]>(
-      `SELECT tc.id FROM toko_config tc
+    const tenantJoin = scope.enforceTenant ? ' AND t.tenant_id = ?' : '';
+    const configSql = `SELECT tc.id FROM toko_config tc
        JOIN toko t ON tc.toko_id = t.id
-       WHERE tc.toko_id = ? AND tc.key = ? AND t.tenant_id = ?`,
-      [tokoId, key, scope.tenantId]
-    );
+       WHERE tc.toko_id = ? AND tc.key = ?${tenantJoin}`;
+    const configParams = scope.enforceTenant ? [tokoId, key, scope.tenantId] : [tokoId, key];
+    const [configRows] = await pool.execute<RowDataPacket[]>(configSql, configParams);
 
     if (configRows.length === 0) {
       throw new Error('Store configuration not found or access denied');
@@ -262,10 +264,10 @@ export class TokoMutationService {
 
   static async updateOperatingHours(scope: AccessScope, tokoId: string, data: BulkUpdateOperatingHours) {
     // Verify store access
-    const [storeRows] = await pool.execute<RowDataPacket[]>(
-      'SELECT id FROM toko WHERE id = ? AND tenant_id = ?',
-      [tokoId, scope.tenantId]
-    );
+    const tenantFilter = scope.enforceTenant ? ' AND tenant_id = ?' : '';
+    const storeSql = `SELECT id FROM toko WHERE id = ?${tenantFilter}`;
+    const storeParams = scope.enforceTenant ? [tokoId, scope.tenantId] : [tokoId];
+    const [storeRows] = await pool.execute<RowDataPacket[]>(storeSql, storeParams);
 
     if (storeRows.length === 0) {
       throw new Error('Store not found or access denied');

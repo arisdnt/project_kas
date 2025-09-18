@@ -16,6 +16,16 @@ export class TenantQueryService {
     let baseWhere = '';
     const baseParams: any[] = [];
 
+    // Default: hanya tampilkan tenant aktif, kecuali jika status spesifik diminta
+    if (query.status) {
+      baseWhere += (baseWhere ? ' AND ' : ' WHERE ') + 't.status = ?';
+      baseParams.push(query.status);
+    } else {
+      // Default: hanya tenant aktif
+      baseWhere += (baseWhere ? ' AND ' : ' WHERE ') + 't.status = ?';
+      baseParams.push('aktif');
+    }
+
     // Text search
     if (query.search) {
       baseWhere += (baseWhere ? ' AND ' : ' WHERE ') +
@@ -24,22 +34,27 @@ export class TenantQueryService {
       baseParams.push(like, like, like);
     }
 
-    // Status filter
-    if (query.status) {
-      baseWhere += (baseWhere ? ' AND ' : ' WHERE ') + 't.status = ?';
-      baseParams.push(query.status);
-    }
-
     // Package filter
     if (query.paket) {
       baseWhere += (baseWhere ? ' AND ' : ' WHERE ') + 't.paket = ?';
       baseParams.push(query.paket);
     }
 
+    console.log(`🔍 [TENANT QUERY] Search params:`, {
+      page, limit, offset,
+      search: query.search,
+      status: query.status,
+      paket: query.paket
+    });
+    console.log(`📝 [TENANT QUERY] WHERE clause: ${baseWhere}`);
+    console.log(`📋 [TENANT QUERY] Parameters:`, baseParams);
+
     // Count query
     const countSql = `SELECT COUNT(*) as total FROM tenants t ${baseWhere}`;
     const [countRows] = await pool.execute<RowDataPacket[]>(countSql, baseParams);
     const total = Number(countRows[0]?.total || 0);
+
+    console.log(`📊 [TENANT QUERY] Total count: ${total}`);
 
     // Data query with store counts
     const dataSql = `
@@ -56,7 +71,9 @@ export class TenantQueryService {
       LIMIT ${limit} OFFSET ${offset}
     `;
 
+    console.log(`🗃️ [TENANT QUERY] Executing data query...`);
     const [rows] = await pool.execute<RowDataPacket[]>(dataSql, baseParams);
+    console.log(`✅ [TENANT QUERY] Found ${rows.length} tenants`);
 
     return {
       data: rows as any[],

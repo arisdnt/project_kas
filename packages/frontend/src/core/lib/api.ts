@@ -21,10 +21,32 @@ class ApiClient {
       const contentType = response.headers.get('content-type');
       if (contentType && contentType.includes('application/json')) {
         const errorData = await response.json();
-        throw new Error(errorData.message || `HTTP ${response.status}: ${response.statusText}`);
+        
+        // Jika ada field errors dari validasi backend, buat error yang lebih informatif
+        if (errorData.errors && typeof errorData.errors === 'object') {
+          const validationErrors = Object.entries(errorData.errors)
+            .map(([field, message]) => `${field}: ${message}`)
+            .join(', ');
+          
+          const error = new Error(errorData.message || `Validasi gagal: ${validationErrors}`);
+          // Tambahkan informasi tambahan untuk debugging
+          (error as any).status = response.status;
+          (error as any).errors = errorData.errors;
+          (error as any).originalMessage = errorData.message;
+          throw error;
+        }
+        
+        // Error biasa tanpa field validasi
+        const error = new Error(errorData.message || `HTTP ${response.status}: ${response.statusText}`);
+        (error as any).status = response.status;
+        (error as any).originalData = errorData;
+        throw error;
       } else {
         const text = await response.text();
-        throw new Error(`Server returned non-JSON response: ${response.status} ${response.statusText}`);
+        const error = new Error(`Server returned non-JSON response: ${response.status} ${response.statusText}`);
+        (error as any).status = response.status;
+        (error as any).responseText = text;
+        throw error;
       }
     }
 

@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import { devtools } from 'zustand/middleware'
 import { useProdukStore, UIProduk } from '@/features/produk/store/produkStore'
 import { config } from '@/core/config'
+import { kasirService, KasirSession, ProdukKasir } from '@/features/kasir/services/kasirService'
 
 // Generate consistent session ID that persists during the session
 const generateSessionId = () => {
@@ -14,7 +15,7 @@ const generateSessionId = () => {
 }
 
 // Generate unique invoice number with simplified format
-const generateInvoiceNumber = (sessionId: string) => {
+const generateInvoiceNumber = (_sessionId?: string) => {
   const now = new Date()
 
   // Date components
@@ -35,47 +36,71 @@ const generateInvoiceNumber = (sessionId: string) => {
 }
 
 export type CartItem = {
-  id: number
+  id: string
   nama: string
   sku?: string
   harga: number
   qty: number
 }
 
+export type CartItemLocal = {
+  id: number | string
+  nama: string
+  sku?: string
+  harga: number
+  qty: number
+  _rawId?: string // original produk_id (UUID) for payment payload
+}
+
 type KasirState = {
-  items: CartItem[]
+  items: CartItemLocal[]
   taxRate: number
   bayar: number
   metode: 'TUNAI' | 'KARTU' | 'QRIS' | 'TRANSFER' | 'EWALLET'
-  pelanggan?: { id: number; nama?: string | null } | null
+  pelanggan?: { id: string; nama?: string | null } | null
   discountType: 'nominal' | 'percent'
   discountValue: number
   invoiceNumber: string
   sessionId: string
+  kasirSession: KasirSession | null
+  isLoading: boolean
+  summary: {
+    total_transaksi: number
+    total_penjualan: number
+    rata_rata_transaksi: number
+  } | null
+  needsStore: boolean
 }
 
 type KasirActions = {
   clear: () => void
-  addProduct: (p: UIProduk) => void
-  addByBarcode: (kode: string) => void
-  inc: (id: number) => void
-  dec: (id: number) => void
-  setQty: (id: number, qty: number) => void
-  remove: (id: number) => void
+  addProduct: (p: UIProduk | ProdukKasir) => Promise<void>
+  addByBarcode: (kode: string) => Promise<void>
+  inc: (id: number) => Promise<void>
+  dec: (id: number) => Promise<void>
+  setQty: (id: number, qty: number) => Promise<void>
+  remove: (id: number) => Promise<void>
   setBayar: (v: number) => void
   setMetode: (m: KasirState['metode']) => void
-  setPelanggan: (p: KasirState['pelanggan']) => void
+  setPelanggan: (p: KasirState['pelanggan']) => Promise<void>
   setDiscountType: (t: KasirState['discountType']) => void
   setDiscountValue: (v: number) => void
   generateNewInvoice: () => void
   loadDraftState: (state: {
-    items: CartItem[]
+    items: CartItemLocal[]
     pelanggan?: KasirState['pelanggan']
     metode: KasirState['metode']
     bayar: number
     discountType: KasirState['discountType']
     discountValue: number
   }) => void
+  initSession: () => Promise<void>
+  refreshSession: () => Promise<void>
+  loadSummary: () => Promise<void>
+  searchProducts: (query: string) => Promise<ProdukKasir[]>
+  scanBarcode: (barcode: string) => Promise<ProdukKasir | null>
+  syncSessionToLocal: () => void
+  setNeedsStore: (v: boolean) => void
 }
 
 export const useKasirStore = create<KasirState & KasirActions>()(
@@ -93,18 +118,38 @@ export const useKasirStore = create<KasirState & KasirActions>()(
       discountValue: 0,
       invoiceNumber: initialInvoiceNumber,
       sessionId: sessionId,
+      kasirSession: null,
+      isLoading: false,
+      summary: null,
+  needsStore: false,
 
-    clear: () => {
-      const newInvoiceNumber = generateInvoiceNumber(get().sessionId)
-      set({
-        items: [],
-        bayar: 0,
-        pelanggan: null,
-        metode: 'TUNAI',
-        discountType: 'nominal',
-        discountValue: 0,
-        invoiceNumber: newInvoiceNumber
-      })
+    clear: async () => {
+      try {
+        await kasirService.clearCart()
+        const newInvoiceNumber = generateInvoiceNumber(get().sessionId)
+        set({
+          items: [],
+          bayar: 0,
+          pelanggan: null,
+          metode: 'TUNAI',
+          discountType: 'nominal',
+          discountValue: 0,
+          invoiceNumber: newInvoiceNumber
+        })
+        await get().refreshSession()
+      } catch (error) {
+        // Fallback to local clear if API fails
+        const newInvoiceNumber = generateInvoiceNumber(get().sessionId)
+        set({
+          items: [],
+          bayar: 0,
+          pelanggan: null,
+          metode: 'TUNAI',
+          discountType: 'nominal',
+          discountValue: 0,
+          invoiceNumber: newInvoiceNumber
+        })
+      }
     },
 
     generateNewInvoice: () => {
@@ -112,49 +157,120 @@ export const useKasirStore = create<KasirState & KasirActions>()(
       set({ invoiceNumber: newInvoiceNumber })
     },
 
-    addProduct: (p: UIProduk) => {
-      if (p.harga == null) return
-      const exists = get().items.find((x) => x.id === p.id)
-      if (exists) {
-        set({ items: get().items.map((x) => (x.id === p.id ? { ...x, qty: x.qty + 1 } : x)) })
-      } else {
+    addProduct: async (p: UIProduk | ProdukKasir) => {
+      if (!p.harga) return
+
+      try {
+        const produkId = typeof p.id === 'string' ? p.id : p.id.toString()
+        await kasirService.addToCart(produkId, 1)
+        await get().refreshSession()
+      } catch (error) {
+        // Fallback to local add if API fails
+        const exists = get().items.find((x) => x.id.toString() === p.id.toString())
+        if (exists) {
+          set({ items: get().items.map((x) => (x.id.toString() === p.id.toString() ? { ...x, qty: x.qty + 1 } : x)) })
+        } else {
+          const isUuidString = typeof p.id === 'string' && /[a-f0-9-]{10,}/i.test(p.id)
+          set({
+            items: [
+              ...get().items,
+              {
+                id: isUuidString ? p.id : (typeof p.id === 'string' ? parseInt(p.id) : p.id),
+                _rawId: typeof p.id === 'string' ? p.id : undefined,
+                nama: p.nama,
+                sku: 'sku' in p ? p.sku : ('barcode' in p ? p.barcode : undefined),
+                harga: Number(p.harga || 0),
+                qty: 1,
+              },
+            ],
+          })
+        }
+      }
+    },
+
+    addByBarcode: async (kode: string) => {
+      try {
+        const product = await kasirService.scanBarcode(kode)
+        if (product) {
+          await get().addProduct(product)
+        }
+      } catch (error) {
+        // Fallback to local search
+        const { items: produkItems } = useProdukStore.getState()
+        const found = produkItems.find((x) => x.sku && x.sku.toLowerCase() === kode.trim().toLowerCase())
+        if (found) {
+          await get().addProduct(found)
+        }
+      }
+    },
+
+    inc: async (id: number) => {
+      try {
+        const item = get().items.find(x => x.id === id)
+        if (item) {
+          const produkId = (item as any)._rawId || item.id
+          await kasirService.updateCartItem(String(produkId), item.qty + 1)
+          await get().refreshSession()
+        }
+      } catch (error) {
+        set({ items: get().items.map((x) => (x.id === id ? { ...x, qty: x.qty + 1 } : x)) })
+      }
+    },
+    dec: async (id: number) => {
+      try {
+        const item = get().items.find(x => x.id === id)
+        if (item) {
+          const produkId = (item as any)._rawId || item.id
+          if (item.qty <= 1) {
+            await kasirService.removeFromCart(String(produkId))
+          } else {
+            await kasirService.updateCartItem(String(produkId), item.qty - 1)
+          }
+          await get().refreshSession()
+        }
+      } catch (error) {
         set({
-          items: [
-            ...get().items,
-            {
-              id: p.id,
-              nama: p.nama,
-              sku: p.sku,
-              harga: Number(p.harga || 0),
-              qty: 1,
-            },
-          ],
+          items: get().items
+            .map((x) => (x.id === id ? { ...x, qty: Math.max(1, x.qty - 1) } : x))
+            .filter((x) => x.qty > 0),
         })
       }
     },
-
-    addByBarcode: (kode: string) => {
-      const { items: produkItems } = useProdukStore.getState()
-      const found = produkItems.find((x) => x.sku && x.sku.toLowerCase() === kode.trim().toLowerCase())
-      if (found) {
-        get().addProduct(found)
+    setQty: async (id: number, qty: number) => {
+      try {
+        const validQty = Math.max(1, Math.floor(qty) || 1)
+        const item = get().items.find(x => x.id === id)
+        if (item) {
+          const produkId = (item as any)._rawId || item.id
+          await kasirService.updateCartItem(String(produkId), validQty)
+          await get().refreshSession()
+        }
+      } catch (error) {
+        set({ items: get().items.map((x) => (x.id === id ? { ...x, qty: Math.max(1, Math.floor(qty) || 1) } : x)) })
       }
-      // Note: if not found, keep silent. In future, fetch by API.
     },
-
-    inc: (id: number) => set({ items: get().items.map((x) => (x.id === id ? { ...x, qty: x.qty + 1 } : x)) }),
-    dec: (id: number) =>
-      set({
-        items: get().items
-          .map((x) => (x.id === id ? { ...x, qty: Math.max(1, x.qty - 1) } : x))
-          .filter((x) => x.qty > 0),
-      }),
-    setQty: (id: number, qty: number) =>
-      set({ items: get().items.map((x) => (x.id === id ? { ...x, qty: Math.max(1, Math.floor(qty) || 1) } : x)) }),
-    remove: (id: number) => set({ items: get().items.filter((x) => x.id !== id) }),
+    remove: async (id: number) => {
+      try {
+        const item = get().items.find(x => x.id === id)
+        const produkId = item ? (item as any)._rawId || item.id : id
+        await kasirService.removeFromCart(String(produkId))
+        await get().refreshSession()
+      } catch (error) {
+        set({ items: get().items.filter((x) => x.id !== id) })
+      }
+    },
     setBayar: (v: number) => set({ bayar: isFinite(v) ? Math.max(0, v) : 0 }),
     setMetode: (m) => set({ metode: m }),
-    setPelanggan: (p) => set({ pelanggan: p || null }),
+    setPelanggan: async (p) => {
+      try {
+        await kasirService.setPelanggan(p?.id)
+        set({ pelanggan: p || null })
+        await get().refreshSession()
+      } catch (error) {
+        // Fallback to local set
+        set({ pelanggan: p || null })
+      }
+    },
     setDiscountType: (t) => set({ discountType: t }),
     setDiscountValue: (v) => set({ discountValue: isFinite(v) ? Math.max(0, v) : 0 }),
     loadDraftState: (state) => {
@@ -169,6 +285,111 @@ export const useKasirStore = create<KasirState & KasirActions>()(
         invoiceNumber: newInvoiceNumber
       })
     },
+
+    // New kasir API actions
+    initSession: async () => {
+      try {
+        set({ isLoading: true })
+        const auth = (await import('@/core/store/authStore'))
+        const authState = auth.useAuthStore.getState()
+        if (!authState.user?.tokoId) {
+          // Attempt to auto determine store context (will not set for god user or multi-store)
+          await authState.ensureStoreContext()
+        }
+        const refreshedAuth = auth.useAuthStore.getState()
+        if (!refreshedAuth.user?.tokoId) {
+          // No store resolved automatically; UI should prompt selection
+          set({ needsStore: true })
+          return
+        }
+        const result = await kasirService.getOrCreateSession()
+        set({ kasirSession: result.session, needsStore: false })
+        get().syncSessionToLocal()
+      } catch (error) {
+        console.error('Failed to init kasir session:', error)
+        if (/Store ID diperlukan/i.test(String(error))) {
+          set({ needsStore: true })
+        }
+      } finally {
+        set({ isLoading: false })
+      }
+    },
+
+    refreshSession: async () => {
+      try {
+        const auth = (await import('@/core/store/authStore'))
+        if (!auth.useAuthStore.getState().user?.tokoId) {
+          set({ needsStore: true })
+          return
+        }
+        const result = await kasirService.getOrCreateSession()
+        set({ kasirSession: result.session, needsStore: false })
+        get().syncSessionToLocal()
+      } catch (error) {
+        console.error('Failed to refresh kasir session:', error)
+        if (/Store ID diperlukan/i.test(String(error))) {
+          set({ needsStore: true })
+        }
+      }
+    },
+
+    loadSummary: async () => {
+      try {
+        const auth = (await import('@/core/store/authStore'))
+        if (!auth.useAuthStore.getState().user?.tokoId) {
+          set({ needsStore: true })
+          return
+        }
+        const summary = await kasirService.getSummary()
+        set({ summary, needsStore: false })
+      } catch (error) {
+        console.error('Failed to load summary:', error)
+      }
+    },
+
+    searchProducts: async (query: string) => {
+      try {
+        return await kasirService.searchProduk({ q: query, limit: 20 })
+      } catch (error) {
+        console.error('Failed to search products:', error)
+        return []
+      }
+    },
+
+    scanBarcode: async (barcode: string) => {
+      try {
+        return await kasirService.scanBarcode(barcode)
+      } catch (error) {
+        console.error('Failed to scan barcode:', error)
+        return null
+      }
+    },
+
+    syncSessionToLocal: () => {
+      const session = get().kasirSession
+      if (!session) return
+
+      // Convert API cart items to local format
+      const localItems: CartItemLocal[] = session.cart_items.map(item => ({
+        // Preserve original produk_id string in a hidden field for payment payload if parseInt fails
+        // Some produk_id are UUID so parseInt would yield NaN -> keep numeric fallback for legacy code
+        id: isNaN(parseInt(item.produk_id)) ? (item.produk_id as any) : parseInt(item.produk_id),
+        nama: item.nama_produk,
+        harga: item.harga,
+        qty: item.quantity,
+        // @ts-ignore add original id reference
+        _rawId: item.produk_id
+      }))
+
+      set({
+        items: localItems,
+        pelanggan: session.pelanggan ? {
+          id: session.pelanggan.id,
+          nama: session.pelanggan.nama
+        } : null
+      })
+    },
+    setNeedsStore: (v: boolean) => set({ needsStore: v }),
   }
 }))
 

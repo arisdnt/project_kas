@@ -47,24 +47,14 @@ export interface KPIData {
 }
 
 /**
- * Interface untuk backend KPI response
+ * Interface untuk backend KPI response sesuai apidashboard.json
  */
 export interface BackendKPIResponse {
-  sales: {
-    total_transactions: number;
-    total_sales: number;
-    average_order_value: number;
-    unique_customers: number;
-  };
-  products: {
-    total_products: number;
-    active_products: number;
-    total_categories: number;
-  };
-  inventory: {
-    total_stock: number;
-    low_stock_items: number;
-  };
+  total_sales: number;
+  total_transactions: number;
+  total_customers: number;
+  average_transaction: number;
+  growth_rate: number;
 }
 
 /**
@@ -93,36 +83,35 @@ export interface ProdukTerlaris {
 }
 
 /**
- * Interface untuk backend top products response
+ * Interface untuk backend top products response sesuai apidashboard.json
  */
 export interface BackendTopProduct {
   product_id: string;
   product_name: string;
-  product_code: string;
-  quantity_sold: number;
-  revenue: number;
-  order_count: number;
+  total_sold: number;
+  total_revenue: number;
+  category: string;
 }
 
 /**
- * Interface untuk backend sales chart data
+ * Interface untuk backend sales chart data sesuai apidashboard.json
  */
 export interface BackendSalesChartData {
   date: string;
-  label: string;
-  transaction_count: number;
-  total_sales: number;
+  sales: number;
+  transactions: number;
 }
 
 /**
- * Interface untuk backend category performance
+ * Interface untuk backend category performance sesuai apidashboard.json
  */
 export interface BackendCategoryPerformance {
   category_id: string;
   category_name: string;
-  product_count: number;
-  quantity_sold: number;
-  revenue: number;
+  total_products: number;
+  total_sold: number;
+  total_revenue: number;
+  growth_rate: number;
 }
 
 /**
@@ -223,12 +212,12 @@ export class DashboardService {
    */
   private static convertBackendKPIToFrontend(backendData: BackendKPIResponse): KPIData {
     return {
-      pendapatanHariIni: backendData.sales.total_sales,
-      transaksiHariIni: backendData.sales.total_transactions,
-      produkTerjualHariIni: backendData.products.active_products,
-      pelangganAktifBulanIni: backendData.sales.unique_customers,
-      pertumbuhanPendapatan: 0, // Backend tidak menyediakan data perbandingan, set 0
-      pertumbuhanTransaksi: 0,
+      pendapatanHariIni: backendData.total_sales,
+      transaksiHariIni: backendData.total_transactions,
+      produkTerjualHariIni: 0, // Tidak tersedia di API overview
+      pelangganAktifBulanIni: backendData.total_customers,
+      pertumbuhanPendapatan: backendData.growth_rate,
+      pertumbuhanTransaksi: backendData.growth_rate,
       pertumbuhanProduk: 0,
       pertumbuhanPelanggan: 0
     };
@@ -348,9 +337,9 @@ export class DashboardService {
     return backendProducts.map(product => ({
       id: product.product_id,
       nama: product.product_name,
-      kategori: 'Belum dikategorikan', // Backend tidak mengirim kategori di top products
-      totalTerjual: product.quantity_sold,
-      pendapatan: product.revenue,
+      kategori: product.category || 'Belum dikategorikan',
+      totalTerjual: product.total_sold,
+      pendapatan: product.total_revenue,
       stokTersisa: 0 // Backend tidak mengirim stok tersisa di top products
     }));
   }
@@ -495,10 +484,13 @@ export class DashboardService {
       const chartData = await this.getSalesChartData(filter);
 
       // Convert to format expected by frontend components
-      return chartData.map(item => ({
-        label: item.label,
-        revenue: item.total_sales,
-        transactions: item.transaction_count,
+      return chartData.map((item) => ({
+        label: new Date(item.date).toLocaleDateString('id-ID', {
+          month: 'short',
+          day: 'numeric'
+        }),
+        revenue: item.sales,
+        transactions: item.transactions,
         date: item.date
       }));
     } catch (error) {

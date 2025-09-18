@@ -18,6 +18,8 @@ export interface TransactionDraft {
   totalAmount: number
 }
 
+const MAX_DRAFTS = 10
+
 /**
  * Hook untuk mengelola draft transaksi dengan localStorage
  * Setiap user memiliki draft terpisah berdasarkan userId dan tokoId
@@ -26,6 +28,13 @@ export function useTransactionDrafts() {
   const { user } = useAuthStore()
   const [drafts, setDrafts] = useState<TransactionDraft[]>([])
   const [isLoading, setIsLoading] = useState(true)
+
+  const normalizeDrafts = useCallback((list: TransactionDraft[]) => {
+    return [...list]
+      .filter(draft => draft?.id && draft?.updatedAt)
+      .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
+      .slice(0, MAX_DRAFTS)
+  }, [])
 
   // Generate storage key berdasarkan user dan toko
   const getStorageKey = useCallback(() => {
@@ -53,7 +62,12 @@ export function useTransactionDrafts() {
           Array.isArray(draft.items) &&
           draft.createdAt
         )
-        setDrafts(validDrafts)
+        const normalizedDrafts = normalizeDrafts(validDrafts)
+        setDrafts(normalizedDrafts)
+
+        if (normalizedDrafts.length !== validDrafts.length) {
+          localStorage.setItem(storageKey, JSON.stringify(normalizedDrafts))
+        }
       } else {
         setDrafts([])
       }
@@ -63,7 +77,7 @@ export function useTransactionDrafts() {
     } finally {
       setIsLoading(false)
     }
-  }, [getStorageKey])
+  }, [getStorageKey, normalizeDrafts])
 
   // Simpan drafts ke localStorage
   const saveDrafts = useCallback((newDrafts: TransactionDraft[]) => {
@@ -71,12 +85,13 @@ export function useTransactionDrafts() {
     if (!storageKey) return
 
     try {
-      localStorage.setItem(storageKey, JSON.stringify(newDrafts))
-      setDrafts(newDrafts)
+      const normalizedDrafts = normalizeDrafts(newDrafts)
+      localStorage.setItem(storageKey, JSON.stringify(normalizedDrafts))
+      setDrafts(normalizedDrafts)
     } catch (error) {
       console.error('Error saving drafts:', error)
     }
-  }, [getStorageKey])
+  }, [getStorageKey, normalizeDrafts])
 
   // Hitung totals untuk draft
   const calculateTotals = useCallback((items: CartItem[]) => {
