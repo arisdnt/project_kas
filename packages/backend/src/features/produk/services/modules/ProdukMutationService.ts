@@ -35,14 +35,14 @@ export class ProdukMutationService {
     `;
 
     const params = [
-      produkData.id, produkData.tenant_id, produkData.toko_id,
+      produkData.id, produkData.tenant_id, (produkData.toko_id ?? null),
       produkData.kategori_id, produkData.brand_id, produkData.supplier_id,
-      produkData.kode, produkData.barcode, produkData.nama,
-      produkData.deskripsi, produkData.satuan, produkData.harga_beli,
-      produkData.harga_jual, produkData.margin_persen, produkData.stok_minimum,
-      produkData.berat, produkData.dimensi, produkData.gambar_url,
-      produkData.is_aktif, produkData.is_dijual_online,
-      produkData.pajak_persen, produkData.dibuat_pada, produkData.diperbarui_pada
+      produkData.kode, (produkData.barcode ?? null), produkData.nama,
+      (produkData.deskripsi ?? null), produkData.satuan, (produkData.harga_beli ?? 0),
+      (produkData.harga_jual ?? 0), (produkData.margin_persen ?? 0), (produkData.stok_minimum ?? 0),
+      (produkData.berat ?? 0), (produkData.dimensi ?? null), (produkData.gambar_url ?? null),
+      (produkData.is_aktif ?? 1), (produkData.is_dijual_online ?? 0),
+      (produkData.pajak_persen ?? 0), produkData.dibuat_pada, produkData.diperbarui_pada
     ];
 
     await pool.execute<ResultSetHeader>(sql, params);

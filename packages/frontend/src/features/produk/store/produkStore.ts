@@ -178,7 +178,7 @@ export const useProdukStore = create<ProdukState & ProdukActions>()(
           // Use selected kategori and brand IDs or defaults
           kategori_id: data.kategoriId || get().getDefaultCategoryId(),
           brand_id: data.brandId || get().getDefaultBrandId(),
-          supplier_id: get().getDefaultSupplierId(),
+          supplier_id: data.supplierId || get().getDefaultSupplierId(),
           is_aktif: data.status === 'aktif' ? 1 : 0,
           is_dijual_online: false,
           pajak_persen: 0,

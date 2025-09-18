@@ -24,6 +24,8 @@ export interface ProductFormData {
   kategoriId?: string
   brand: string
   brandId?: string
+  supplier?: string
+  supplierId?: string
   hargaBeli: number
   hargaJual: number
   stok: number
@@ -114,15 +116,17 @@ export const ProductEditSidebar = React.forwardRef<
   HTMLDivElement,
   ProductEditSidebarProps
 >(({ product, open, onOpenChange, onSave, isLoading = false, className, isCreate = false }, ref) => {
-  const { categories, brands, loadMasterData, masterDataLoading } = useProdukStore()
+  const { categories, brands, suppliers, loadMasterData, masterDataLoading } = useProdukStore()
 
   const [formData, setFormData] = React.useState<ProductFormData>({
     nama: '',
     kode: '',
     kategori: '',
     kategoriId: '',
-    brand: '',
-    brandId: '',
+  brand: '',
+  brandId: '',
+  supplier: '',
+  supplierId: '',
     hargaBeli: 0,
     hargaJual: 0,
     stok: 0,
@@ -186,26 +190,28 @@ export const ProductEditSidebar = React.forwardRef<
 
   // Load master data when component mounts
   React.useEffect(() => {
-    if (open && categories.length === 0 && brands.length === 0) {
+    if (open && (categories.length === 0 || brands.length === 0 || suppliers.length === 0)) {
       loadMasterData()
     }
-  }, [open, categories.length, brands.length, loadMasterData])
+  }, [open, categories.length, brands.length, suppliers.length, loadMasterData])
 
   React.useEffect(() => {
     if (product) {
       // Find kategori and brand IDs if they exist
-      const categoryId = categories.find(cat => cat.nama === product.kategori)?.id || ''
-      const brandId = brands.find(brand => brand.nama === product.brand)?.id || ''
+  const categoryId = categories.find(cat => cat.nama === product.kategori)?.id || ''
+  const brandId = brands.find(brand => brand.nama === product.brand)?.id || ''
+  const supplierId = suppliers.find(s => s.nama === (product as any).supplier)?.id || ''
 
       setFormData({
         ...product,
         kategoriId: categoryId,
-        brandId: brandId
+        brandId: brandId,
+        supplierId: supplierId
       })
       setErrors({})
       setTouched({})
     }
-  }, [product, categories, brands])
+  }, [product, categories, brands, suppliers])
 
   // Convert categories and brands to combobox options
   const categoryOptions = React.useMemo(() =>
@@ -216,6 +222,11 @@ export const ProductEditSidebar = React.forwardRef<
   const brandOptions = React.useMemo(() =>
     brands.map(brand => ({ value: brand.id, label: brand.nama })),
     [brands]
+  )
+
+  const supplierOptions = React.useMemo(() =>
+    suppliers.map(s => ({ value: s.id, label: s.nama })),
+    [suppliers]
   )
 
 
@@ -396,6 +407,24 @@ export const ProductEditSidebar = React.forwardRef<
                         <p className="text-sm text-red-500">{errors.brand}</p>
                       )}
                     </div>
+                  </div>
+
+                  {/* Supplier */}
+                  <div className="space-y-2">
+                    <Label htmlFor="supplier">Supplier *</Label>
+                    <Combobox
+                      options={supplierOptions}
+                      value={formData.supplierId}
+                      onValueChange={(value) => {
+                        const s = suppliers.find(sp => sp.id === value)
+                        setFormData(prev => ({ ...prev, supplierId: value, supplier: s?.nama || '' }))
+                      }}
+                      placeholder="Pilih supplier..."
+                      searchPlaceholder="Cari supplier..."
+                      emptyText="Supplier tidak ditemukan"
+                      allowCreate={false}
+                      disabled={masterDataLoading}
+                    />
                   </div>
 
                   {/* Harga */}
@@ -611,6 +640,24 @@ export const ProductEditSidebar = React.forwardRef<
                     <p className="text-sm text-red-500">{errors.brand}</p>
                   )}
                 </div>
+              </div>
+
+              {/* Supplier */}
+              <div className="space-y-2">
+                <Label htmlFor="supplier">Supplier *</Label>
+                <Combobox
+                  options={supplierOptions}
+                  value={formData.supplierId}
+                  onValueChange={(value) => {
+                    const s = suppliers.find(sp => sp.id === value)
+                    setFormData(prev => ({ ...prev, supplierId: value, supplier: s?.nama || '' }))
+                  }}
+                  placeholder="Pilih supplier..."
+                  searchPlaceholder="Cari supplier..."
+                  emptyText="Supplier tidak ditemukan"
+                  allowCreate={false}
+                  disabled={masterDataLoading}
+                />
               </div>
 
               {/* Harga */}
