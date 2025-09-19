@@ -10,7 +10,6 @@ import path from 'path';
 import { Server } from 'socket.io';
 import cors from 'cors';
 import helmet from 'helmet';
-import { registerSwagger } from '@/config/swagger/registerSwagger';
 import { appConfig } from '@/core/config/app';
 import {
   defaultRateLimiter,
@@ -138,8 +137,7 @@ import { KasirSocketService } from '@/features/kasir/services/KasirSocketService
 import peranRoutes from '@/features/peran/routes/peranRoutes';
 import penggunaRoutes from '@/features/pengguna/routes/penggunaRoutes';
 
-// Inisialisasi Swagger UI + JSON endpoints
-registerSwagger(app);
+// Swagger removed: API docs endpoints have been disabled and code cleaned up.
 
 // API Routes
 app.use('/api/auth', authRateLimiter as any, authRoutes);

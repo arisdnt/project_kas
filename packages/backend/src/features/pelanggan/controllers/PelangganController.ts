@@ -1,96 +1,27 @@
-/**
- * Customer Controller
- * Handles customer operations with access scope validation
- */
 
 import { Request, Response } from 'express';
 import { PelangganService } from '../services/PelangganService';
-import { SearchPelangganQuerySchema, CreatePelangganSchema, UpdatePelangganSchema, BulkPelangganActionSchema, PelangganCreditLimitAdjustmentSchema } from '../models/PelangganCore';
+import { 
+  SearchPelangganQuerySchema, 
+  CreatePelangganSchema, 
+  UpdatePelangganSchema,
+  BulkPelangganActionSchema,
+  ImportPelangganSchema,
+  PelangganCreditLimitAdjustmentSchema
+} from '../models/PelangganCore';
+import { logger } from '@/core/utils/logger';
 import { z } from 'zod';
 
+// Schema untuk validasi yang tidak ada di PelangganCore
 const PointsAdjustmentSchema = z.object({
-  adjustment: z.number().int(),
-  reason: z.string().min(1),
+  adjustment: z.number(),
+  reason: z.string().optional(),
   transaksi_id: z.string().uuid().optional()
 });
 
-const ImportCustomersSchema = z.object({
-  customers: z.array(z.object({
-    nama: z.string().min(1),
-    email: z.string().email().optional(),
-    telepon: z.string().optional(),
-    alamat: z.string().optional(),
-    tanggal_lahir: z.string().optional(),
-    jenis_kelamin: z.enum(['pria', 'wanita']).optional(),
-    tipe: z.enum(['reguler', 'vip', 'member', 'wholesale']).default('reguler')
-  })).min(1)
-});
+// Schema lokal dihapus karena sudah ada di PelangganCore
 
 export class PelangganController {
-  /**
-   * @swagger
-   * /api/pelanggan:
-   *   get:
-   *     tags: [Pelanggan]
-   *     summary: Cari pelanggan
-   *     description: Mencari pelanggan dengan filter dan pagination
-   *     security:
-   *       - bearerAuth: []
-   *     parameters:
-   *       - in: query
-   *         name: page
-   *         schema:
-   *           type: string
-   *           default: "1"
-   *         description: Nomor halaman
-   *       - in: query
-   *         name: limit
-   *         schema:
-   *           type: string
-   *           default: "10"
-   *         description: Jumlah item per halaman
-   *       - in: query
-   *         name: search
-   *         schema:
-   *           type: string
-   *         description: Kata kunci pencarian nama pelanggan
-   *     responses:
-   *       200:
-   *         description: Daftar pelanggan berhasil diambil
-   *         content:
-   *           application/json:
-   *             schema:
-   *               type: object
-   *               properties:
-   *                 success:
-   *                   type: boolean
-   *                   example: true
-   *                 data:
-   *                   type: array
-   *                   items:
-   *                     type: object
-   *                     properties:
-   *                       id:
-   *                         type: string
-   *                         format: uuid
-   *                       nama:
-   *                         type: string
-   *                       email:
-   *                         type: string
-   *                       no_hp:
-   *                         type: string
-   *                       tipe:
-   *                         type: string
-   *                         enum: [reguler, vip, member, wholesale]
-   *                 pagination:
-   *                   $ref: '#/components/schemas/Pagination'
-   *       401:
-   *         description: Unauthorized
-   *         content:
-   *           application/json:
-   *             schema:
-   *               $ref: '#/components/schemas/ErrorResponse'
-   */
   static async searchCustomers(req: Request, res: Response) {
     try {
       if (!req.user || !req.accessScope) {
@@ -316,13 +247,16 @@ export class PelangganController {
       }
 
       const { id } = req.params;
-      const data = PointsAdjustmentSchema.parse(req.body);
+      if (!id) {
+        return res.status(400).json({ success: false, message: 'Customer ID is required' });
+      }
 
+      const data = PointsAdjustmentSchema.parse(req.body);
       const result = await PelangganService.adjustCustomerPoints(
-        req.accessScope,
-        id,
-        data.adjustment,
-        data.reason,
+        req.accessScope, 
+        id, 
+        data.adjustment, 
+        data.reason || 'Points adjustment', 
         data.transaksi_id
       );
 
@@ -342,7 +276,14 @@ export class PelangganController {
         return res.status(401).json({ success: false, message: 'Unauthorized' });
       }
 
-      const data = BulkPelangganActionSchema.parse(req.body);
+      // Transform request body to match schema
+      const requestData = req.body;
+      const data = BulkPelangganActionSchema.parse({
+        action: requestData.action,
+        pelanggan_ids: requestData.customerIds || requestData.pelanggan_ids,
+        reason: requestData.reason
+      });
+      
       const result = await PelangganService.bulkCustomerAction(req.accessScope, data);
 
       return res.json({ success: true, data: result });
@@ -361,7 +302,10 @@ export class PelangganController {
         return res.status(401).json({ success: false, message: 'Unauthorized' });
       }
 
-      const data = ImportCustomersSchema.parse(req.body);
+      const data = z.object({
+        customers: z.array(ImportPelangganSchema)
+      }).parse(req.body);
+      
       const result = await PelangganService.importCustomers(req.accessScope, data.customers);
 
       return res.json({ success: true, data: result });
@@ -380,7 +324,21 @@ export class PelangganController {
         return res.status(401).json({ success: false, message: 'Unauthorized' });
       }
 
-      const data = PelangganCreditLimitAdjustmentSchema.parse(req.body);
+      const { id } = req.params;
+      if (!id) {
+        return res.status(400).json({ success: false, message: 'Customer ID is required' });
+      }
+
+      const body = req.body;
+      
+      // Buat data sesuai dengan schema yang diharapkan
+      const data = PelangganCreditLimitAdjustmentSchema.parse({
+        pelanggan_id: id,
+        new_limit: body.creditLimit,
+        reason: body.reason || 'Credit limit adjustment',
+        approved_by: req.user.id
+      });
+      
       const result = await PelangganService.adjustCreditLimit(req.accessScope, data);
 
       return res.json({ success: true, data: result });

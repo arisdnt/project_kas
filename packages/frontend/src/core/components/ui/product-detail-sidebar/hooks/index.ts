@@ -1,0 +1,1 @@
+export { useProductImage } from './useProductImage'

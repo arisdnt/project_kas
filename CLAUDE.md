@@ -29,7 +29,7 @@ npm test --workspace=backend         # Run Jest tests
 npm run lint --workspace=backend     # ESLint check
 
 # Frontend (React + Vite + Tailwind)
-npm run dev --workspace=frontend     # Start Vite dev server on port 5173
+npm run dev --workspace=frontend     # Start Vite dev server on port 3002
 npm run build --workspace=frontend   # Build for production to dist/
 npm run preview --workspace=frontend # Preview production build
 npm run lint --workspace=frontend    # ESLint check

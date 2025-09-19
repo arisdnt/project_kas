@@ -1,28 +1,4 @@
-/**
- * Sales Controller
- * Handles sales transaction operations with access scope validation
- */
 
-/**
- * @swagger
- * components:
- *   schemas:
- *     TransaksiPenjualan:
- *       type: object
- *       properties:
- *         id:
- *           type: string
- *           format: uuid
- *         kode_transaksi:
- *           type: string
- *         total:
- *           type: number
- *         status:
- *           type: string
- *         created_at:
- *           type: string
- *           format: date-time
- */
 
 import { Request, Response } from 'express';
 import { PenjualanService, CreateTransaksiRequest } from '../services/PenjualanService';
@@ -37,57 +13,7 @@ const CreateTransaksiRequestSchema = z.object({
 });
 
 export class PenjualanController {
-  /**
-   * @swagger
-   * /api/penjualan:
-   *   get:
-   *     tags: [Penjualan]
-   *     summary: Cari transaksi penjualan
-   *     description: Mencari transaksi penjualan dengan filter dan pagination
-   *     security:
-   *       - bearerAuth: []
-   *     parameters:
-   *       - in: query
-   *         name: page
-   *         schema:
-   *           type: string
-   *           default: "1"
-   *         description: Nomor halaman
-   *       - in: query
-   *         name: limit
-   *         schema:
-   *           type: string
-   *           default: "10"
-   *         description: Jumlah item per halaman
-   *       - in: query
-   *         name: search
-   *         schema:
-   *           type: string
-   *         description: Kata kunci pencarian
-   *     responses:
-   *       200:
-   *         description: Daftar transaksi berhasil diambil
-   *         content:
-   *           application/json:
-   *             schema:
-   *               type: object
-   *               properties:
-   *                 success:
-   *                   type: boolean
-   *                   example: true
-   *                 data:
-   *                   type: array
-   *                   items:
-   *                     $ref: '#/components/schemas/TransaksiPenjualan'
-   *                 pagination:
-   *                   $ref: '#/components/schemas/Pagination'
-   *       401:
-   *         description: Unauthorized
-   *         content:
-   *           application/json:
-   *             schema:
-   *               $ref: '#/components/schemas/ErrorResponse'
-   */
+  
   static async search(req: Request, res: Response) {
     try {
       if (!req.user || !req.accessScope) {

@@ -148,6 +148,15 @@ export const CreateSupplierContactLogSchema = SupplierContactLogSchema.omit({
   created_at: true
 });
 
+export const RateSupplierSchema = z.object({
+  rating: z.number().int().min(1).max(5),
+  notes: z.string().optional()
+});
+
+export const ImportSuppliersSchema = z.object({
+  suppliers: z.array(ImportSupplierSchema).min(1)
+});
+
 export type Supplier = z.infer<typeof SupplierSchema>;
 export type CreateSupplier = z.infer<typeof CreateSupplierSchema>;
 export type UpdateSupplier = z.infer<typeof UpdateSupplierSchema>;

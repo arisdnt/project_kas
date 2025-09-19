@@ -1,98 +1,19 @@
-/**
- * Supplier Controller
- * Handles supplier operations with access scope validation
- */
 
 import { Request, Response } from 'express';
 import { SupplierService } from '../services/SupplierService';
-import { SearchSupplierQuerySchema, CreateSupplierSchema, UpdateSupplierSchema, BulkSupplierActionSchema, CreateSupplierPaymentTermsSchema, CreateSupplierContactLogSchema } from '../models/SupplierCore';
-import { z } from 'zod';
-
-const ImportSuppliersSchema = z.object({
-  suppliers: z.array(z.object({
-    nama: z.string().min(1),
-    kontak_person: z.string().optional(),
-    telepon: z.string().optional(),
-    email: z.string().email().optional(),
-    alamat: z.string().optional(),
-    npwp: z.string().optional(),
-    bank_nama: z.string().optional(),
-    bank_rekening: z.string().optional(),
-    bank_atas_nama: z.string().optional()
-  })).min(1)
-});
-
-const RateSupplierSchema = z.object({
-  rating: z.number().min(1).max(5),
-  notes: z.string().optional()
-});
+import { 
+  SearchSupplierQuerySchema,
+  CreateSupplierSchema,
+  UpdateSupplierSchema,
+  ImportSuppliersSchema, 
+  CreateSupplierPaymentTermsSchema, 
+  CreateSupplierContactLogSchema, 
+  RateSupplierSchema,
+  BulkSupplierActionSchema
+} from '../models/SupplierCore';
+import { logger } from '@/core/utils/logger';
 
 export class SupplierController {
-  /**
-   * @swagger
-   * /api/supplier:
-   *   get:
-   *     tags: [Supplier]
-   *     summary: Cari supplier
-   *     description: Mencari supplier dengan filter dan pagination
-   *     security:
-   *       - bearerAuth: []
-   *     parameters:
-   *       - in: query
-   *         name: page
-   *         schema:
-   *           type: string
-   *           default: "1"
-   *         description: Nomor halaman
-   *       - in: query
-   *         name: limit
-   *         schema:
-   *           type: string
-   *           default: "10"
-   *         description: Jumlah item per halaman
-   *       - in: query
-   *         name: search
-   *         schema:
-   *           type: string
-   *         description: Kata kunci pencarian nama supplier
-   *     responses:
-   *       200:
-   *         description: Daftar supplier berhasil diambil
-   *         content:
-   *           application/json:
-   *             schema:
-   *               type: object
-   *               properties:
-   *                 success:
-   *                   type: boolean
-   *                   example: true
-   *                 data:
-   *                   type: array
-   *                   items:
-   *                     type: object
-   *                     properties:
-   *                       id:
-   *                         type: string
-   *                         format: uuid
-   *                       nama:
-   *                         type: string
-   *                       kontak_person:
-   *                         type: string
-   *                       telepon:
-   *                         type: string
-   *                       email:
-   *                         type: string
-   *                       alamat:
-   *                         type: string
-   *                 pagination:
-   *                   $ref: '#/components/schemas/Pagination'
-   *       401:
-   *         description: Unauthorized
-   *         content:
-   *           application/json:
-   *             schema:
-   *               $ref: '#/components/schemas/ErrorResponse'
-   */
   static async searchSuppliers(req: Request, res: Response) {
     try {
       if (!req.user || !req.accessScope) {

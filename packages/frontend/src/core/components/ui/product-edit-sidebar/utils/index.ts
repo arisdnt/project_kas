@@ -1,0 +1,1 @@
+export { generateProductCode, validateImageFile } from './productCodeGenerator'

@@ -1,87 +1,36 @@
-/**
- * Dashboard Controller
- * Handles dashboard data requests with access scope validation
- */
 
 import { Request, Response } from 'express';
 import { DashboardService } from '../services/DashboardService';
+import { DashboardAnalyticsService } from '../services/modules/DashboardAnalyticsService';
 import { DashboardQuerySchema, AnalyticsFilterSchema } from '../models/DashboardCore';
+import { AccessScope } from '@/core/middleware/accessScope';
+import { logger } from '@/core/utils/logger';
 import { z } from 'zod';
 
-const OverviewKPIQuerySchema = z.object({
-  start_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date format, use YYYY-MM-DD'),
-  end_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date format, use YYYY-MM-DD')
-});
-
-const TopItemsQuerySchema = z.object({
-  start_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date format, use YYYY-MM-DD'),
-  end_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date format, use YYYY-MM-DD'),
+// Schema untuk query parameters yang sering digunakan
+const TopItemsQuerySchema = DashboardQuerySchema.extend({
   limit: z.string().optional().default('10')
 });
 
+const OverviewKPIQuerySchema = DashboardQuerySchema;
+const SalesChartQuerySchema = AnalyticsFilterSchema;
+const TopProductsQuerySchema = TopItemsQuerySchema;
+const TopCustomersQuerySchema = TopItemsQuerySchema;
+const PaymentMethodQuerySchema = DashboardQuerySchema;
+const CategoryPerformanceQuerySchema = DashboardQuerySchema;
+
 export class DashboardController {
-  /**
-   * @swagger
-   * /api/dashboard/overview:
-   *   get:
-   *     tags: [Dashboard]
-   *     summary: Data overview KPI dashboard
-   *     description: Mengambil data KPI untuk dashboard overview
-   *     security:
-   *       - bearerAuth: []
-   *     parameters:
-   *       - in: query
-   *         name: start_date
-   *         required: true
-   *         schema:
-   *           type: string
-   *           format: date
-   *         description: Tanggal mulai (YYYY-MM-DD)
-   *       - in: query
-   *         name: end_date
-   *         required: true
-   *         schema:
-   *           type: string
-   *           format: date
-   *         description: Tanggal akhir (YYYY-MM-DD)
-   *     responses:
-   *       200:
-   *         description: Data KPI berhasil diambil
-   *         content:
-   *           application/json:
-   *             schema:
-   *               type: object
-   *               properties:
-   *                 success:
-   *                   type: boolean
-   *                   example: true
-   *                 data:
-   *                   type: object
-   *                   properties:
-   *                     totalSales:
-   *                       type: number
-   *                     totalTransactions:
-   *                       type: number
-   *                     totalCustomers:
-   *                       type: number
-   *       401:
-   *         description: Unauthorized
-   *         content:
-   *           application/json:
-   *             schema:
-   *               $ref: '#/components/schemas/ErrorResponse'
-   */
   static async getOverviewKPIs(req: Request, res: Response) {
     try {
       if (!req.user || !req.accessScope) {
         return res.status(401).json({ success: false, message: 'Unauthorized' });
       }
 
-      const query = OverviewKPIQuerySchema.parse(req.query);
+      const query = DashboardQuerySchema.parse(req.query);
       const kpis = await DashboardService.getOverviewKPIs(
         req.accessScope,
-        query.start_date,
-        query.end_date
+        query.start_date || '',
+        query.end_date || ''
       );
 
       return res.json({ success: true, data: kpis });
@@ -100,18 +49,18 @@ export class DashboardController {
         return res.status(401).json({ success: false, message: 'Unauthorized' });
       }
 
-      const filter = AnalyticsFilterSchema.parse({
-        ...req.query,
-        tenant_id: req.accessScope.tenantId
-      });
+      const query = AnalyticsFilterSchema.parse(req.query);
+      const chartData = await DashboardService.getSalesChart(
+        req.accessScope,
+        query
+      );
 
-      const chartData = await DashboardService.getSalesChart(req.accessScope, filter);
       return res.json({ success: true, data: chartData });
     } catch (error: any) {
       console.error('Get sales chart error:', error);
       return res.status(400).json({
         success: false,
-        message: error.message || 'Failed to get sales chart data'
+        message: error.message || 'Failed to get sales chart'
       });
     }
   }
@@ -125,8 +74,8 @@ export class DashboardController {
       const query = TopItemsQuerySchema.parse(req.query);
       const products = await DashboardService.getTopProducts(
         req.accessScope,
-        query.start_date,
-        query.end_date,
+        query.start_date || '',
+        query.end_date || '',
         Number(query.limit)
       );
 
@@ -149,8 +98,8 @@ export class DashboardController {
       const query = TopItemsQuerySchema.parse(req.query);
       const customers = await DashboardService.getTopCustomers(
         req.accessScope,
-        query.start_date,
-        query.end_date,
+        query.start_date || '',
+        query.end_date || '',
         Number(query.limit)
       );
 
@@ -170,11 +119,11 @@ export class DashboardController {
         return res.status(401).json({ success: false, message: 'Unauthorized' });
       }
 
-      const query = OverviewKPIQuerySchema.parse(req.query);
+      const query = DashboardQuerySchema.parse(req.query);
       const distribution = await DashboardService.getPaymentMethodDistribution(
         req.accessScope,
-        query.start_date,
-        query.end_date
+        query.start_date || '',
+        query.end_date || ''
       );
 
       return res.json({ success: true, data: distribution });
@@ -193,11 +142,11 @@ export class DashboardController {
         return res.status(401).json({ success: false, message: 'Unauthorized' });
       }
 
-      const query = OverviewKPIQuerySchema.parse(req.query);
+      const query = DashboardQuerySchema.parse(req.query);
       const performance = await DashboardService.getCategoryPerformance(
         req.accessScope,
-        query.start_date,
-        query.end_date
+        query.start_date || '',
+        query.end_date || ''
       );
 
       return res.json({ success: true, data: performance });

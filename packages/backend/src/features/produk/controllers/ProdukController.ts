@@ -1,102 +1,34 @@
-/**
- * Product Controller
- * Handles product CRUD operations with access scope validation
- */
 
 import { Request, Response } from 'express';
 import { ProdukService } from '../services/ProdukService';
 import { SearchProdukQuerySchema, CreateProdukSchema, UpdateProdukSchema } from '../models/ProdukCore';
+import { logger } from '@/core/utils/logger';
 import { requireStoreWhenNeeded } from '@/core/middleware/accessScope';
-import multer from 'multer';
 import { DokumenService } from '@/features/dokumen/services/DokumenService';
-
-// Configure multer for image upload
-const imageUpload = multer({
-  storage: multer.memoryStorage(),
-  limits: {
-    fileSize: 10 * 1024 * 1024 // 10MB limit for images
-  },
-  fileFilter: (req, file, cb) => {
-    // Only allow image files
-    if (file.mimetype.startsWith('image/')) {
-      cb(null, true);
-    } else {
-      cb(new Error('Only image files are allowed'));
-    }
-  }
-});
+import multer from 'multer';
+import path from 'path';
+import fs from 'fs/promises';
 
 export class ProdukController {
-  static imageUploadMiddleware = imageUpload.single('image') as any;
-  /**
-   * @swagger
-   * /api/produk:
-   *   get:
-   *     tags: [Produk]
-   *     summary: Cari produk
-   *     description: Mencari produk dengan filter dan pagination
-   *     security:
-   *       - bearerAuth: []
-   *     parameters:
-   *       - in: query
-   *         name: page
-   *         schema:
-   *           type: string
-   *           default: "1"
-   *         description: Nomor halaman
-   *       - in: query
-   *         name: limit
-   *         schema:
-   *           type: string
-   *           default: "10"
-   *         description: Jumlah item per halaman
-   *       - in: query
-   *         name: search
-   *         schema:
-   *           type: string
-   *         description: Kata kunci pencarian
-   *       - in: query
-   *         name: kategori_id
-   *         schema:
-   *           type: string
-   *           format: uuid
-   *         description: Filter berdasarkan kategori
-   *       - in: query
-   *         name: brand_id
-   *         schema:
-   *           type: string
-   *           format: uuid
-   *         description: Filter berdasarkan brand
-   *       - in: query
-   *         name: is_aktif
-   *         schema:
-   *           type: string
-   *           enum: ["0", "1"]
-   *         description: Filter status aktif
-   *     responses:
-   *       200:
-   *         description: Daftar produk berhasil diambil
-   *         content:
-   *           application/json:
-   *             schema:
-   *               type: object
-   *               properties:
-   *                 success:
-   *                   type: boolean
-   *                   example: true
-   *                 data:
-   *                   type: array
-   *                   items:
-   *                     $ref: '#/components/schemas/Produk'
-   *                 pagination:
-   *                   $ref: '#/components/schemas/Pagination'
-   *       401:
-   *         description: Unauthorized
-   *         content:
-   *           application/json:
-   *             schema:
-   *               $ref: '#/components/schemas/ErrorResponse'
-   */
+  // Konfigurasi multer untuk upload gambar
+  private static imageUpload = multer({
+    storage: multer.memoryStorage(),
+    limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
+    fileFilter: (req, file, cb) => {
+      const allowedTypes = /jpeg|jpg|png|gif|webp/;
+      const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
+      const mimetype = allowedTypes.test(file.mimetype);
+      
+      if (mimetype && extname) {
+        return cb(null, true);
+      } else {
+        cb(new Error('Hanya file gambar yang diizinkan'));
+      }
+    }
+  });
+
+  // Middleware untuk upload gambar
+  static imageUploadMiddleware = ProdukController.imageUpload.single('image') as any;
   static async search(req: Request, res: Response) {
     try {
       if (!req.user || !req.accessScope) {
@@ -125,43 +57,7 @@ export class ProdukController {
     }
   }
 
-  /**
-   * @swagger
-   * /api/produk/{id}:
-   *   get:
-   *     tags: [Produk]
-   *     summary: Ambil produk berdasarkan ID
-   *     description: Mengambil detail produk berdasarkan ID
-   *     security:
-   *       - bearerAuth: []
-   *     parameters:
-   *       - in: path
-   *         name: id
-   *         required: true
-   *         schema:
-   *           type: string
-   *           format: uuid
-   *         description: ID produk
-   *     responses:
-   *       200:
-   *         description: Detail produk berhasil diambil
-   *         content:
-   *           application/json:
-   *             schema:
-   *               type: object
-   *               properties:
-   *                 success:
-   *                   type: boolean
-   *                   example: true
-   *                 data:
-   *                   $ref: '#/components/schemas/Produk'
-   *       404:
-   *         description: Produk tidak ditemukan
-   *         content:
-   *           application/json:
-   *             schema:
-   *               $ref: '#/components/schemas/ErrorResponse'
-   */
+  
   static async findById(req: Request, res: Response) {
     try {
       if (!req.user || !req.accessScope) {
@@ -181,76 +77,7 @@ export class ProdukController {
     }
   }
 
-  /**
-   * @swagger
-   * /api/produk:
-   *   post:
-   *     tags: [Produk]
-   *     summary: Buat produk baru
-   *     description: Membuat produk baru (memerlukan akses toko)
-   *     security:
-   *       - bearerAuth: []
-   *     requestBody:
-   *       required: true
-   *       content:
-   *         application/json:
-   *           schema:
-   *             type: object
-   *             required:
-   *               - kategori_id
-   *               - brand_id
-   *               - supplier_id
-   *               - kode
-   *               - nama
-   *             properties:
-   *               kategori_id:
-   *                 type: string
-   *                 format: uuid
-   *                 description: ID kategori produk
-   *               brand_id:
-   *                 type: string
-   *                 format: uuid
-   *                 description: ID brand produk
-   *               supplier_id:
-   *                 type: string
-   *                 format: uuid
-   *                 description: ID supplier produk
-   *               kode:
-   *                 type: string
-   *                 maxLength: 50
-   *                 description: Kode produk unik
-   *               nama:
-   *                 type: string
-   *                 maxLength: 255
-   *                 description: Nama produk
-   *               harga_beli:
-   *                 type: number
-   *                 minimum: 0
-   *                 description: Harga beli produk
-   *               harga_jual:
-   *                 type: number
-   *                 minimum: 0
-   *                 description: Harga jual produk
-   *     responses:
-   *       201:
-   *         description: Produk berhasil dibuat
-   *         content:
-   *           application/json:
-   *             schema:
-   *               type: object
-   *               properties:
-   *                 success:
-   *                   type: boolean
-   *                   example: true
-   *                 data:
-   *                   $ref: '#/components/schemas/Produk'
-   *       400:
-   *         description: Data tidak valid
-   *         content:
-   *           application/json:
-   *             schema:
-   *               $ref: '#/components/schemas/ErrorResponse'
-   */
+  
   static async create(req: Request, res: Response) {
     try {
       if (!req.user || !req.accessScope) {
@@ -275,66 +102,7 @@ export class ProdukController {
     }
   }
 
-  /**
-   * @swagger
-   * /api/produk/{id}:
-   *   put:
-   *     tags: [Produk]
-   *     summary: Update produk
-   *     description: Mengupdate data produk berdasarkan ID
-   *     security:
-   *       - bearerAuth: []
-   *     parameters:
-   *       - in: path
-   *         name: id
-   *         required: true
-   *         schema:
-   *           type: string
-   *           format: uuid
-   *         description: ID produk
-   *     requestBody:
-   *       required: true
-   *       content:
-   *         application/json:
-   *           schema:
-   *             type: object
-   *             properties:
-   *               nama:
-   *                 type: string
-   *                 maxLength: 255
-   *                 description: Nama produk
-   *               harga_beli:
-   *                 type: number
-   *                 minimum: 0
-   *                 description: Harga beli produk
-   *               harga_jual:
-   *                 type: number
-   *                 minimum: 0
-   *                 description: Harga jual produk
-   *               is_aktif:
-   *                 type: integer
-   *                 enum: [0, 1]
-   *                 description: Status aktif produk
-   *     responses:
-   *       200:
-   *         description: Produk berhasil diupdate
-   *         content:
-   *           application/json:
-   *             schema:
-   *               type: object
-   *               properties:
-   *                 success:
-   *                   type: boolean
-   *                   example: true
-   *                 data:
-   *                   $ref: '#/components/schemas/Produk'
-   *       400:
-   *         description: Data tidak valid
-   *         content:
-   *           application/json:
-   *             schema:
-   *               $ref: '#/components/schemas/ErrorResponse'
-   */
+  
   static async update(req: Request, res: Response) {
     try {
       if (!req.user || !req.accessScope) {
@@ -355,47 +123,7 @@ export class ProdukController {
     }
   }
 
-  /**
-   * @swagger
-   * /api/produk/{id}:
-   *   delete:
-   *     tags: [Produk]
-   *     summary: Hapus produk
-   *     description: Menghapus produk berdasarkan ID
-   *     security:
-   *       - bearerAuth: []
-   *     parameters:
-   *       - in: path
-   *         name: id
-   *         required: true
-   *         schema:
-   *           type: string
-   *           format: uuid
-   *         description: ID produk
-   *     responses:
-   *       200:
-   *         description: Produk berhasil dihapus
-   *         content:
-   *           application/json:
-   *             schema:
-   *               type: object
-   *               properties:
-   *                 success:
-   *                   type: boolean
-   *                   example: true
-   *                 data:
-   *                   type: object
-   *                   properties:
-   *                     message:
-   *                       type: string
-   *                       example: Product deleted successfully
-   *       400:
-   *         description: Gagal menghapus produk
-   *         content:
-   *           application/json:
-   *             schema:
-   *               $ref: '#/components/schemas/ErrorResponse'
-   */
+  
   static async delete(req: Request, res: Response) {
     try {
       if (!req.user || !req.accessScope) {
@@ -518,56 +246,7 @@ export class ProdukController {
     }
   }
 
-  /**
-   * @swagger
-   * /api/produk/{id}/upload-image:
-   *   post:
-   *     tags: [Produk]
-   *     summary: Upload gambar produk
-   *     description: Upload gambar untuk produk dan update gambar_url
-   *     security:
-   *       - bearerAuth: []
-   *     parameters:
-   *       - in: path
-   *         name: id
-   *         required: true
-   *         schema:
-   *           type: string
-   *           format: uuid
-   *         description: ID produk
-   *     requestBody:
-   *       required: true
-   *       content:
-   *         multipart/form-data:
-   *           schema:
-   *             type: object
-   *             properties:
-   *               image:
-   *                 type: string
-   *                 format: binary
-   *                 description: File gambar produk
-   *     responses:
-   *       200:
-   *         description: Gambar berhasil diupload
-   *         content:
-   *           application/json:
-   *             schema:
-   *               type: object
-   *               properties:
-   *                 success:
-   *                   type: boolean
-   *                   example: true
-   *                 data:
-   *                   type: object
-   *                   properties:
-   *                     gambar_url:
-   *                       type: string
-   *                       description: URL gambar yang telah diupload
-   *       400:
-   *         description: File tidak valid atau error upload
-   *       404:
-   *         description: Produk tidak ditemukan
-   */
+  
   static async uploadProductImage(req: Request, res: Response) {
     try {
       if (!req.user || !req.accessScope) {
@@ -619,40 +298,7 @@ export class ProdukController {
     }
   }
 
-  /**
-   * @swagger
-   * /api/produk/{id}/remove-image:
-   *   delete:
-   *     tags: [Produk]
-   *     summary: Hapus gambar produk
-   *     description: Hapus gambar produk dan update gambar_url menjadi null
-   *     security:
-   *       - bearerAuth: []
-   *     parameters:
-   *       - in: path
-   *         name: id
-   *         required: true
-   *         schema:
-   *           type: string
-   *           format: uuid
-   *         description: ID produk
-   *     responses:
-   *       200:
-   *         description: Gambar berhasil dihapus
-   *         content:
-   *           application/json:
-   *             schema:
-   *               type: object
-   *               properties:
-   *                 success:
-   *                   type: boolean
-   *                   example: true
-   *                 message:
-   *                   type: string
-   *                   example: Product image removed successfully
-   *       404:
-   *         description: Produk tidak ditemukan
-   */
+  
   static async removeProductImage(req: Request, res: Response) {
     try {
       if (!req.user || !req.accessScope) {
