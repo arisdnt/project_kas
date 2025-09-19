@@ -159,6 +159,7 @@ export const useBrandStore = create<BrandState & BrandActions>()(
       const formData = new FormData();
       formData.append('image', imageFile);
 
+      console.log('[BrandStore] Uploading brand image', { brandId, name: imageFile.name, size: imageFile.size, type: imageFile.type });
       const res = await fetch(`${API_BASE}/${brandId}/upload-image`, {
         method: 'POST',
         headers: {
@@ -168,6 +169,7 @@ export const useBrandStore = create<BrandState & BrandActions>()(
       });
 
       const js = await res.json();
+      console.log('[BrandStore] Upload response', { status: res.status, ok: res.ok, body: js });
       if (!res.ok || !js.success) throw new Error(js.message || 'Gagal upload gambar brand');
 
       // Update brand in store
@@ -181,6 +183,7 @@ export const useBrandStore = create<BrandState & BrandActions>()(
 
     removeBrandImage: async (brandId: string): Promise<void> => {
       const token = useAuthStore.getState().token;
+      console.log('[BrandStore] Removing brand image', { brandId });
       const res = await fetch(`${API_BASE}/${brandId}/remove-image`, {
         method: 'DELETE',
         headers: {
@@ -189,10 +192,11 @@ export const useBrandStore = create<BrandState & BrandActions>()(
       });
 
       const js = await res.json();
+      console.log('[BrandStore] Remove response', { status: res.status, ok: res.ok, body: js });
       if (!res.ok || !js.success) throw new Error(js.message || 'Gagal hapus gambar brand');
 
       // Update brand in store
-      const all = get().all.map((b) => (b.id === brandId ? { ...b, logo_url: null } : b));
+  const all = get().all.map((b) => (b.id === brandId ? { ...b, logo_url: undefined } : b));
       const { slice, hasNext } = filterAndSlice(all, get().search, get().page, get().limit);
       set({ all, items: slice, hasNext });
     },

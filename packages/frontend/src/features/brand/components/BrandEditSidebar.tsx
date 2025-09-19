@@ -4,7 +4,6 @@ import { Button } from '@/core/components/ui/button'
 import { Input } from '@/core/components/ui/input'
 import { Textarea } from '@/core/components/ui/textarea'
 import { ScopeSelector } from '@/core/components/ui/scope-selector'
-import { Separator } from '@/core/components/ui/separator'
 import { Upload, X, Image } from 'lucide-react'
 import { useAuthStore } from '@/core/store/authStore'
 import { UIBrand } from '../types/brand'
@@ -211,10 +210,9 @@ export const BrandEditSidebar = React.forwardRef<HTMLDivElement, Props>(
       await onSave({
         nama: v,
         deskripsi: deskripsi.trim() || undefined,
-        logo_url: logoUrl.trim() || undefined,
         website: website.trim() || undefined,
         ...scopeData
-      })
+      }, selectedImageFile || undefined)
       onOpenChange(false)
     }
 
@@ -249,6 +247,39 @@ export const BrandEditSidebar = React.forwardRef<HTMLDivElement, Props>(
                 <div className="col-span-3 space-y-4">
                   <h3 className="text-sm font-medium">Detail Brand</h3>
                   <div className="space-y-4">
+                    {/* Logo uploader & preview (create mode: local preview only) */}
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Logo Brand</label>
+                      <div className="flex items-center gap-4">
+                        <div className="w-24 h-24 rounded-lg overflow-hidden relative border bg-gray-50">
+                          <BrandImage src={logoUrl} alt={nama || 'Logo Brand'} className="w-full h-full" />
+                        </div>
+                        <div className="flex gap-2">
+                          <input
+                            ref={fileInputRef}
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            onChange={handleFileSelect}
+                          />
+                          <Button type="button" variant="secondary" onClick={() => fileInputRef.current?.click()} disabled={uploading || isLoading}>
+                            <Upload className="w-4 h-4 mr-2" /> Pilih Gambar
+                          </Button>
+                          {logoUrl && (
+                            <Button
+                              type="button"
+                              variant="outline"
+                              onClick={() => { setSelectedImageFile(null); setLogoUrl(''); fileInputRef.current && (fileInputRef.current.value = '') }}
+                              disabled={uploading || isLoading}
+                            >
+                              <X className="w-4 h-4 mr-2" /> Hapus
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                      <p className="text-xs text-gray-500">Format: JPG, PNG, GIF. Maks 10MB.</p>
+                    </div>
+
                     <div className="space-y-2">
                       <label htmlFor="nama" className="text-sm font-medium">Nama Brand *</label>
                       <Input id="nama" value={nama} onChange={(e) => setNama(e.target.value)} className={error ? 'border-red-500' : ''} />
@@ -260,10 +291,7 @@ export const BrandEditSidebar = React.forwardRef<HTMLDivElement, Props>(
                       <Textarea id="deskripsi" value={deskripsi} onChange={(e) => setDeskripsi(e.target.value)} rows={3} />
                     </div>
 
-                    <div className="space-y-2">
-                      <label htmlFor="logo_url" className="text-sm font-medium">URL Logo</label>
-                      <Input id="logo_url" value={logoUrl} onChange={(e) => setLogoUrl(e.target.value)} placeholder="https://..." />
-                    </div>
+                    {/* Removed URL Logo field: logo handled by upload above */}
 
                     <div className="space-y-2">
                       <label htmlFor="website" className="text-sm font-medium">Website</label>
@@ -275,6 +303,34 @@ export const BrandEditSidebar = React.forwardRef<HTMLDivElement, Props>(
             ) : (
               // Edit mode: single column
               <div className="space-y-4 px-1">
+                {/* Logo uploader & preview (edit mode: immediate upload/remove) */}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Logo Brand</label>
+                  <div className="flex items-center gap-4">
+                    <div className="w-24 h-24 rounded-lg overflow-hidden relative border bg-gray-50">
+                      <BrandImage src={logoUrl || editingBrand?.logo_url} alt={nama || editingBrand?.nama || 'Logo Brand'} className="w-full h-full" />
+                    </div>
+                    <div className="flex gap-2">
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={handleFileSelect}
+                      />
+                      <Button type="button" variant="secondary" onClick={() => fileInputRef.current?.click()} disabled={uploading || isLoading}>
+                        <Upload className="w-4 h-4 mr-2" /> {uploading ? 'Mengupload...' : 'Upload Gambar'}
+                      </Button>
+                      {(logoUrl || editingBrand?.logo_url) && onRemoveImage && (
+                        <Button type="button" variant="outline" onClick={handleRemoveImage} disabled={uploading || isLoading}>
+                          <X className="w-4 h-4 mr-2" /> {uploading ? 'Menghapus...' : 'Hapus'}
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                  <p className="text-xs text-gray-500">Format: JPG, PNG, GIF. Maks 10MB.</p>
+                </div>
+
                 <div className="space-y-2">
                   <label htmlFor="nama" className="text-sm font-medium">Nama Brand *</label>
                   <Input id="nama" value={nama} onChange={(e) => setNama(e.target.value)} className={error ? 'border-red-500' : ''} />
@@ -286,10 +342,7 @@ export const BrandEditSidebar = React.forwardRef<HTMLDivElement, Props>(
                   <Textarea id="deskripsi" value={deskripsi} onChange={(e) => setDeskripsi(e.target.value)} rows={3} />
                 </div>
 
-                <div className="space-y-2">
-                  <label htmlFor="logo_url" className="text-sm font-medium">URL Logo</label>
-                  <Input id="logo_url" value={logoUrl} onChange={(e) => setLogoUrl(e.target.value)} placeholder="https://..." />
-                </div>
+                {/* Removed URL Logo field on edit: logo handled by upload/remove controls */}
 
                 <div className="space-y-2">
                   <label htmlFor="website" className="text-sm font-medium">Website</label>

@@ -58,6 +58,12 @@ export class DokumenMutationService {
 
       // Upload file to MinIO first
       const bucketName = process.env.MINIO_BUCKET || 'pos-files';
+      console.log('[DokumenMutationService] Putting object to MinIO', {
+        objectKey,
+        size: file.size,
+        mimeType,
+        bucket: process.env.MINIO_BUCKET || 'pos-files'
+      });
       await putObject(objectKey, file.buffer, {
         'Content-Type': mimeType,
         'Original-Name': file.originalname,
@@ -114,6 +120,14 @@ export class DokumenMutationService {
         JSON.stringify(documentData.metadata_json || {})
       ];
 
+      console.log('[DokumenMutationService] Inserting dokumen_minio record', {
+        id,
+        tenant_id: documentData.tenant_id,
+        toko_id: documentData.toko_id,
+        object_key: documentData.object_key,
+        size: documentData.ukuran_file,
+        mime_type: documentData.mime_type
+      });
       await pool.execute(sql, params);
 
       // Return created document data
@@ -122,6 +136,7 @@ export class DokumenMutationService {
         [id]
       );
 
+      console.log('[DokumenMutationService] Upload complete', { id, objectKey });
       return {
         document: rows[0],
         success: true
@@ -129,6 +144,7 @@ export class DokumenMutationService {
 
     } catch (error) {
       logger.error({ error: error instanceof Error ? error.message : error }, 'Document upload failed');
+      console.error('[DokumenMutationService] Upload failed', error);
       throw new Error(`Failed to upload document: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }

@@ -394,8 +394,9 @@ export class MasterDataController {
         String((req as any).user.id)
       );
 
-      // Update category with new icon URL
-      const minioUrl = `minio://pos-files/${uploadResult.document.object_key}`;
+  // Update category with new icon URL (respect bucket from upload result)
+  const bucketNameCat = uploadResult.document?.bucket_name || 'pos-files';
+  const minioUrl = `minio://${bucketNameCat}/${uploadResult.document.object_key}`;
       const category = await ProdukService.updateCategory(req.accessScope, id, {
         icon_url: minioUrl
       });
@@ -474,7 +475,19 @@ export class MasterDataController {
       const { id } = req.params;
       const file = req.file;
 
+      console.log('[BrandUpload] Incoming upload', {
+        brandId: id,
+        userId: (req as any).user?.id,
+        scope: req.accessScope,
+        hasFile: !!file,
+        headers: {
+          'content-type': req.headers['content-type'],
+          'content-length': req.headers['content-length']
+        }
+      });
+
       if (!file) {
+        console.warn('[BrandUpload] No file provided');
         return res.status(400).json({ success: false, message: 'No image file provided' });
       }
 
@@ -493,11 +506,22 @@ export class MasterDataController {
         String((req as any).user.id)
       );
 
-      // Update brand with new logo URL
-      const minioUrl = `minio://pos-files/${uploadResult.document.object_key}`;
+      console.log('[BrandUpload] Uploaded to MinIO and DB', {
+        documentId: uploadResult.document?.id,
+        objectKey: uploadResult.document?.object_key,
+        bucket: uploadResult.document?.bucket_name,
+        size: file.size,
+        mimetype: file.mimetype
+      });
+
+  // Update brand with new logo URL (respect bucket from upload result)
+  const bucketName = uploadResult.document?.bucket_name || 'pos-files';
+  const minioUrl = `minio://${bucketName}/${uploadResult.document.object_key}`;
       const brand = await ProdukService.updateBrand(req.accessScope, id, {
         logo_url: minioUrl
       });
+
+      console.log('[BrandUpload] Brand updated with logo_url', { brandId: id, logo_url: minioUrl });
 
       return res.json({
         success: true,
@@ -508,7 +532,10 @@ export class MasterDataController {
         message: 'Brand image uploaded successfully'
       });
     } catch (error: any) {
-      console.error('Upload brand image error:', error);
+      console.error('[BrandUpload] Error:', {
+        message: error?.message,
+        stack: error?.stack
+      });
       return res.status(500).json({
         success: false,
         message: 'Failed to upload image',
@@ -525,11 +552,18 @@ export class MasterDataController {
 
       const { id } = req.params;
 
+      console.log('[BrandRemoveImage] Incoming remove', {
+        brandId: id,
+        userId: (req as any).user?.id,
+        scope: req.accessScope,
+      });
+
       // Get current brand to get the current logo URL
       const brands = await ProdukService.getBrands(req.accessScope);
       const brand = brands.find(b => b.id === id);
 
       if (!brand) {
+        console.warn('[BrandRemoveImage] Brand not found', { brandId: id });
         return res.status(404).json({ success: false, message: 'Brand not found' });
       }
 
@@ -537,9 +571,10 @@ export class MasterDataController {
       if (brand.logo_url && brand.logo_url.startsWith('minio://')) {
         try {
           const objectKey = brand.logo_url.replace('minio://pos-files/', '');
+          console.log('[BrandRemoveImage] Removing from MinIO', { objectKey });
           await removeObject(objectKey);
         } catch (error) {
-          console.warn('Failed to delete MinIO file:', error);
+          console.warn('[BrandRemoveImage] Failed to delete MinIO file:', error);
         }
       }
 
@@ -548,13 +583,18 @@ export class MasterDataController {
         logo_url: null as any
       });
 
+      console.log('[BrandRemoveImage] Brand logo_url cleared', { brandId: id });
+
       return res.json({
         success: true,
         data: updatedBrand,
         message: 'Brand image removed successfully'
       });
     } catch (error: any) {
-      console.error('Remove brand image error:', error);
+      console.error('[BrandRemoveImage] Error:', {
+        message: error?.message,
+        stack: error?.stack
+      });
       return res.status(500).json({
         success: false,
         message: 'Failed to remove image',

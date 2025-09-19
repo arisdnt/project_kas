@@ -401,43 +401,64 @@ export class MasterDataService {
       'SELECT id FROM tenants WHERE status = \"aktif\"'
     );
 
-    const sql = `
+    // Karena kolom toko_id NOT NULL, kita buat entri per toko untuk setiap tenant
+    const insertSql = `
       INSERT INTO brand (
         id, tenant_id, toko_id, nama, deskripsi, logo_url, website,
         status, dibuat_pada, diperbarui_pada
-      ) VALUES (?, ?, NULL, ?, ?, ?, ?, 'aktif', ?, ?)
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, 'aktif', ?, ?)
     `;
 
-    // Insert untuk setiap tenant
+    let inserted = 0;
     for (const tenant of tenants) {
-      const brandId = `${id}-${tenant.id}`;
-      const params = [
-        brandId, tenant.id, data.nama,
-        data.deskripsi || null, data.logo_url || null, data.website || null,
-        now, now
-      ];
-      await pool.execute<ResultSetHeader>(sql, params);
+      // Ambil semua toko aktif untuk tenant ini
+      const [stores] = await pool.execute<RowDataPacket[]>(
+        'SELECT id FROM toko WHERE tenant_id = ? AND (status = "aktif" OR status IS NULL)',
+        [tenant.id]
+      );
+
+      for (const store of stores) {
+        const brandIdPerStore = uuidv4();
+        const params = [
+          brandIdPerStore, tenant.id, store.id, data.nama,
+          data.deskripsi || null, data.logo_url || null, data.website || null,
+          now, now
+        ];
+        await pool.execute<ResultSetHeader>(insertSql, params);
+        inserted++;
+      }
     }
 
-    return { id, message: `Brand created for ${tenants.length} tenants` };
+    return { id, message: `Brand created across ${inserted} stores for all tenants` };
   }
 
   private static async createBrandForAllStores(id: string, data: any, tenantId: string, now: Date) {
-    const sql = `
+    // Karena toko_id NOT NULL, buat entri untuk setiap toko aktif dalam tenant
+    const [stores] = await pool.execute<RowDataPacket[]>(
+      'SELECT id FROM toko WHERE tenant_id = ? AND (status = "aktif" OR status IS NULL)',
+      [tenantId]
+    );
+
+    const insertSql = `
       INSERT INTO brand (
         id, tenant_id, toko_id, nama, deskripsi, logo_url, website,
         status, dibuat_pada, diperbarui_pada
-      ) VALUES (?, ?, NULL, ?, ?, ?, ?, 'aktif', ?, ?)
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, 'aktif', ?, ?)
     `;
 
-    const params = [
-      id, tenantId, data.nama,
-      data.deskripsi || null, data.logo_url || null, data.website || null,
-      now, now
-    ];
+    let inserted = 0;
+    for (const store of stores) {
+      const brandIdPerStore = uuidv4();
+      const params = [
+        brandIdPerStore, tenantId, store.id, data.nama,
+        data.deskripsi || null, data.logo_url || null, data.website || null,
+        now, now
+      ];
+      await pool.execute<ResultSetHeader>(insertSql, params);
+      inserted++;
+    }
 
-    await pool.execute<ResultSetHeader>(sql, params);
-    return { id, message: 'Brand created for all stores in tenant' };
+    return { id, message: `Brand created for all ${inserted} stores in tenant` };
   }
 
   static async updateBrand(scope: AccessScope, id: string, data: {

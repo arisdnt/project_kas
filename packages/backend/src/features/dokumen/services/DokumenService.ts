@@ -45,6 +45,19 @@ export class DokumenService {
     // Validate file type based on category (we'll validate in mutation service after MIME type fix)
     // this.validateFileType(file, config.kategori_dokumen);
 
+    // Diagnostic log for upload request
+    try {
+      console.log('[DokumenService.uploadDocument] start', {
+        tenantId: scope.tenantId,
+        storeId: scope.storeId,
+        kategori: config.kategori_dokumen,
+        userId,
+        size: file.size,
+        mimetype: file.mimetype,
+        originalname: file.originalname
+      });
+    } catch {}
+
     return DokumenMutationService.uploadDocument(scope, file, config, userId);
   }
 

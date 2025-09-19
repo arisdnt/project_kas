@@ -127,6 +127,7 @@ export function BrandPage() {
 
       <BrandEditSidebar
         value={editing}
+        editingBrand={selected}
         open={editOpen}
         onOpenChange={(o) => {
           setEditOpen(o)
@@ -136,6 +137,8 @@ export function BrandPage() {
           }
         }}
         onSave={onSave}
+        onUploadImage={onUploadImage}
+        onRemoveImage={onRemoveImage}
         isLoading={saving}
       />
     </div>
