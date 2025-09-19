@@ -3,7 +3,7 @@ import { Search, Factory, Edit2, Trash2, Plus, Loader2 } from 'lucide-react';
 import { Button } from '@/core/components/ui/button';
 import { Input } from '@/core/components/ui/input';
 import { Badge } from '@/core/components/ui/badge';
-import { Sidebar, SidebarContent, SidebarHeader, SidebarTitle } from '@/core/components/ui/sidebar';
+import { TenanSidebar, TenanSidebarContent, TenanSidebarHeader, TenanSidebarTitle } from '../components/TenanSidebar';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/core/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/core/components/ui/table';
 import { tenantService, TenantDTO } from '../services/tenantService';
@@ -312,16 +312,16 @@ export function TenanPage() {
         </div>
       </div>
 
-      <Sidebar open={drawerOpen} onOpenChange={setDrawerOpen}>
-        <SidebarContent className="!w-[40vw] !max-w-none">
-          <SidebarHeader>
-            <SidebarTitle>{editing ? 'Edit Tenant' : 'Tambah Tenant'}</SidebarTitle>
-          </SidebarHeader>
+      <TenanSidebar open={drawerOpen} onOpenChange={setDrawerOpen}>
+        <TenanSidebarContent className="!w-[40vw] !max-w-none">
+          <TenanSidebarHeader>
+            <TenanSidebarTitle>{editing ? 'Edit Tenant' : 'Tambah Tenant'}</TenanSidebarTitle>
+          </TenanSidebarHeader>
           <div className="flex-1 overflow-y-auto p-6">
             <TenantForm mode={editing ? 'edit' : 'create'} initial={editing} onSuccess={() => { setDrawerOpen(false); toast({ title: editing ? 'Tenant diperbarui' : 'Tenant dibuat', description: editing ? 'Perubahan berhasil disimpan.' : 'Tenant baru berhasil dibuat.' }); load(); }} onCancel={() => setDrawerOpen(false)} />
           </div>
-        </SidebarContent>
-      </Sidebar>
+        </TenanSidebarContent>
+      </TenanSidebar>
 
       <Dialog open={!!confirmDelete} onOpenChange={o => { if(!o) setConfirmDelete(null); }}>
         <DialogContent>

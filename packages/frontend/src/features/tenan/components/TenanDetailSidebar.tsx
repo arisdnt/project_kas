@@ -1,5 +1,5 @@
 import * as React from 'react'
-import { Sidebar, SidebarContent, SidebarHeader, SidebarTitle, SidebarDescription, SidebarFooter } from '@/core/components/ui/sidebar'
+import { TenanSidebar, TenanSidebarContent, TenanSidebarHeader, TenanSidebarTitle, TenanSidebarDescription, TenanSidebarFooter } from './TenanSidebar'
 import { Button } from '@/core/components/ui/button'
 import { Tenan } from '@/features/tenan/store/tenanStore'
 
@@ -13,12 +13,12 @@ export const TenanDetailSidebar = React.forwardRef<HTMLDivElement, Props>(
   ({ tenan, open, onOpenChange }, ref) => {
     if (!tenan) return null
     return (
-      <Sidebar open={open} onOpenChange={onOpenChange}>
-        <SidebarContent className="w-full max-w-lg" ref={ref}>
-          <SidebarHeader>
-            <SidebarTitle>Detail Tenan</SidebarTitle>
-            <SidebarDescription>Informasi tenan dan paket langganan</SidebarDescription>
-          </SidebarHeader>
+      <TenanSidebar open={open} onOpenChange={onOpenChange}>
+        <TenanSidebarContent className="w-full max-w-lg" ref={ref}>
+          <TenanSidebarHeader>
+            <TenanSidebarTitle>Detail Tenan</TenanSidebarTitle>
+            <TenanSidebarDescription>Informasi tenan dan paket langganan</TenanSidebarDescription>
+          </TenanSidebarHeader>
           <div className="flex-1 overflow-y-auto space-y-4">
             <section className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
@@ -71,11 +71,11 @@ export const TenanDetailSidebar = React.forwardRef<HTMLDivElement, Props>(
               </div>
             </section>
           </div>
-          <SidebarFooter>
+          <TenanSidebarFooter>
             <Button variant="outline" onClick={() => onOpenChange(false)} className="flex-1">Tutup</Button>
-          </SidebarFooter>
-        </SidebarContent>
-      </Sidebar>
+          </TenanSidebarFooter>
+        </TenanSidebarContent>
+      </TenanSidebar>
     )
   }
 )

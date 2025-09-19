@@ -1,5 +1,5 @@
 import * as React from 'react'
-import { Sidebar, SidebarContent, SidebarHeader, SidebarTitle, SidebarDescription, SidebarFooter } from '@/core/components/ui/sidebar'
+import { TenanSidebar, TenanSidebarContent, TenanSidebarHeader, TenanSidebarTitle, TenanSidebarDescription, TenanSidebarFooter } from './TenanSidebar'
 import { Button } from '@/core/components/ui/button'
 import { Input } from '@/core/components/ui/input'
 import { Label } from '@/core/components/ui/label'
@@ -43,13 +43,13 @@ export const TenanEditSidebar = React.forwardRef<HTMLDivElement, Props>(
     }
 
     return (
-      <Sidebar open={open} onOpenChange={onOpenChange}>
-        <SidebarContent className="w-full max-w-xl" ref={ref}>
+      <TenanSidebar open={open} onOpenChange={onOpenChange}>
+        <TenanSidebarContent className="w-full max-w-xl" ref={ref}>
           <form onSubmit={onSubmit} className="flex flex-col h-full">
-            <SidebarHeader>
-              <SidebarTitle>{value ? 'Edit Tenan' : 'Tenan Baru'}</SidebarTitle>
-              <SidebarDescription>Kelola informasi tenan, paket, dan batasan</SidebarDescription>
-            </SidebarHeader>
+            <TenanSidebarHeader>
+              <TenanSidebarTitle>{value ? 'Edit Tenan' : 'Tenan Baru'}</TenanSidebarTitle>
+              <TenanSidebarDescription>Kelola informasi tenan, paket, dan batasan</TenanSidebarDescription>
+            </TenanSidebarHeader>
             <div className="flex-1 overflow-y-auto space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
@@ -105,13 +105,13 @@ export const TenanEditSidebar = React.forwardRef<HTMLDivElement, Props>(
                 <Textarea id="alamat" rows={3} value={form.alamat || ''} onChange={(e) => setForm({ ...form, alamat: e.target.value })} disabled={!canEdit} />
               </div>
             </div>
-            <SidebarFooter>
+            <TenanSidebarFooter>
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)} className="flex-1">Batal</Button>
               <Button type="submit" disabled={!canEdit || isLoading} className="flex-1">{isLoading ? 'Menyimpan...' : 'Simpan'}</Button>
-            </SidebarFooter>
+            </TenanSidebarFooter>
           </form>
-        </SidebarContent>
-      </Sidebar>
+        </TenanSidebarContent>
+      </TenanSidebar>
     )
   }
 )
