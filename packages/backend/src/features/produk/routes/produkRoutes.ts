@@ -16,26 +16,7 @@ router.use(attachAccessScope);
 
 // Product CRUD routes
 router.get('/', requirePermission(PERMISSIONS.PRODUCT_READ), ProdukController.search);
-
-router.get('/:id', requirePermission(PERMISSIONS.PRODUCT_READ), ProdukController.findById);
-
 router.post('/', requirePermission(PERMISSIONS.PRODUCT_CREATE), ProdukController.create);
-
-router.put('/:id', requirePermission(PERMISSIONS.PRODUCT_UPDATE), ProdukController.update);
-
-router.delete('/:id', requirePermission(PERMISSIONS.PRODUCT_DELETE), ProdukController.delete);
-
-// Image upload routes
-router.post('/:id/upload-image',
-  requirePermission(PERMISSIONS.PRODUCT_UPDATE),
-  ProdukController.imageUploadMiddleware,
-  ProdukController.uploadProductImage
-);
-
-router.delete('/:id/remove-image',
-  requirePermission(PERMISSIONS.PRODUCT_UPDATE),
-  ProdukController.removeProductImage
-);
 
 // Inventory routes - require store access
 router.get('/inventory/search',
@@ -195,5 +176,24 @@ router.post('/suppliers',
   requirePermission(PERMISSIONS.PRODUCT_CREATE),
   ProdukController.createSupplier
 );
+
+// Image upload routes
+router.post('/:id/upload-image',
+  requirePermission(PERMISSIONS.PRODUCT_UPDATE),
+  ProdukController.imageUploadMiddleware,
+  ProdukController.uploadProductImage
+);
+
+router.delete('/:id/remove-image',
+  requirePermission(PERMISSIONS.PRODUCT_UPDATE),
+  ProdukController.removeProductImage
+);
+
+// Product detail routes (placed last to avoid catching static paths)
+router.get('/:id', requirePermission(PERMISSIONS.PRODUCT_READ), ProdukController.findById);
+
+router.put('/:id', requirePermission(PERMISSIONS.PRODUCT_UPDATE), ProdukController.update);
+
+router.delete('/:id', requirePermission(PERMISSIONS.PRODUCT_DELETE), ProdukController.delete);
 
 export default router;

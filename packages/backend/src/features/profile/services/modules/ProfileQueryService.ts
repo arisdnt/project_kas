@@ -15,7 +15,8 @@ export class ProfileQueryService {
     }
 
     // Check if has permission to view profiles
-    if (scope.level && scope.level > 2) {
+    const isSelf = scope.userId === userId;
+    if (!isSelf && scope.level && scope.level > 2) {
       throw new Error('Insufficient permissions to view other user profiles');
     }
 

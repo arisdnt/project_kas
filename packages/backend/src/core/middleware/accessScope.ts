@@ -13,6 +13,7 @@ export interface AccessScope {
   storeId?: string; // toko_id
   level?: number;
   role: UserRole;
+  userId: string;
   isGod: boolean;
   // Flag penegakan otomatis
   enforceTenant: boolean;
@@ -64,6 +65,7 @@ export function attachAccessScope(req: Request, _res: Response, next: NextFuncti
     storeId: isGod ? ((paramStore as string) || GOD_STORE_ID) : ((paramStore as string) || user.tokoId),
     level,
     role: user.role,
+    userId: user.id,
     isGod,
     // God user melewati semua pembatasan
     enforceTenant: !isGod,
@@ -282,4 +284,3 @@ export function requireStoreWhenNeeded(req: Request, res: Response, next: NextFu
   }
   return next();
 }
-

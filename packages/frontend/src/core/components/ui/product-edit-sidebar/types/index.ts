@@ -37,14 +37,6 @@ export interface FormErrors {
   stok?: string
   satuan?: string
 }
-
-export interface ScopeData {
-  targetTenantId?: string
-  targetStoreId?: string
-  applyToAllTenants?: boolean
-  applyToAllStores?: boolean
-}
-
 export interface ImageUploadState {
   selectedImage: File | null
   imagePreview: string | null

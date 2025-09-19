@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/core/components/ui/card'
-import { Button } from '@/core/components/ui/button'
+import { ActionButton } from '@/core/components/ui/action-button'
+import { DeleteConfirmationDialog } from '@/core/components/ui/delete-confirmation-dialog'
 import { useProdukStore, UIProduk } from '@/features/produk/store/produkStore'
 import { useAuthStore } from '@/core/store/authStore'
-import { Eye, Pencil, Trash2, Image } from 'lucide-react'
+import { useToast } from '@/core/hooks/use-toast'
+import { Image } from 'lucide-react'
 
 type Props = {
   onView: (p: UIProduk) => void
@@ -181,6 +183,18 @@ export function ProdukTable({ onView, onEdit }: Props) {
   const search = useProdukStore((s) => s.search)
   const filters = useProdukStore((s) => s.filters)
   const scrollerRef = useRef<HTMLDivElement | null>(null)
+  const { toast } = useToast()
+
+  // Delete confirmation dialog state
+  const [deleteDialog, setDeleteDialog] = useState<{
+    open: boolean
+    product: UIProduk | null
+    loading: boolean
+  }>({
+    open: false,
+    product: null,
+    loading: false
+  })
 
   useEffect(() => {
     loadFirst()
@@ -244,9 +258,41 @@ export function ProdukTable({ onView, onEdit }: Props) {
     </tbody>
   ), [])
 
-  const onDelete = async (p: UIProduk) => {
-    if (!confirm(`Hapus produk "${p.nama}"?`)) return
-    await deleteProduk(p.id)
+  const openDeleteDialog = (product: UIProduk) => {
+    setDeleteDialog({
+      open: true,
+      product,
+      loading: false
+    })
+  }
+
+  const closeDeleteDialog = () => {
+    setDeleteDialog({
+      open: false,
+      product: null,
+      loading: false
+    })
+  }
+
+  const handleDeleteConfirm = async () => {
+    if (!deleteDialog.product) return
+
+    setDeleteDialog(prev => ({ ...prev, loading: true }))
+
+    try {
+      await deleteProduk(deleteDialog.product.id)
+      toast({
+        title: 'Produk dihapus',
+        description: `Produk "${deleteDialog.product.nama}" berhasil dihapus.`
+      })
+      closeDeleteDialog()
+    } catch (error: any) {
+      toast({
+        title: 'Gagal menghapus produk',
+        description: error?.message || 'Terjadi kesalahan saat menghapus produk.'
+      })
+      setDeleteDialog(prev => ({ ...prev, loading: false }))
+    }
   }
 
   return (
@@ -315,17 +361,14 @@ export function ProdukTable({ onView, onEdit }: Props) {
                       </span>
                     </td>
                     <td className="px-4 py-3">
-                      <div className="flex items-center gap-2">
-                        <Button variant="ghost" size="sm" onClick={() => onView(p)} className="text-blue-600 hover:text-blue-700 hover:bg-blue-50">
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                        <Button variant="ghost" size="sm" onClick={() => onEdit(p)} className="text-amber-600 hover:text-amber-700 hover:bg-amber-50">
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                        <Button variant="ghost" size="sm" onClick={() => onDelete(p)} className="text-red-600 hover:text-red-700 hover:bg-red-50">
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
+                      <ActionButton
+                        onView={() => onView(p)}
+                        onEdit={() => onEdit(p)}
+                        onDelete={() => openDeleteDialog(p)}
+                        viewLabel="Lihat Detail Produk"
+                        editLabel="Edit Produk"
+                        deleteLabel="Hapus Produk"
+                      />
                     </td>
                   </tr>
                 )
@@ -343,6 +386,18 @@ export function ProdukTable({ onView, onEdit }: Props) {
           )}
         </div>
       </CardContent>
+
+      {/* Delete Confirmation Dialog */}
+      <DeleteConfirmationDialog
+        open={deleteDialog.open}
+        onOpenChange={closeDeleteDialog}
+        title="Hapus Produk"
+        description="Apakah Anda yakin ingin menghapus produk ini? Semua data terkait produk akan ikut terhapus."
+        itemName={deleteDialog.product?.nama}
+        onConfirm={handleDeleteConfirm}
+        isLoading={deleteDialog.loading}
+        confirmText="Hapus Produk"
+      />
     </Card>
   )
 }

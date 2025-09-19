@@ -22,6 +22,22 @@ export function LoginPage() {
   const [error, setError] = useState<string>('');
   const { login, isLoading } = useAuthStore();
 
+  const handleQuickLogin = async (username: string, password: string) => {
+    if (isLoading) return;
+    setError('');
+    setForm(prev => ({
+      ...prev,
+      username,
+      password
+    }));
+
+    try {
+      await login(username, password, form.tenantId);
+    } catch (err: any) {
+      setError(err.message || 'Login gagal');
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
@@ -180,8 +196,41 @@ export function LoginPage() {
                  disabled={isLoading}
                  className="w-full h-11 text-base font-medium"
                >
-                 {isLoading ? 'Memproses...' : 'Masuk'}
-               </Button>
+               {isLoading ? 'Memproses...' : 'Masuk'}
+              </Button>
+
+              <div className="space-y-2">
+                <p className="text-center text-xs text-gray-500">Fast Login (Mode Pengembangan)</p>
+                <div className="grid grid-cols-1 gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    disabled={isLoading}
+                    className="w-full h-10 text-sm"
+                    onClick={() => handleQuickLogin('god', 'god123')}
+                  >
+                    Login sebagai God
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    disabled={isLoading}
+                    className="w-full h-10 text-sm"
+                    onClick={() => handleQuickLogin('kindrut', '123123123')}
+                  >
+                    Login sebagai Admin (Level 2)
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    disabled={isLoading}
+                    className="w-full h-10 text-sm"
+                    onClick={() => handleQuickLogin('admintoko', '123123123')}
+                  >
+                    Login sebagai Admin Toko
+                  </Button>
+                </div>
+              </div>
              </form>
 
              {config.ui?.login?.footerText && (

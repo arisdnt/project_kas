@@ -1,16 +1,17 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Card, CardContent } from '@/core/components/ui/card'
-import { Button } from '@/core/components/ui/button'
 import { Badge } from '@/core/components/ui/badge'
+import { ActionButton } from '@/core/components/ui/action-button'
+import { DeleteConfirmationDialog } from '@/core/components/ui/delete-confirmation-dialog'
 import { useKategoriStore } from '@/features/kategori/store/kategoriStore'
 import { UIKategori } from '@/features/kategori/types/kategori'
-import { Eye, Pencil, Trash2, Package, Image } from 'lucide-react'
+import { Image } from 'lucide-react'
 import { useAuthStore } from '@/core/store/authStore'
+import { useToast } from '@/core/hooks/use-toast'
 
 type Props = {
   onView: (k: UIKategori) => void
   onEdit: (k: UIKategori) => void
-  onViewProducts: (k: UIKategori) => void
 }
 
 // Helper function to convert MinIO URL to accessible URL
@@ -176,9 +177,21 @@ function CategoryImage({ src, alt, className = "", showHoverPreview = false }: {
   )
 }
 
-export function KategoriTable({ onView, onEdit, onViewProducts }: Props) {
+export function KategoriTable({ onView, onEdit }: Props) {
   const { items, loading, hasNext, loadNext, loadFirst, deleteKategori } = useKategoriStore()
   const scrollerRef = useRef<HTMLDivElement | null>(null)
+  const { toast } = useToast()
+
+  // Delete confirmation dialog state
+  const [deleteDialog, setDeleteDialog] = useState<{
+    open: boolean
+    kategori: UIKategori | null
+    loading: boolean
+  }>({
+    open: false,
+    kategori: null,
+    loading: false
+  })
 
   useEffect(() => {
     loadFirst()
@@ -214,9 +227,41 @@ export function KategoriTable({ onView, onEdit, onViewProducts }: Props) {
     </tbody>
   ), [])
 
-  const onDelete = async (k: UIKategori) => {
-    if (!confirm(`Hapus kategori "${k.nama}"?`)) return
-    await deleteKategori(k.id)
+  const openDeleteDialog = (kategori: UIKategori) => {
+    setDeleteDialog({
+      open: true,
+      kategori,
+      loading: false
+    })
+  }
+
+  const closeDeleteDialog = () => {
+    setDeleteDialog({
+      open: false,
+      kategori: null,
+      loading: false
+    })
+  }
+
+  const handleDeleteConfirm = async () => {
+    if (!deleteDialog.kategori) return
+
+    setDeleteDialog(prev => ({ ...prev, loading: true }))
+
+    try {
+      await deleteKategori(deleteDialog.kategori.id)
+      toast({
+        title: 'Kategori dihapus',
+        description: `Kategori "${deleteDialog.kategori.nama}" berhasil dihapus.`
+      })
+      closeDeleteDialog()
+    } catch (error: any) {
+      toast({
+        title: 'Gagal menghapus kategori',
+        description: error?.message || 'Terjadi kesalahan saat menghapus kategori.'
+      })
+      setDeleteDialog(prev => ({ ...prev, loading: false }))
+    }
   }
 
   return (
@@ -266,17 +311,6 @@ export function KategoriTable({ onView, onEdit, onViewProducts }: Props) {
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2">
                       <span className="text-sm font-medium">{k.jumlah_produk}</span>
-                      {k.jumlah_produk > 0 && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => onViewProducts(k)}
-                          className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 h-6 px-2"
-                        >
-                          <Package className="h-3 w-3 mr-1" />
-                          Detail
-                        </Button>
-                      )}
                     </div>
                   </td>
                   <td className="px-4 py-3">
@@ -285,17 +319,14 @@ export function KategoriTable({ onView, onEdit, onViewProducts }: Props) {
                     </Badge>
                   </td>
                   <td className="px-4 py-3">
-                    <div className="flex items-center gap-2">
-                      <Button variant="ghost" size="sm" onClick={() => onView(k)} className="text-blue-600 hover:text-blue-700 hover:bg-blue-50">
-                        <Eye className="h-4 w-4" />
-                      </Button>
-                      <Button variant="ghost" size="sm" onClick={() => onEdit(k)} className="text-amber-600 hover:text-amber-700 hover:bg-amber-50">
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                      <Button variant="ghost" size="sm" onClick={() => onDelete(k)} className="text-red-600 hover:text-red-700 hover:bg-red-50">
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
+                    <ActionButton
+                      onView={() => onView(k)}
+                      onEdit={() => onEdit(k)}
+                      onDelete={() => openDeleteDialog(k)}
+                      viewLabel="Lihat Detail Kategori"
+                      editLabel="Edit Kategori"
+                      deleteLabel="Hapus Kategori"
+                    />
                   </td>
                 </tr>
               ))}
@@ -311,6 +342,18 @@ export function KategoriTable({ onView, onEdit, onViewProducts }: Props) {
           )}
         </div>
       </CardContent>
+
+      {/* Delete Confirmation Dialog */}
+      <DeleteConfirmationDialog
+        open={deleteDialog.open}
+        onOpenChange={closeDeleteDialog}
+        title="Hapus Kategori"
+        description="Apakah Anda yakin ingin menghapus kategori ini? Semua produk dalam kategori ini akan terpengaruh."
+        itemName={deleteDialog.kategori?.nama}
+        onConfirm={handleDeleteConfirm}
+        isLoading={deleteDialog.loading}
+        confirmText="Hapus Kategori"
+      />
     </Card>
   )
 }

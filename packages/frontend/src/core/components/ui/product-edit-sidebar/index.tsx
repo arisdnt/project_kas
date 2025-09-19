@@ -15,7 +15,7 @@ import { useProductForm } from './hooks/useProductForm'
 import { useImageUpload } from './hooks/useImageUpload'
 import { CreateModeLayout } from './layouts/CreateModeLayout'
 import { EditModeLayout } from './layouts/EditModeLayout'
-import { ProductEditSidebarProps, ProductFormData } from './types'
+import type { ProductEditSidebarProps, ProductFormData } from './types'
 
 export const ProductEditSidebar = React.forwardRef<
   HTMLDivElement,
@@ -52,8 +52,6 @@ export const ProductEditSidebar = React.forwardRef<
     setFormData,
     errors,
     touched,
-    scopeData,
-    setScopeData,
     handleInputChange,
     handleBlur,
     handleSubmit,
@@ -186,7 +184,6 @@ export const ProductEditSidebar = React.forwardRef<
               fileInputRef={fileInputRef}
               onInputChange={handleInputChange}
               onBlur={handleBlur}
-              onScopeChange={setScopeData}
               onImageSelect={handleImageSelect}
               onClearImageSelection={clearSelection}
               onTriggerFileInput={triggerFileInput}

@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Card, CardContent } from '@/core/components/ui/card'
-import { Button } from '@/core/components/ui/button'
+import { ActionButton } from '@/core/components/ui/action-button'
+import { DeleteConfirmationDialog } from '@/core/components/ui/delete-confirmation-dialog'
 import { useBrandStore, UIBrand } from '@/features/brand/store/brandStore'
-import { Eye, Pencil, Trash2, Image } from 'lucide-react'
+import { Image } from 'lucide-react'
 import { useAuthStore } from '@/core/store/authStore'
+import { useToast } from '@/core/hooks/use-toast'
 
 type Props = {
   onView: (b: UIBrand) => void
@@ -176,6 +178,18 @@ function BrandImage({ src, alt, className = "", showHoverPreview = false }: { sr
 export function BrandTable({ onView, onEdit }: Props) {
   const { items, loading, hasNext, loadNext, loadFirst, deleteBrand } = useBrandStore()
   const scrollerRef = useRef<HTMLDivElement | null>(null)
+  const { toast } = useToast()
+
+  // Delete confirmation dialog state
+  const [deleteDialog, setDeleteDialog] = useState<{
+    open: boolean
+    brand: UIBrand | null
+    loading: boolean
+  }>({
+    open: false,
+    brand: null,
+    loading: false
+  })
 
   useEffect(() => {
     loadFirst()
@@ -207,9 +221,41 @@ export function BrandTable({ onView, onEdit }: Props) {
     </tbody>
   ), [])
 
-  const onDelete = async (b: UIBrand) => {
-    if (!confirm(`Hapus brand "${b.nama}"?`)) return
-    await deleteBrand(b.id)
+  const openDeleteDialog = (brand: UIBrand) => {
+    setDeleteDialog({
+      open: true,
+      brand,
+      loading: false
+    })
+  }
+
+  const closeDeleteDialog = () => {
+    setDeleteDialog({
+      open: false,
+      brand: null,
+      loading: false
+    })
+  }
+
+  const handleDeleteConfirm = async () => {
+    if (!deleteDialog.brand) return
+
+    setDeleteDialog(prev => ({ ...prev, loading: true }))
+
+    try {
+      await deleteBrand(deleteDialog.brand.id)
+      toast({
+        title: 'Brand dihapus',
+        description: `Brand "${deleteDialog.brand.nama}" berhasil dihapus.`
+      })
+      closeDeleteDialog()
+    } catch (error: any) {
+      toast({
+        title: 'Gagal menghapus brand',
+        description: error?.message || 'Terjadi kesalahan saat menghapus brand.'
+      })
+      setDeleteDialog(prev => ({ ...prev, loading: false }))
+    }
   }
 
   return (
@@ -246,17 +292,14 @@ export function BrandTable({ onView, onEdit }: Props) {
                     {b.deskripsi && <div className="text-xs text-gray-500 truncate mt-0.5">{b.deskripsi}</div>}
                   </td>
                   <td className="px-4 py-3">
-                    <div className="flex items-center gap-2">
-                      <Button variant="ghost" size="sm" onClick={() => onView(b)} className="text-blue-600 hover:text-blue-700 hover:bg-blue-50">
-                        <Eye className="h-4 w-4" />
-                      </Button>
-                      <Button variant="ghost" size="sm" onClick={() => onEdit(b)} className="text-amber-600 hover:text-amber-700 hover:bg-amber-50">
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                      <Button variant="ghost" size="sm" onClick={() => onDelete(b)} className="text-red-600 hover:text-red-700 hover:bg-red-50">
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
+                    <ActionButton
+                      onView={() => onView(b)}
+                      onEdit={() => onEdit(b)}
+                      onDelete={() => openDeleteDialog(b)}
+                      viewLabel="Lihat Detail Brand"
+                      editLabel="Edit Brand"
+                      deleteLabel="Hapus Brand"
+                    />
                   </td>
                 </tr>
               ))}
@@ -272,6 +315,18 @@ export function BrandTable({ onView, onEdit }: Props) {
           )}
         </div>
       </CardContent>
+
+      {/* Delete Confirmation Dialog */}
+      <DeleteConfirmationDialog
+        open={deleteDialog.open}
+        onOpenChange={closeDeleteDialog}
+        title="Hapus Brand"
+        description="Apakah Anda yakin ingin menghapus brand ini? Semua produk yang menggunakan brand ini akan terpengaruh."
+        itemName={deleteDialog.brand?.nama}
+        onConfirm={handleDeleteConfirm}
+        isLoading={deleteDialog.loading}
+        confirmText="Hapus Brand"
+      />
     </Card>
   )
 }

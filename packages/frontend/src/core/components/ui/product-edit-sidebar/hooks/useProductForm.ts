@@ -1,5 +1,5 @@
 import * as React from 'react'
-import { ProductFormData, FormErrors, ScopeData } from '../types'
+import { ProductFormData, FormErrors } from '../types'
 import { validateForm } from '../validation/productValidation'
 
 interface UseProductFormProps {
@@ -33,7 +33,6 @@ export const useProductForm = ({
 
   const [errors, setErrors] = React.useState<FormErrors>({})
   const [touched, setTouched] = React.useState<Record<string, boolean>>({})
-  const [scopeData, setScopeData] = React.useState<ScopeData>({})
 
   // Update form data when initialData changes
   React.useEffect(() => {
@@ -69,8 +68,7 @@ export const useProductForm = ({
 
     if (Object.keys(formErrors).length === 0) {
       try {
-        // Combine scopeData only for create mode
-        const payload: any = isCreate ? { ...formData, ...scopeData } : formData
+        const payload: any = formData
         await onSave(payload)
         return true
       } catch (error) {
@@ -84,7 +82,6 @@ export const useProductForm = ({
   const resetForm = () => {
     setErrors({})
     setTouched({})
-    setScopeData({})
   }
 
   return {
@@ -92,8 +89,6 @@ export const useProductForm = ({
     setFormData,
     errors,
     touched,
-    scopeData,
-    setScopeData,
     handleInputChange,
     handleBlur,
     handleSubmit,

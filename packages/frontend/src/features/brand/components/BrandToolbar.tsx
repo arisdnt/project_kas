@@ -11,7 +11,7 @@ type Props = {
 
 export function BrandToolbar({ onCreate }: Props) {
   const { setSearch, loadFirst } = useBrandStore()
-  const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
+  const { isAuthenticated, user } = useAuthStore()
   const [query, setQuery] = useState('')
 
   useEffect(() => {

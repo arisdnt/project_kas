@@ -2,12 +2,11 @@ import * as React from 'react'
 import { Input } from '../../input'
 import { Label } from '../../label'
 import { Combobox } from '../../combobox'
-import { ScopeSelector } from '../../scope-selector'
 import { ProductCodeField } from '../components/ProductCodeField'
 import { PriceFields } from '../components/PriceFields'
 import { StockAndUnitFields } from '../components/StockAndUnitFields'
 import { ImageUploadField } from '../components/ImageUploadField'
-import { ProductFormData, FormErrors, ScopeData, ImageUploadState } from '../types'
+import { ProductFormData, FormErrors, ImageUploadState } from '../types'
 
 interface CreateModeLayoutProps {
   formData: ProductFormData
@@ -22,20 +21,19 @@ interface CreateModeLayoutProps {
   fileInputRef: React.RefObject<HTMLInputElement>
   onInputChange: (field: keyof ProductFormData, value: string | number) => void
   onBlur: (field: keyof ProductFormData) => void
-  onScopeChange: (scope: ScopeData) => void
   onImageSelect: (event: React.ChangeEvent<HTMLInputElement>) => void
   onClearImageSelection: () => void
   onTriggerFileInput: () => void
-  onCategoryChange: (value: string, categories: any[]) => void
-  onBrandChange: (value: string, brands: any[]) => void
-  onSupplierChange: (value: string, suppliers: any[]) => void
+  onCategoryChange: (value: string) => void
+  onBrandChange: (value: string) => void
+  onSupplierChange: (value: string) => void
+  // scope selection removed for product sidebar
 }
 
 export const CreateModeLayout: React.FC<CreateModeLayoutProps> = ({
   formData,
   errors,
   touched,
-  isLoading,
   masterDataLoading,
   categoryOptions,
   brandOptions,
@@ -44,27 +42,17 @@ export const CreateModeLayout: React.FC<CreateModeLayoutProps> = ({
   fileInputRef,
   onInputChange,
   onBlur,
-  onScopeChange,
   onImageSelect,
   onClearImageSelection,
   onTriggerFileInput,
   onCategoryChange,
   onBrandChange,
-  onSupplierChange
+  onSupplierChange,
 }) => {
   return (
     <div className="grid grid-cols-5 gap-6 h-full">
-      {/* Left column: Scope Selection */}
-      <div className="col-span-2 space-y-4">
-        <div className="space-y-4">
-          <h3 className="text-sm font-medium">Scope Selection</h3>
-          <ScopeSelector
-            onScopeChange={onScopeChange}
-            disabled={isLoading}
-            compact={true}
-          />
-        </div>
-      </div>
+  {/* Left column intentionally removed - scope selection moved/disabled */}
+  <div className="col-span-2" />
 
       {/* Right column: Product Details */}
       <div className="col-span-3 space-y-4">
