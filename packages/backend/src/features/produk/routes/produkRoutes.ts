@@ -492,6 +492,18 @@ router.put('/:id', requirePermission(PERMISSIONS.PRODUCT_UPDATE), ProdukControll
  */
 router.delete('/:id', requirePermission(PERMISSIONS.PRODUCT_DELETE), ProdukController.delete);
 
+// Image upload routes
+router.post('/:id/upload-image',
+  requirePermission(PERMISSIONS.PRODUCT_UPDATE),
+  ProdukController.imageUploadMiddleware,
+  ProdukController.uploadProductImage
+);
+
+router.delete('/:id/remove-image',
+  requirePermission(PERMISSIONS.PRODUCT_UPDATE),
+  ProdukController.removeProductImage
+);
+
 /**
  * @swagger
  * /api/produk/inventory/search:
@@ -888,6 +900,30 @@ router.put('/master/categories/:id',
 router.delete('/master/categories/:id',
   requirePermission(PERMISSIONS.PRODUCT_DELETE),
   MasterDataController.deleteCategory
+);
+
+// Category image upload routes
+router.post('/master/categories/:id/upload-image',
+  requirePermission(PERMISSIONS.PRODUCT_UPDATE),
+  MasterDataController.imageUploadMiddleware,
+  MasterDataController.uploadCategoryImage
+);
+
+router.delete('/master/categories/:id/remove-image',
+  requirePermission(PERMISSIONS.PRODUCT_UPDATE),
+  MasterDataController.removeCategoryImage
+);
+
+// Brand image upload routes
+router.post('/master/brands/:id/upload-image',
+  requirePermission(PERMISSIONS.PRODUCT_UPDATE),
+  MasterDataController.imageUploadMiddleware,
+  MasterDataController.uploadBrandImage
+);
+
+router.delete('/master/brands/:id/remove-image',
+  requirePermission(PERMISSIONS.PRODUCT_UPDATE),
+  MasterDataController.removeBrandImage
 );
 
 /**

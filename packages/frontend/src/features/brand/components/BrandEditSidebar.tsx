@@ -5,6 +5,9 @@ import { Input } from '@/core/components/ui/input'
 import { Textarea } from '@/core/components/ui/textarea'
 import { ScopeSelector } from '@/core/components/ui/scope-selector'
 import { Separator } from '@/core/components/ui/separator'
+import { Upload, X, Image } from 'lucide-react'
+import { useAuthStore } from '@/core/store/authStore'
+import { UIBrand } from '../types/brand'
 
 type BrandFormData = {
   nama: string
@@ -20,14 +23,108 @@ type BrandFormData = {
 
 type Props = {
   value: { nama: string; deskripsi?: string; logo_url?: string; website?: string } | null
+  editingBrand?: UIBrand | null
   open: boolean
   onOpenChange: (open: boolean) => void
-  onSave: (data: BrandFormData) => Promise<void>
+  onSave: (data: BrandFormData, imageFile?: File) => Promise<void>
+  onUploadImage?: (brandId: string, file: File) => Promise<string>
+  onRemoveImage?: (brandId: string) => Promise<void>
   isLoading?: boolean
 }
 
+// Helper function to convert MinIO URL to accessible URL
+async function convertMinioUrl(minioUrl: string | null | undefined): Promise<string | null> {
+  if (!minioUrl || !minioUrl.startsWith('minio://')) {
+    return minioUrl || null;
+  }
+
+  try {
+    const objectKey = minioUrl.replace('minio://pos-files/', '');
+    const token = useAuthStore.getState().token;
+    const response = await fetch(`http://localhost:3000/api/dokumen/object-url`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: JSON.stringify({ object_key: objectKey })
+    });
+
+    if (response.ok) {
+      const result = await response.json();
+      return result.data?.url || null;
+    }
+
+    return null;
+  } catch (error) {
+    console.error('Failed to convert MinIO URL:', error);
+    return null;
+  }
+}
+
+// Component untuk menampilkan gambar brand dengan fallback
+function BrandImage({ src, alt, className = "" }: { src?: string; alt: string; className?: string }) {
+  const [imageError, setImageError] = React.useState(false)
+  const [imageLoaded, setImageLoaded] = React.useState(false)
+  const [actualSrc, setActualSrc] = React.useState<string | null>(null)
+  const [converting, setConverting] = React.useState(false)
+
+  React.useEffect(() => {
+    async function handleUrl() {
+      if (!src) {
+        setActualSrc(null);
+        return;
+      }
+
+      if (src.startsWith('minio://')) {
+        setConverting(true);
+        try {
+          const convertedUrl = await convertMinioUrl(src);
+          setActualSrc(convertedUrl);
+        } catch (error) {
+          console.error('Error converting URL:', error);
+          setActualSrc(null);
+        } finally {
+          setConverting(false);
+        }
+      } else {
+        setActualSrc(src);
+      }
+    }
+
+    setImageError(false);
+    setImageLoaded(false);
+    handleUrl();
+  }, [src]);
+
+  if (!actualSrc || imageError) {
+    return (
+      <div className={`bg-gray-100 flex items-center justify-center ${className}`}>
+        <Image className="w-8 h-8 text-gray-400" />
+      </div>
+    )
+  }
+
+  return (
+    <div className={`bg-gray-100 flex items-center justify-center ${className}`}>
+      {(converting || !imageLoaded) && (
+        <div className="absolute inset-0 bg-gray-200 animate-pulse rounded-lg" />
+      )}
+      {!converting && (
+        <img
+          src={actualSrc}
+          alt={alt}
+          className={`w-full h-full object-cover transition-opacity ${imageLoaded ? 'opacity-100' : 'opacity-0'}`}
+          onLoad={() => setImageLoaded(true)}
+          onError={() => setImageError(true)}
+        />
+      )}
+    </div>
+  )
+}
+
 export const BrandEditSidebar = React.forwardRef<HTMLDivElement, Props>(
-  ({ value, open, onOpenChange, onSave, isLoading = false }, ref) => {
+  ({ value, editingBrand, open, onOpenChange, onSave, onUploadImage, onRemoveImage, isLoading = false }, ref) => {
     const [nama, setNama] = React.useState('')
     const [deskripsi, setDeskripsi] = React.useState('')
     const [logoUrl, setLogoUrl] = React.useState('')
@@ -39,15 +136,70 @@ export const BrandEditSidebar = React.forwardRef<HTMLDivElement, Props>(
       applyToAllTenants?: boolean
       applyToAllStores?: boolean
     }>({})
+    const [uploading, setUploading] = React.useState(false)
+    const [selectedImageFile, setSelectedImageFile] = React.useState<File | null>(null)
+    const fileInputRef = React.useRef<HTMLInputElement>(null)
 
     React.useEffect(() => {
-      setNama(value?.nama ?? '')
-      setDeskripsi(value?.deskripsi ?? '')
-      setLogoUrl(value?.logo_url ?? '')
-      setWebsite(value?.website ?? '')
+      setNama(value?.nama ?? editingBrand?.nama ?? '')
+      setDeskripsi(value?.deskripsi ?? editingBrand?.deskripsi ?? '')
+      setLogoUrl(value?.logo_url ?? editingBrand?.logo_url ?? '')
+      setWebsite(value?.website ?? editingBrand?.website ?? '')
+      setSelectedImageFile(null)
       setError(undefined)
       setScopeData({}) // Reset scope data when opening
-    }, [value, open])
+    }, [value, editingBrand, open])
+
+    const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+      const file = event.target.files?.[0]
+      if (!file) return
+
+      // For create mode, just set as local preview
+      if (!editingBrand) {
+        setSelectedImageFile(file)
+        const reader = new FileReader()
+        reader.onload = (e) => {
+          setLogoUrl(e.target?.result as string)
+        }
+        reader.readAsDataURL(file)
+        return
+      }
+
+      // For edit mode, upload to server
+      if (editingBrand && onUploadImage) {
+        handleImageUpload(file)
+      }
+    }
+
+    const handleImageUpload = async (file: File) => {
+      if (!editingBrand || !onUploadImage) return
+
+      setUploading(true)
+      try {
+        const newLogoUrl = await onUploadImage(editingBrand.id, file)
+        setLogoUrl(newLogoUrl)
+      } catch (error) {
+        console.error('Error uploading image:', error)
+        setError('Gagal upload gambar')
+      } finally {
+        setUploading(false)
+      }
+    }
+
+    const handleRemoveImage = async () => {
+      if (!editingBrand || !onRemoveImage) return
+
+      setUploading(true)
+      try {
+        await onRemoveImage(editingBrand.id)
+        setLogoUrl('')
+      } catch (error) {
+        console.error('Error removing image:', error)
+        setError('Gagal hapus gambar')
+      } finally {
+        setUploading(false)
+      }
+    }
 
     const handleSubmit = async () => {
       const v = nama.trim()

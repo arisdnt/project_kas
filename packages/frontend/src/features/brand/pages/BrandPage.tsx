@@ -7,7 +7,7 @@ import { BrandEditSidebar } from '@/features/brand/components/BrandEditSidebar'
 import { useToast } from '@/core/hooks/use-toast'
 
 export function BrandPage() {
-  const { createBrand, updateBrand } = useBrandStore()
+  const { createBrand, updateBrand, uploadBrandImage, removeBrandImage } = useBrandStore()
   const { toast } = useToast()
 
   const [detailOpen, setDetailOpen] = useState(false)
@@ -48,7 +48,7 @@ export function BrandPage() {
     targetStoreId?: string;
     applyToAllTenants?: boolean;
     applyToAllStores?: boolean;
-  }) => {
+  }, imageFile?: File) => {
     setSaving(true)
     try {
       if (selected) {
@@ -62,14 +62,50 @@ export function BrandPage() {
         toast({ title: 'Brand diperbarui' })
       } else {
         // For create operations, pass all data including scope
-        await createBrand(data)
-        toast({ title: 'Brand dibuat' })
+        const createdBrand = await createBrand(data)
+
+        // If there's an image file, upload it to the newly created brand
+        if (imageFile && createdBrand && createdBrand.id !== 'scope-operation') {
+          try {
+            await uploadBrandImage(createdBrand.id, imageFile)
+            toast({ title: 'Brand dan gambar berhasil dibuat' })
+          } catch (uploadError) {
+            console.error('Failed to upload image:', uploadError)
+            toast({
+              title: 'Brand dibuat, tetapi gagal upload gambar',
+              description: 'Anda dapat upload gambar nanti melalui edit brand'
+            })
+          }
+        } else {
+          toast({ title: 'Brand dibuat' })
+        }
       }
     } catch (e: any) {
       toast({ title: 'Gagal menyimpan', description: e?.message || 'Terjadi kesalahan' })
       throw e
     } finally {
       setSaving(false)
+    }
+  }
+
+  const onUploadImage = async (brandId: string, file: File): Promise<string> => {
+    try {
+      const logoUrl = await uploadBrandImage(brandId, file)
+      toast({ title: 'Gambar brand berhasil diupload' })
+      return logoUrl
+    } catch (e: any) {
+      toast({ title: 'Gagal upload gambar', description: e?.message || 'Terjadi kesalahan' })
+      throw e
+    }
+  }
+
+  const onRemoveImage = async (brandId: string): Promise<void> => {
+    try {
+      await removeBrandImage(brandId)
+      toast({ title: 'Gambar brand berhasil dihapus' })
+    } catch (e: any) {
+      toast({ title: 'Gagal hapus gambar', description: e?.message || 'Terjadi kesalahan' })
+      throw e
     }
   }
 

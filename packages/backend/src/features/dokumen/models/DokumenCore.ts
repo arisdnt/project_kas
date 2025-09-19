@@ -19,9 +19,9 @@ export const DokumenMinioSchema = z.object({
   ukuran_file: z.number().int().min(0),
   mime_type: z.string().optional(),
   hash_file: z.string().optional(),
-  kategori_dokumen: z.enum(['invoice', 'receipt', 'product_image', 'user_avatar', 'report', 'backup', 'other']).default('other'),
+  kategori_dokumen: z.enum(['invoice', 'receipt', 'contract', 'image', 'document', 'other']).default('other'),
   deskripsi: z.string().optional(),
-  status: z.enum(['uploaded', 'processing', 'error', 'deleted']).default('uploaded'),
+  status: z.enum(['uploaded', 'processing', 'ready', 'error', 'deleted']).default('uploaded'),
   is_public: z.boolean().default(false),
   expires_at: z.date().optional(),
   metadata_json: z.record(z.any()).optional(),
@@ -49,8 +49,8 @@ export const SearchDokumenQuerySchema = z.object({
   limit: z.string().optional().default('10'),
   search: z.string().optional(),
   tipe_file: z.string().optional(),
-  kategori_dokumen: z.enum(['invoice', 'receipt', 'product_image', 'user_avatar', 'report', 'backup', 'other']).optional(),
-  status: z.enum(['uploaded', 'processing', 'error', 'deleted']).optional(),
+  kategori_dokumen: z.enum(['invoice', 'receipt', 'contract', 'image', 'document', 'other']).optional(),
+  status: z.enum(['uploaded', 'processing', 'ready', 'error', 'deleted']).optional(),
   is_public: z.boolean().optional(),
   start_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
   end_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional()
@@ -66,7 +66,7 @@ export const FileUploadSchema = z.object({
 });
 
 export const UploadConfigSchema = z.object({
-  kategori_dokumen: z.enum(['invoice', 'receipt', 'product_image', 'user_avatar', 'report', 'backup', 'other']).default('other'),
+  kategori_dokumen: z.enum(['invoice', 'receipt', 'contract', 'image', 'document', 'other']).default('other'),
   deskripsi: z.string().optional(),
   is_public: z.boolean().default(false),
   expires_at: z.string().datetime().optional()

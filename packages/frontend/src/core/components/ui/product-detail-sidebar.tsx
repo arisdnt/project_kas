@@ -10,8 +10,9 @@ import {
   SidebarDescription,
   SidebarFooter,
 } from "./sidebar"
-import { Package, Tag, Calendar, User, BarChart3 } from "lucide-react"
+import { Package, Tag, Calendar, User, BarChart3, Image } from "lucide-react"
 import { cn } from "../../lib/utils"
+import { useAuthStore } from '@/core/store/authStore'
 
 export interface Product {
   id: string
@@ -57,6 +58,119 @@ const formatDate = (dateString: string): string => {
   }).format(new Date(dateString))
 }
 
+// Helper function to convert MinIO URL to accessible URL (same as ProdukTable)
+async function convertMinioUrl(minioUrl: string | null | undefined): Promise<string | null> {
+  console.log('convertMinioUrl called with:', minioUrl);
+
+  if (!minioUrl || !minioUrl.startsWith('minio://')) {
+    console.log('convertMinioUrl: Not a MinIO URL, returning as-is');
+    return minioUrl || null;
+  }
+
+  try {
+    const objectKey = minioUrl.replace('minio://pos-files/', '');
+    console.log('convertMinioUrl: Extracted object key:', objectKey);
+
+    const token = useAuthStore.getState().token;
+    console.log('convertMinioUrl: Using token:', token ? 'Present' : 'Missing');
+
+    const apiUrl = `http://localhost:3000/api/dokumen/object-url`;
+    console.log('convertMinioUrl: Making request to:', apiUrl);
+
+    const response = await fetch(apiUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: JSON.stringify({ object_key: objectKey })
+    });
+
+    console.log('convertMinioUrl: Response status:', response.status);
+
+    if (response.ok) {
+      const result = await response.json();
+      console.log('convertMinioUrl: Response data:', result);
+      return result.data?.url || null;
+    } else {
+      const errorText = await response.text();
+      console.error('convertMinioUrl: API error:', response.status, errorText);
+      return null;
+    }
+  } catch (error) {
+    console.error('convertMinioUrl: Exception:', error);
+    return null;
+  }
+}
+
+// Component untuk menampilkan gambar produk dengan fallback
+function ProductDetailImage({ src, alt, className = "" }: { src?: string; alt: string; className?: string }) {
+  const [imageError, setImageError] = React.useState(false)
+  const [imageLoaded, setImageLoaded] = React.useState(false)
+  const [actualSrc, setActualSrc] = React.useState<string | null>(null)
+  const [converting, setConverting] = React.useState(false)
+
+  // Convert MinIO URL to accessible URL
+  React.useEffect(() => {
+    async function handleUrl() {
+      if (!src) {
+        console.log('ProductDetailImage: No src provided');
+        setActualSrc(null);
+        return;
+      }
+
+      console.log('ProductDetailImage: Original URL:', src);
+
+      if (src.startsWith('minio://')) {
+        console.log('ProductDetailImage: Converting MinIO URL...');
+        setConverting(true);
+        try {
+          const convertedUrl = await convertMinioUrl(src);
+          console.log('ProductDetailImage: Converted URL:', convertedUrl);
+          setActualSrc(convertedUrl);
+        } catch (error) {
+          console.error('ProductDetailImage: Error converting URL:', error);
+          setActualSrc(null);
+        } finally {
+          setConverting(false);
+        }
+      } else {
+        console.log('ProductDetailImage: Using URL as-is');
+        setActualSrc(src);
+      }
+    }
+
+    setImageError(false);
+    setImageLoaded(false);
+    handleUrl();
+  }, [src]);
+
+  if (!actualSrc || imageError) {
+    return (
+      <div className={`bg-gray-100 flex items-center justify-center ${className}`}>
+        <Image className="w-12 h-12 text-gray-400" />
+      </div>
+    )
+  }
+
+  return (
+    <div className={`bg-gray-100 flex items-center justify-center ${className}`}>
+      {(converting || !imageLoaded) && (
+        <div className="absolute inset-0 bg-gray-200 animate-pulse rounded-lg" />
+      )}
+      {!converting && (
+        <img
+          src={actualSrc}
+          alt={alt}
+          className={`w-full h-full object-cover transition-opacity ${imageLoaded ? 'opacity-100' : 'opacity-0'}`}
+          onLoad={() => setImageLoaded(true)}
+          onError={() => setImageError(true)}
+        />
+      )}
+    </div>
+  )
+}
+
 export const ProductDetailSidebar = React.forwardRef<
   HTMLDivElement,
   ProductDetailSidebarProps
@@ -68,7 +182,7 @@ export const ProductDetailSidebar = React.forwardRef<
 
   return (
     <Sidebar open={open} onOpenChange={onOpenChange}>
-      <SidebarContent size="forty" className={cn("w-full", className)} ref={ref}>
+      <SidebarContent size="fifty" className={cn("w-full", className)} ref={ref}>
         <SidebarHeader>
           <SidebarTitle>Detail Produk</SidebarTitle>
           <SidebarDescription>
@@ -76,17 +190,30 @@ export const ProductDetailSidebar = React.forwardRef<
           </SidebarDescription>
         </SidebarHeader>
 
-        <div className="flex-1 overflow-y-auto space-y-6">
-          {/* Product Image */}
-          {product.gambar && (
-            <div className="aspect-square w-full overflow-hidden rounded-lg border">
-              <img
-                src={product.gambar}
-                alt={product.nama}
-                className="h-full w-full object-cover"
-              />
+        <div className="flex-1 overflow-y-auto">
+          <div className="grid grid-cols-2 gap-6 h-full">
+            {/* Left Column - Product Image */}
+            <div className="flex flex-col">
+              <div className="aspect-square w-full overflow-hidden rounded-lg border relative">
+                <ProductDetailImage
+                  src={product.gambar}
+                  alt={product.nama}
+                  className="h-full w-full rounded-lg"
+                />
+              </div>
+
+              {/* Debug Info - Temporary */}
+              <div className="mt-2 p-2 bg-gray-100 rounded text-xs text-gray-600">
+                <div className="font-mono break-all">
+                  <div><strong>Original URL:</strong> {product.gambar || 'No URL'}</div>
+                  <div><strong>Auth Token:</strong> {useAuthStore.getState().token ? 'Present' : 'Missing'}</div>
+                  <div><strong>API Endpoint:</strong> http://localhost:3000/api/dokumen/object-url</div>
+                </div>
+              </div>
             </div>
-          )}
+
+            {/* Right Column - Product Details */}
+            <div className="space-y-6">`
 
           {/* Basic Info */}
           <Card>
@@ -214,6 +341,8 @@ export const ProductDetailSidebar = React.forwardRef<
               </div>
             </CardContent>
           </Card>
+            </div>
+          </div>
         </div>
 
         <SidebarFooter>

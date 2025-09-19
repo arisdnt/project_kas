@@ -1,7 +1,7 @@
 import { config } from '@/core/config'
 import { useAuthStore } from '@/core/store/authStore'
 
-export type UploadTarget = 'umum' | 'produk' | 'dokumen'
+export type UploadTarget = 'other' | 'image' | 'document' | 'invoice' | 'receipt' | 'contract'
 
 const BASE = `${config.api.url}:${config.api.port}/api/files`
 
@@ -10,7 +10,7 @@ const authHeaders = (): HeadersInit => {
   return token ? ({ Authorization: `Bearer ${token}` } as HeadersInit) : ({} as HeadersInit)
 }
 
-export async function uploadFile(file: File, target: UploadTarget = 'umum'): Promise<{ key: string }> {
+export async function uploadFile(file: File, target: UploadTarget = 'other'): Promise<{ key: string }> {
   const fd = new FormData()
   fd.append('file', file)
   fd.append('target', target)

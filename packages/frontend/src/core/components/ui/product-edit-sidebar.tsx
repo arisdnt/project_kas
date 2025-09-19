@@ -11,7 +11,7 @@ import {
   SidebarDescription,
   SidebarFooter,
 } from "./sidebar"
-import { Save, X, Shuffle } from "lucide-react"
+import { Save, X, Shuffle, Upload, Trash2, Image } from "lucide-react"
 import { cn } from "../../lib/utils"
 import { useProdukStore } from "@/features/produk/store/produkStore"
 import { ScopeSelector } from '@/core/components/ui/scope-selector'
@@ -32,17 +32,20 @@ export interface ProductFormData {
   satuan: string
   deskripsi?: string
   status: 'aktif' | 'nonaktif'
+  gambar_url?: string
 }
 
 export interface ProductEditSidebarProps {
   product: ProductFormData | null
   open: boolean
   onOpenChange: (open: boolean) => void
-  onSave: (product: ProductFormData) => Promise<void>
+  onSave: (product: ProductFormData) => Promise<any>
   isLoading?: boolean
   className?: string
   // Tambahan: indikasi mode create agar kita bisa tampilkan ScopeSelector (scope hanya berlaku create)
   isCreate?: boolean
+  // Product ID for image upload
+  productId?: number
 }
 
 interface FormErrors {
@@ -115,30 +118,36 @@ const SATUAN_OPTIONS = [
 export const ProductEditSidebar = React.forwardRef<
   HTMLDivElement,
   ProductEditSidebarProps
->(({ product, open, onOpenChange, onSave, isLoading = false, className, isCreate = false }, ref) => {
-  const { categories, brands, suppliers, loadMasterData, masterDataLoading } = useProdukStore()
+>(({ product, open, onOpenChange, onSave, isLoading = false, className, isCreate = false, productId }, ref) => {
+  const { categories, brands, suppliers, loadMasterData, masterDataLoading, uploadProductImage, removeProductImage } = useProdukStore()
 
   const [formData, setFormData] = React.useState<ProductFormData>({
     nama: '',
     kode: '',
     kategori: '',
     kategoriId: '',
-  brand: '',
-  brandId: '',
-  supplier: '',
-  supplierId: '',
+    brand: '',
+    brandId: '',
+    supplier: '',
+    supplierId: '',
     hargaBeli: 0,
     hargaJual: 0,
     stok: 0,
     satuan: 'pcs',
     deskripsi: '',
     status: 'aktif',
+    gambar_url: undefined,
   })
 
   const [errors, setErrors] = React.useState<FormErrors>({})
   const [touched, setTouched] = React.useState<Record<string, boolean>>({})
   // Scope data hanya untuk create
   const [scopeData, setScopeData] = React.useState<{ targetTenantId?: string; targetStoreId?: string; applyToAllTenants?: boolean; applyToAllStores?: boolean }>({})
+  // Image upload state
+  const [selectedImage, setSelectedImage] = React.useState<File | null>(null)
+  const [imagePreview, setImagePreview] = React.useState<string | null>(null)
+  const [imageUploading, setImageUploading] = React.useState(false)
+  const fileInputRef = React.useRef<HTMLInputElement>(null)
 
   // Generate product code based on product name
   const generateProductCode = () => {
@@ -251,15 +260,29 @@ export const ProductEditSidebar = React.forwardRef<
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    
+
     const formErrors = validateForm(formData)
     setErrors(formErrors)
-    
+
     if (Object.keys(formErrors).length === 0) {
       try {
         // Gabungkan scopeData hanya saat create
         const payload: any = isCreate ? { ...formData, ...scopeData } : formData
-        await onSave(payload)
+        const result = await onSave(payload)
+
+        // If creating a new product and there's a selected image, upload it
+        if (isCreate && selectedImage && result && result.id) {
+          setImageUploading(true)
+          try {
+            await uploadProductImage(result.id, selectedImage)
+          } catch (error: any) {
+            console.error('Failed to upload image:', error)
+            alert('Product created successfully, but failed to upload image: ' + error.message)
+          } finally {
+            setImageUploading(false)
+          }
+        }
+
         onOpenChange(false)
       } catch (error) {
         console.error('Error saving product:', error)
@@ -270,7 +293,66 @@ export const ProductEditSidebar = React.forwardRef<
   const handleCancel = () => {
     setErrors({})
     setTouched({})
+    setSelectedImage(null)
+    setImagePreview(null)
     onOpenChange(false)
+  }
+
+  // Image handling functions
+  const handleImageSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (file) {
+      if (file.size > 10 * 1024 * 1024) { // 10MB limit
+        alert('File size must be less than 10MB')
+        return
+      }
+      if (!file.type.startsWith('image/')) {
+        alert('Please select an image file')
+        return
+      }
+      setSelectedImage(file)
+
+      // Create preview
+      const reader = new FileReader()
+      reader.onload = (e) => {
+        setImagePreview(e.target?.result as string)
+      }
+      reader.readAsDataURL(file)
+    }
+  }
+
+  const handleImageUpload = async (productId: number) => {
+    if (!selectedImage) return
+
+    setImageUploading(true)
+    try {
+      const imageUrl = await uploadProductImage(productId, selectedImage)
+      setFormData(prev => ({ ...prev, gambar_url: imageUrl }))
+      setSelectedImage(null)
+      setImagePreview(null)
+    } catch (error: any) {
+      alert('Failed to upload image: ' + error.message)
+    } finally {
+      setImageUploading(false)
+    }
+  }
+
+  const handleImageRemove = async (productId: number) => {
+    setImageUploading(true)
+    try {
+      await removeProductImage(productId)
+      setFormData(prev => ({ ...prev, gambar_url: undefined }))
+      setSelectedImage(null)
+      setImagePreview(null)
+    } catch (error: any) {
+      alert('Failed to remove image: ' + error.message)
+    } finally {
+      setImageUploading(false)
+    }
+  }
+
+  const triggerFileInput = () => {
+    fileInputRef.current?.click()
   }
 
   if (!product) return null
@@ -532,6 +614,89 @@ export const ProductEditSidebar = React.forwardRef<
                       className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                     />
                   </div>
+
+                  {/* Image Upload */}
+                  <div className="space-y-2">
+                    <Label>Gambar Produk</Label>
+                    <div className="space-y-3">
+                      {/* Current Image or Preview */}
+                      {(imagePreview || formData.gambar_url) && (
+                        <div className="relative w-32 h-32 border rounded-lg overflow-hidden">
+                          <img
+                            src={imagePreview || formData.gambar_url}
+                            alt="Product preview"
+                            className="w-full h-full object-cover"
+                          />
+                          {!isCreate && formData.gambar_url && !selectedImage && (
+                            <Button
+                              type="button"
+                              variant="destructive"
+                              size="sm"
+                              onClick={() => productId && handleImageRemove(productId)}
+                              disabled={imageUploading}
+                              className="absolute top-1 right-1 h-6 w-6 p-0"
+                            >
+                              <Trash2 className="h-3 w-3" />
+                            </Button>
+                          )}
+                          {isCreate && selectedImage && (
+                            <Button
+                              type="button"
+                              variant="destructive"
+                              size="sm"
+                              onClick={() => {
+                                setSelectedImage(null)
+                                setImagePreview(null)
+                              }}
+                              className="absolute top-1 right-1 h-6 w-6 p-0"
+                            >
+                              <Trash2 className="h-3 w-3" />
+                            </Button>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Upload Button */}
+                      <div className="flex gap-2">
+                        <input
+                          ref={fileInputRef}
+                          type="file"
+                          accept="image/*"
+                          onChange={handleImageSelect}
+                          className="hidden"
+                        />
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={triggerFileInput}
+                          disabled={imageUploading}
+                          className="flex-1"
+                        >
+                          <Image className="h-4 w-4 mr-2" />
+                          {formData.gambar_url || selectedImage ? 'Ganti Gambar' : 'Pilih Gambar'}
+                        </Button>
+
+                        {selectedImage && !isCreate && (
+                          <Button
+                            type="button"
+                            onClick={() => productId && handleImageUpload(productId)}
+                            disabled={imageUploading}
+                            className="px-4"
+                          >
+                            <Upload className="h-4 w-4 mr-2" />
+                            {imageUploading ? 'Uploading...' : 'Upload'}
+                          </Button>
+                        )}
+                      </div>
+
+                      {selectedImage && (
+                        <p className="text-sm text-muted-foreground">
+                          File selected: {selectedImage.name} ({(selectedImage.size / 1024 / 1024).toFixed(2)} MB)
+                          {isCreate && <span className="block text-xs text-blue-600">Gambar akan diupload setelah produk dibuat</span>}
+                        </p>
+                      )}
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -764,6 +929,74 @@ export const ProductEditSidebar = React.forwardRef<
                   rows={3}
                   className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                 />
+              </div>
+
+              {/* Image Upload */}
+              <div className="space-y-2">
+                <Label>Gambar Produk</Label>
+                <div className="space-y-3">
+                  {/* Current Image or Preview */}
+                  {(imagePreview || formData.gambar_url) && (
+                    <div className="relative w-32 h-32 border rounded-lg overflow-hidden">
+                      <img
+                        src={imagePreview || formData.gambar_url}
+                        alt="Product preview"
+                        className="w-full h-full object-cover"
+                      />
+                      {formData.gambar_url && !selectedImage && (
+                        <Button
+                          type="button"
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => productId && handleImageRemove(productId)}
+                          disabled={imageUploading}
+                          className="absolute top-1 right-1 h-6 w-6 p-0"
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Upload Button */}
+                  <div className="flex gap-2">
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/*"
+                      onChange={handleImageSelect}
+                      className="hidden"
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={triggerFileInput}
+                      disabled={imageUploading}
+                      className="flex-1"
+                    >
+                      <Image className="h-4 w-4 mr-2" />
+                      {formData.gambar_url ? 'Ganti Gambar' : 'Pilih Gambar'}
+                    </Button>
+
+                    {selectedImage && (
+                      <Button
+                        type="button"
+                        onClick={() => productId && handleImageUpload(productId)}
+                        disabled={imageUploading}
+                        className="px-4"
+                      >
+                        <Upload className="h-4 w-4 mr-2" />
+                        {imageUploading ? 'Uploading...' : 'Upload'}
+                      </Button>
+                    )}
+                  </div>
+
+                  {selectedImage && (
+                    <p className="text-sm text-muted-foreground">
+                      File selected: {selectedImage.name} ({(selectedImage.size / 1024 / 1024).toFixed(2)} MB)
+                    </p>
+                  )}
+                </div>
               </div>
             </div>
           )}

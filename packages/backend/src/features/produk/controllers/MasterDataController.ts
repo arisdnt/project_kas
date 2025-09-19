@@ -5,6 +5,9 @@
 
 import { Request, Response } from 'express';
 import { ProdukService } from '../services/ProdukService';
+import { DokumenService } from '../../dokumen/services/DokumenService';
+import multer from 'multer';
+import { removeObject } from '@/core/storage/minioClient';
 import { z } from 'zod';
 
 const CreateCategorySchema = z.object({
@@ -346,6 +349,216 @@ export class MasterDataController {
       return res.status(400).json({
         success: false,
         message: error.message || 'Failed to create supplier'
+      });
+    }
+  }
+
+  // Configure multer for image upload (local, similar to ProdukController)
+  private static imageUpload = multer({
+    storage: multer.memoryStorage(),
+    limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
+    fileFilter: (req, file, cb) => {
+      if (file.mimetype.startsWith('image/')) cb(null, true);
+      else cb(new Error('Only image files are allowed'));
+    }
+  });
+
+  // Image upload methods for categories
+  static imageUploadMiddleware = MasterDataController.imageUpload.single('image') as any;
+
+  static async uploadCategoryImage(req: Request, res: Response) {
+    try {
+      if (!req.user || !req.accessScope) {
+        return res.status(401).json({ success: false, message: 'Unauthorized' });
+      }
+
+      const { id } = req.params;
+      const file = req.file;
+
+      if (!file) {
+        return res.status(400).json({ success: false, message: 'No image file provided' });
+      }
+
+      // Upload to MinIO via DokumenService
+      const uploadResult = await DokumenService.uploadDocument(
+        req.accessScope,
+        {
+          fieldname: 'image',
+          originalname: file.originalname,
+          encoding: (file as any).encoding || '7bit',
+          mimetype: file.mimetype,
+          buffer: file.buffer,
+          size: file.size,
+        },
+        { kategori_dokumen: 'image', is_public: false },
+        String((req as any).user.id)
+      );
+
+      // Update category with new icon URL
+      const minioUrl = `minio://pos-files/${uploadResult.document.object_key}`;
+      const category = await ProdukService.updateCategory(req.accessScope, id, {
+        icon_url: minioUrl
+      });
+
+      return res.json({
+        success: true,
+        data: {
+          icon_url: minioUrl,
+          category: category
+        },
+        message: 'Category image uploaded successfully'
+      });
+    } catch (error: any) {
+      console.error('Upload category image error:', error);
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to upload image',
+        error: error.message
+      });
+    }
+  }
+
+  static async removeCategoryImage(req: Request, res: Response) {
+    try {
+      if (!req.user || !req.accessScope) {
+        return res.status(401).json({ success: false, message: 'Unauthorized' });
+      }
+
+      const { id } = req.params;
+
+      // Get current category to get the current icon URL
+      const categories = await ProdukService.getCategories(req.accessScope);
+      const category = categories.find(c => c.id === id);
+
+      if (!category) {
+        return res.status(404).json({ success: false, message: 'Category not found' });
+      }
+
+      // Remove from MinIO if exists
+      if (category.icon_url && category.icon_url.startsWith('minio://')) {
+        try {
+          const objectKey = category.icon_url.replace('minio://pos-files/', '');
+          await removeObject(objectKey);
+        } catch (error) {
+          console.warn('Failed to delete MinIO file:', error);
+        }
+      }
+
+      // Update category to remove icon URL
+      const updatedCategory = await ProdukService.updateCategory(req.accessScope, id, {
+        icon_url: null as any
+      });
+
+      return res.json({
+        success: true,
+        data: updatedCategory,
+        message: 'Category image removed successfully'
+      });
+    } catch (error: any) {
+      console.error('Remove category image error:', error);
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to remove image',
+        error: error.message
+      });
+    }
+  }
+
+  // Image upload methods for brands
+  static async uploadBrandImage(req: Request, res: Response) {
+    try {
+      if (!req.user || !req.accessScope) {
+        return res.status(401).json({ success: false, message: 'Unauthorized' });
+      }
+
+      const { id } = req.params;
+      const file = req.file;
+
+      if (!file) {
+        return res.status(400).json({ success: false, message: 'No image file provided' });
+      }
+
+      // Upload to MinIO via DokumenService
+      const uploadResult = await DokumenService.uploadDocument(
+        req.accessScope,
+        {
+          fieldname: 'image',
+          originalname: file.originalname,
+          encoding: (file as any).encoding || '7bit',
+          mimetype: file.mimetype,
+          buffer: file.buffer,
+          size: file.size,
+        },
+        { kategori_dokumen: 'image', is_public: false },
+        String((req as any).user.id)
+      );
+
+      // Update brand with new logo URL
+      const minioUrl = `minio://pos-files/${uploadResult.document.object_key}`;
+      const brand = await ProdukService.updateBrand(req.accessScope, id, {
+        logo_url: minioUrl
+      });
+
+      return res.json({
+        success: true,
+        data: {
+          logo_url: minioUrl,
+          brand: brand
+        },
+        message: 'Brand image uploaded successfully'
+      });
+    } catch (error: any) {
+      console.error('Upload brand image error:', error);
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to upload image',
+        error: error.message
+      });
+    }
+  }
+
+  static async removeBrandImage(req: Request, res: Response) {
+    try {
+      if (!req.user || !req.accessScope) {
+        return res.status(401).json({ success: false, message: 'Unauthorized' });
+      }
+
+      const { id } = req.params;
+
+      // Get current brand to get the current logo URL
+      const brands = await ProdukService.getBrands(req.accessScope);
+      const brand = brands.find(b => b.id === id);
+
+      if (!brand) {
+        return res.status(404).json({ success: false, message: 'Brand not found' });
+      }
+
+      // Remove from MinIO if exists
+      if (brand.logo_url && brand.logo_url.startsWith('minio://')) {
+        try {
+          const objectKey = brand.logo_url.replace('minio://pos-files/', '');
+          await removeObject(objectKey);
+        } catch (error) {
+          console.warn('Failed to delete MinIO file:', error);
+        }
+      }
+
+      // Update brand to remove logo URL
+      const updatedBrand = await ProdukService.updateBrand(req.accessScope, id, {
+        logo_url: null as any
+      });
+
+      return res.json({
+        success: true,
+        data: updatedBrand,
+        message: 'Brand image removed successfully'
+      });
+    } catch (error: any) {
+      console.error('Remove brand image error:', error);
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to remove image',
+        error: error.message
       });
     }
   }

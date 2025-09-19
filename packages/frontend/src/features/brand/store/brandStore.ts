@@ -38,9 +38,11 @@ type BrandActions = {
   setSearch: (v: string) => void
   loadFirst: () => Promise<void>
   loadNext: () => Promise<void>
-  createBrand: (data: BrandCreateData) => Promise<void>
+  createBrand: (data: BrandCreateData) => Promise<UIBrand>
   updateBrand: (id: string, data: BrandUpdateData) => Promise<void>
   deleteBrand: (id: string) => Promise<void>
+  uploadBrandImage: (brandId: string, imageFile: File) => Promise<string>
+  removeBrandImage: (brandId: string) => Promise<void>
 }
 
 const API_BASE = `${config.api.url}:${config.api.port}/api/produk/master/brands`
@@ -99,7 +101,7 @@ export const useBrandStore = create<BrandState & BrandActions>()(
       set({ items: slice, page: nextPage, hasNext: nextHas, loading: false })
     },
 
-    createBrand: async (data: BrandCreateData) => {
+    createBrand: async (data: BrandCreateData): Promise<UIBrand> => {
       // Use enhanced API endpoint that supports scope operations
       const res = await fetch(API_BASE_ENHANCED, {
         method: 'POST',
@@ -117,12 +119,16 @@ export const useBrandStore = create<BrandState & BrandActions>()(
         console.log('Brand created with scope:', result.message)
         // Reload all data to get updated list
         await get().loadFirst()
+        // For scope operations, we can't return the specific created brand
+        // Return a placeholder that indicates success
+        return { id: 'scope-operation', nama: 'Scope Operation', status: 'aktif' } as UIBrand
       } else {
         // Normal single brand creation
         const created: UIBrand = result
         const all = [created, ...get().all]
         const { slice, hasNext } = filterAndSlice(all, get().search, 1, get().limit)
         set({ all, items: slice, page: 1, hasNext })
+        return created
       }
     },
 
@@ -146,6 +152,49 @@ export const useBrandStore = create<BrandState & BrandActions>()(
       const all = get().all.filter((b) => b.id !== id)
       const { slice, hasNext } = filterAndSlice(all, get().search, 1, get().limit)
       set({ all, items: slice, page: 1, hasNext })
+    },
+
+    uploadBrandImage: async (brandId: string, imageFile: File): Promise<string> => {
+      const token = useAuthStore.getState().token;
+      const formData = new FormData();
+      formData.append('image', imageFile);
+
+      const res = await fetch(`${API_BASE}/${brandId}/upload-image`, {
+        method: 'POST',
+        headers: {
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: formData,
+      });
+
+      const js = await res.json();
+      if (!res.ok || !js.success) throw new Error(js.message || 'Gagal upload gambar brand');
+
+      // Update brand in store
+      const updatedBrand = js.data.brand;
+      const all = get().all.map((b) => (b.id === brandId ? { ...b, logo_url: updatedBrand.logo_url } : b));
+      const { slice, hasNext } = filterAndSlice(all, get().search, get().page, get().limit);
+      set({ all, items: slice, hasNext });
+
+      return js.data.logo_url;
+    },
+
+    removeBrandImage: async (brandId: string): Promise<void> => {
+      const token = useAuthStore.getState().token;
+      const res = await fetch(`${API_BASE}/${brandId}/remove-image`, {
+        method: 'DELETE',
+        headers: {
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+      });
+
+      const js = await res.json();
+      if (!res.ok || !js.success) throw new Error(js.message || 'Gagal hapus gambar brand');
+
+      // Update brand in store
+      const all = get().all.map((b) => (b.id === brandId ? { ...b, logo_url: null } : b));
+      const { slice, hasNext } = filterAndSlice(all, get().search, get().page, get().limit);
+      set({ all, items: slice, hasNext });
     },
   }))
 )

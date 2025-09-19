@@ -21,6 +21,7 @@ type UIProduk = {
   isOnline?: boolean
   deskripsi?: string
   stokMinimum?: number
+  gambar_url?: string
   dibuatPada?: string
   diperbaruiPada?: string
 }
@@ -48,6 +49,7 @@ const authHeaders = () => {
   }
 }
 
+
 function mapProdukDto(p: any): UIProduk {
   const inv = Array.isArray(p.inventaris) && p.inventaris.length > 0 ? p.inventaris[0] : undefined
   return {
@@ -66,6 +68,7 @@ function mapProdukDto(p: any): UIProduk {
     isOnline: p.is_dijual_online,
     deskripsi: p.deskripsi,
     stokMinimum: p.stok_minimum,
+    gambar_url: p.gambar_url,
     dibuatPada: p.dibuat_pada || p.dibuatPada,
     diperbaruiPada: p.diperbarui_pada || p.diperbaruiPada,
   }
@@ -97,7 +100,7 @@ type ProdukActions = {
   setFilters: (f: Filters) => void
   loadFirst: () => Promise<void>
   loadNext: () => Promise<void>
-  createProduk: (data: ProductFormData) => Promise<void>
+  createProduk: (data: ProductFormData) => Promise<any>
   updateProduk: (id: number, data: ProductFormData) => Promise<void>
   deleteProduk: (id: number) => Promise<void>
   upsertFromRealtime: (p: UIProduk) => void
@@ -110,6 +113,9 @@ type ProdukActions = {
   getDefaultCategoryId: () => string
   getDefaultBrandId: () => string
   getDefaultSupplierId: () => string
+  // Image upload functions
+  uploadProductImage: (productId: number, imageFile: File) => Promise<string>
+  removeProductImage: (productId: number) => Promise<void>
 }
 
 export const useProdukStore = create<ProdukState & ProdukActions>()(
@@ -209,6 +215,9 @@ export const useProdukStore = create<ProdukState & ProdukActions>()(
       // Optimistically prepend to list
       const ui = mapProdukDto(created)
       set({ items: [ui, ...get().items] })
+
+      // Return the created product data with id
+      return created
     },
 
     updateProduk: async (id: number, data: ProductFormData) => {
@@ -355,6 +364,59 @@ export const useProdukStore = create<ProdukState & ProdukActions>()(
       // Reload master data to get updated list
       await get().loadMasterData()
       return js.data
+    },
+
+    // Image upload functions
+    uploadProductImage: async (productId: number, imageFile: File) => {
+      const formData = new FormData();
+      formData.append('image', imageFile);
+
+      const token = useAuthStore.getState().token;
+      const res = await fetch(`${API_BASE}/${productId}/upload-image`, {
+        method: 'POST',
+        headers: {
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: formData,
+      });
+
+      const js = await res.json();
+      if (!res.ok || !js.success) {
+        throw new Error(js.message || 'Failed to upload image');
+      }
+
+      // Update the product in the list with the new image URL
+      const imageUrl = js.data.gambar_url;
+      set({
+        items: get().items.map((item) =>
+          item.id === productId ? { ...item, gambar_url: imageUrl } : item
+        ),
+      });
+
+      return imageUrl;
+    },
+
+    removeProductImage: async (productId: number) => {
+      const token = useAuthStore.getState().token;
+      const res = await fetch(`${API_BASE}/${productId}/remove-image`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+      });
+
+      const js = await res.json();
+      if (!res.ok || !js.success) {
+        throw new Error(js.message || 'Failed to remove image');
+      }
+
+      // Update the product in the list to remove image URL
+      set({
+        items: get().items.map((item) =>
+          item.id === productId ? { ...item, gambar_url: undefined } : item
+        ),
+      });
     },
   }))
 )

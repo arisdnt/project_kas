@@ -28,7 +28,7 @@ export const ProdukCoreSchema = z.object({
   stok_minimum: z.number().int().min(0).default(0),
   berat: z.number().min(0).default(0),
   dimensi: z.string().max(100).optional(),
-  gambar_url: z.string().url().optional(),
+  gambar_url: z.string().url().optional().nullable(),
   is_aktif: z.nativeEnum(ProdukStatus).default(ProdukStatus.ACTIVE),
   is_dijual_online: z.boolean().default(false),
   pajak_persen: z.number().min(0).max(100).default(0),

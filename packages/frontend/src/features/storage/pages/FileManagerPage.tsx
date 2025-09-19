@@ -1,12 +1,11 @@
-import { useMemo, useRef, useState, useEffect } from 'react'
-import { uploadFile, type UploadTarget } from '@/features/storage/services/storageService'
+import { useMemo, useState, useEffect, useRef } from 'react'
+import { type UploadTarget } from '@/features/storage/services/storageService'
 import { dokumenService, type DokumenItem } from '@/features/storage/services/dokumenService'
+import { config } from '@/core/config'
+import { useAuthStore } from '@/core/store/authStore'
 import { Button } from '@/core/components/ui/button'
 import { Input } from '@/core/components/ui/input'
-import { Label } from '@/core/components/ui/label'
 import { Card, CardContent } from '@/core/components/ui/card'
-import { ScopeSelector } from '@/core/components/ui/scope-selector'
-import { Separator } from '@/core/components/ui/separator'
 import { useToast } from '@/core/hooks/use-toast'
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu'
 import { 
@@ -36,8 +35,8 @@ import {
   TableRow,
 } from "@/core/components/ui/table"
 import { Badge } from "@/core/components/ui/badge"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/core/components/ui/dialog"
-import DocumentPreviewModal from "@/features/storage/components/DocumentPreviewModal"
+import DocumentPreviewDrawer from "@/features/storage/components/DocumentPreviewDrawer"
+import DocumentUploadDrawer, { type DocumentUploadData } from "@/features/storage/components/DocumentUploadDrawer"
 import { formatBytes, getFileType, formatDate, getMimeTypeExtension, getFileIcon, getFileIconColor } from "./fileUtils"
 
 interface FileItem {
@@ -54,9 +53,9 @@ interface FileItem {
 
 export function FileManagerPage() {
   const { toast } = useToast()
-  const [target, setTarget] = useState<UploadTarget>('umum')
+  const [target, setTarget] = useState<UploadTarget>('other')
   const [isUploading, setIsUploading] = useState(false)
-  const fileRef = useRef<HTMLInputElement>(null)
+  const tableContainerRef = useRef<HTMLDivElement>(null)
   const [files, setFiles] = useState<FileItem[]>([])
   // Removed unused resolveKey state
   const [copiedKey, setCopiedKey] = useState<string | null>(null)
@@ -68,8 +67,7 @@ export function FileManagerPage() {
   const [previewOpenUrl, setPreviewOpenUrl] = useState<string | null>(null)
   const [isDeleting, setIsDeleting] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
-  const [uploadDialogOpen, setUploadDialogOpen] = useState(false)
-  const [scopeData, setScopeData] = useState<{ targetTenantId?: string; targetStoreId?: string; applyToAllTenants?: boolean; applyToAllStores?: boolean }>({})
+  const [uploadDrawerOpen, setUploadDrawerOpen] = useState(false)
   
   // Pagination state
   const [page, setPage] = useState(1)
@@ -77,7 +75,6 @@ export function FileManagerPage() {
   const [total, setTotal] = useState(0)
   const [hasMore, setHasMore] = useState(true)
   const [isLoadingMore, setIsLoadingMore] = useState(false)
-  const tableContainerRef = useRef<HTMLDivElement>(null)
 
   // Load files from database
   const loadFiles = async (isLoadMore = false) => {
@@ -93,7 +90,7 @@ export function FileManagerPage() {
       const response = await dokumenService.getList({
         page: isLoadMore ? page + 1 : 1,
         limit,
-        kategori: selectedCategory === 'all' ? undefined : selectedCategory,
+        kategori_dokumen: selectedCategory === 'all' ? undefined : selectedCategory,
         search: searchTerm || undefined
       })
       
@@ -103,18 +100,46 @@ export function FileManagerPage() {
         return
       }
       
+      // Function to fix MIME type based on filename
+      const fixMimeType = (mimeType: string, filename: string): string => {
+        if (mimeType === 'application/octet-stream') {
+          const ext = filename.split('.').pop()?.toLowerCase()
+          const mimeTypeMap: Record<string, string> = {
+            'jpg': 'image/jpeg',
+            'jpeg': 'image/jpeg',
+            'png': 'image/png',
+            'gif': 'image/gif',
+            'webp': 'image/webp',
+            'pdf': 'application/pdf',
+            'doc': 'application/msword',
+            'docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            'txt': 'text/plain',
+            'csv': 'text/csv',
+            'xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'zip': 'application/zip'
+          }
+          return mimeTypeMap[ext || ''] || mimeType
+        }
+        return mimeType
+      }
+
       const dokumenFiles: FileItem[] = response.data.items
         .filter((dok: DokumenItem) => dok.id && dok.id.trim() !== '') // Filter out invalid IDs
-        .map((dok: DokumenItem) => ({
-          id: dok.id, // ID is already a string UUID from backend
-          key: dok.kunci_objek || '',
-          name: dok.nama_file_asli || 'Unknown',
-          size: dok.ukuran_file || 0,
-          type: dok.tipe_mime || 'application/octet-stream',
-          category: dok.kategori as UploadTarget || 'umum',
-          uploadedBy: dok.diupload_oleh?.toString() || 'Unknown',
-          uploadedAt: new Date(dok.tanggal_upload || Date.now())
-        }))
+        .map((dok: DokumenItem) => {
+          const originalMime = dok.tipe_mime || 'application/octet-stream'
+          const correctedMime = fixMimeType(originalMime, dok.nama_file_asli || '')
+
+          return {
+            id: dok.id, // ID is already a string UUID from backend
+            key: dok.kunci_objek || '',
+            name: dok.nama_file_asli || 'Unknown',
+            size: dok.ukuran_file || 0,
+            type: correctedMime, // Use corrected MIME type
+            category: dok.kategori as UploadTarget || 'other',
+            uploadedBy: dok.diupload_oleh?.toString() || 'Unknown',
+            uploadedAt: new Date(dok.tanggal_upload || Date.now())
+          }
+        })
       
       if (isLoadMore) {
         setFiles(prev => [...prev, ...dokumenFiles])
@@ -171,14 +196,6 @@ export function FileManagerPage() {
     return () => container.removeEventListener('scroll', handleScroll)
   }, [hasMore, isLoadingMore, isLoading])
 
-  const helperText = useMemo(
-    () => ({
-      umum: 'Dokumen umum (resi, lampiran, dll.)',
-      produk: 'Gambar produk (jpeg, png, webp, gif)',
-      dokumen: 'File PDF/dokumen transaksi',
-    }[target]),
-    [target]
-  )
 
   // filteredFiles logic inlined by using search/filter directly in load; kept raw files listing
 
@@ -196,43 +213,52 @@ export function FileManagerPage() {
     }
   }, [files])
 
-  async function handleUpload() {
-    const file = fileRef.current?.files?.[0]
-    if (!file) {
-      toast({ title: 'Pilih file terlebih dahulu', variant: 'destructive' })
-      return
-    }
+  async function handleUpload(uploadData: DocumentUploadData) {
     setIsUploading(true)
     try {
-      // Upload file to storage bucket first
-      await uploadFile(file, target)
-      // After successful raw file upload, create dokumen metadata with scope (if backend supports)
-      try {
-        await dokumenService.create({
-          status: 'aktif',
-          kunci_objek: file.name, // assuming file name as key; adapt if service returns a key
-          nama_file_asli: file.name,
-          ukuran_file: file.size,
-            tipe_mime: file.type || 'application/octet-stream',
-          kategori: target,
-          deskripsi: undefined,
-          ...(scopeData)
-        } as any)
-      } catch (metaErr) {
-        // Non-fatal if backend belum dukung scope fields; log silently
-        console.warn('Dokumen metadata create (with scope) failed or skipped:', metaErr)
+      // Create FormData for multipart upload
+      const formData = new FormData()
+      formData.append('file', uploadData.file)
+      formData.append('kategori_dokumen', uploadData.kategori_dokumen)
+      formData.append('is_public', 'false')
+
+      // Add scope data if provided
+      if (uploadData.targetTenantId) {
+        formData.append('targetTenantId', uploadData.targetTenantId)
       }
-      toast({ title: 'Berhasil unggah', description: file.name })
-      
+      if (uploadData.targetStoreId) {
+        formData.append('targetStoreId', uploadData.targetStoreId)
+      }
+      if (uploadData.applyToAllTenants) {
+        formData.append('applyToAllTenants', 'true')
+      }
+      if (uploadData.applyToAllStores) {
+        formData.append('applyToAllStores', 'true')
+      }
+
+      // Upload using the proper API endpoint
+      const BASE_URL = `${config.api.url}:${config.api.port}`
+      const response = await fetch(`${BASE_URL}/api/dokumen/upload`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${useAuthStore.getState().token}`
+        },
+        body: formData
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.message || 'Upload failed')
+      }
+
+      const result = await response.json()
+      toast({ title: 'Berhasil unggah', description: uploadData.file.name })
+
       // Reload files from database to get updated list
       await loadFiles()
-      
-      // Clear file input and close dialog
-      if (fileRef.current) fileRef.current.value = ''
-      setUploadDialogOpen(false)
-      setScopeData({})
     } catch (e: any) {
       toast({ title: 'Gagal unggah', description: e?.message || 'Terjadi kesalahan', variant: 'destructive' })
+      throw e // Re-throw to prevent drawer from closing
     } finally {
       setIsUploading(false)
     }
@@ -247,12 +273,21 @@ export function FileManagerPage() {
       
       // Use same-origin streaming endpoint to work offline without external viewer/CORS
       const streamUrl = dokumenService.getStreamUrl(file.id)
+      console.log('Opening preview:', { fileId: file.id, streamUrl, fileName: file.name, mimeType: file.type })
+
+      // Test if stream endpoint is available
+      const streamTest = await dokumenService.testStream(file.id)
+      console.log('Stream test result:', streamTest)
+
       // Also get presigned URL for opening in a new tab / download without auth header
       let openUrl: string | null = null
       try {
         const presigned = await dokumenService.getFileUrl(file.id)
         openUrl = presigned.data.url
-      } catch {}
+        console.log('Presigned URL obtained:', openUrl)
+      } catch (error) {
+        console.error('Failed to get presigned URL:', error)
+      }
       setSelectedFile(file)
       setPreviewUrl(streamUrl)
       setPreviewOpenUrl(openUrl)
@@ -337,8 +372,8 @@ export function FileManagerPage() {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Produk</p>
-                <p className="text-2xl font-bold text-gray-900">{stats.categoryCounts.produk || 0}</p>
+                <p className="text-sm font-medium text-gray-600">Gambar</p>
+                <p className="text-2xl font-bold text-gray-900">{stats.categoryCounts.image || 0}</p>
               </div>
               <div className="h-12 w-12 bg-purple-100 rounded-lg flex items-center justify-center">
                 <Image className="h-6 w-6 text-purple-600" />
@@ -346,13 +381,13 @@ export function FileManagerPage() {
             </div>
           </CardContent>
         </Card>
-        
+
         <Card className="border-0 shadow-sm">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600">Dokumen</p>
-                <p className="text-2xl font-bold text-gray-900">{stats.categoryCounts.dokumen || 0}</p>
+                <p className="text-2xl font-bold text-gray-900">{stats.categoryCounts.document || 0}</p>
               </div>
               <div className="h-12 w-12 bg-orange-100 rounded-lg flex items-center justify-center">
                 <FileText className="h-6 w-6 text-orange-600" />
@@ -394,7 +429,7 @@ export function FileManagerPage() {
                     >
                       Semua Kategori
                     </DropdownMenu.Item>
-                    {(['umum', 'produk', 'dokumen'] as UploadTarget[]).map((t) => (
+                    {(['other', 'image', 'document', 'invoice', 'receipt', 'contract'] as UploadTarget[]).map((t) => (
                       <DropdownMenu.Item 
                         key={t} 
                         className="px-2 py-1.5 text-sm rounded hover:bg-gray-50 outline-none cursor-pointer" 
@@ -406,81 +441,13 @@ export function FileManagerPage() {
                   </DropdownMenu.Content>
                 </DropdownMenu.Portal>
               </DropdownMenu.Root>
-              <Dialog open={uploadDialogOpen} onOpenChange={(open) => {
-                setUploadDialogOpen(open)
-                if (open) {
-                  // Reset form when dialog opens
-                  setTarget('umum')
-                  if (fileRef.current) fileRef.current.value = ''
-                  setScopeData({})
-                }
-              }}>
-                <DialogTrigger asChild>
-                  <Button className="bg-blue-600 hover:bg-blue-700 text-white">
-                    <Upload className="h-4 w-4 mr-2" />
-                    Upload File
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="max-w-md">
-                  <DialogHeader>
-                    <DialogTitle>Upload File Baru</DialogTitle>
-                  </DialogHeader>
-                  <div className="space-y-5">
-                    <div className="space-y-3">
-                      <h3 className="text-sm font-medium">Scope</h3>
-                      <ScopeSelector onScopeChange={setScopeData} compact disabled={isUploading} />
-                      <Separator />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="file">Pilih File</Label>
-                      <Input id="file" type="file" ref={fileRef} className="cursor-pointer" />
-                      <p className="text-xs text-gray-500">Maksimal 10MB. Format: JPEG, PNG, PDF, DOC</p>
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Kategori</Label>
-                      <DropdownMenu.Root>
-                        <DropdownMenu.Trigger asChild>
-                          <Button variant="outline" className="w-full justify-between">
-                            <span className="capitalize">{target}</span>
-                            <ChevronDown className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenu.Trigger>
-                        <DropdownMenu.Portal>
-                          <DropdownMenu.Content className="w-full min-w-[160px] bg-white rounded-md p-1 shadow border border-gray-200">
-                            {(['umum', 'produk', 'dokumen'] as UploadTarget[]).map((t) => (
-                              <DropdownMenu.Item 
-                                key={t} 
-                                className="px-2 py-1.5 text-sm rounded hover:bg-gray-50 outline-none cursor-pointer" 
-                                onSelect={() => setTarget(t)}
-                              >
-                                <span className="capitalize">{t}</span>
-                              </DropdownMenu.Item>
-                            ))}
-                          </DropdownMenu.Content>
-                        </DropdownMenu.Portal>
-                      </DropdownMenu.Root>
-                      <p className="text-xs text-gray-500">{helperText}</p>
-                    </div>
-                    <Button 
-                      onClick={handleUpload} 
-                      disabled={isUploading} 
-                      className="w-full bg-blue-600 hover:bg-blue-700 text-white"
-                    >
-                      {isUploading ? (
-                        <>
-                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                          Mengupload...
-                        </>
-                      ) : (
-                        <>
-                          <Upload className="h-4 w-4 mr-2" />
-                          Upload File
-                        </>
-                      )}
-                    </Button>
-                  </div>
-                </DialogContent>
-              </Dialog>
+              <Button
+                className="bg-blue-600 hover:bg-blue-700 text-white"
+                onClick={() => setUploadDrawerOpen(true)}
+              >
+                <Upload className="h-4 w-4 mr-2" />
+                Upload File
+              </Button>
             </div>
           </div>
         </CardContent>
@@ -648,9 +615,9 @@ export function FileManagerPage() {
         </CardContent>
       </Card>
 
-      {/* Preview Modal (clean, minimal wrapper) */}
+      {/* Preview Drawer (90% width, side panel) */}
       {selectedFile && previewUrl && (
-        <DocumentPreviewModal
+        <DocumentPreviewDrawer
           open={previewOpen}
           onOpenChange={setPreviewOpen}
           name={selectedFile.name}
@@ -660,6 +627,14 @@ export function FileManagerPage() {
           openUrl={previewOpenUrl ?? undefined}
         />
       )}
+
+      {/* Upload Drawer */}
+      <DocumentUploadDrawer
+        open={uploadDrawerOpen}
+        onOpenChange={setUploadDrawerOpen}
+        onUpload={handleUpload}
+        isLoading={isUploading}
+      />
 
       </div>
   )

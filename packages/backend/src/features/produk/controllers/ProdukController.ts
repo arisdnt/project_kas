@@ -7,8 +7,27 @@ import { Request, Response } from 'express';
 import { ProdukService } from '../services/ProdukService';
 import { SearchProdukQuerySchema, CreateProdukSchema, UpdateProdukSchema } from '../models/ProdukCore';
 import { requireStoreWhenNeeded } from '@/core/middleware/accessScope';
+import multer from 'multer';
+import { DokumenService } from '@/features/dokumen/services/DokumenService';
+
+// Configure multer for image upload
+const imageUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 10 * 1024 * 1024 // 10MB limit for images
+  },
+  fileFilter: (req, file, cb) => {
+    // Only allow image files
+    if (file.mimetype.startsWith('image/')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only image files are allowed'));
+    }
+  }
+});
 
 export class ProdukController {
+  static imageUploadMiddleware = imageUpload.single('image') as any;
   /**
    * @swagger
    * /api/produk:
@@ -495,6 +514,174 @@ export class ProdukController {
       return res.status(400).json({
         success: false,
         message: error.message || 'Failed to create supplier'
+      });
+    }
+  }
+
+  /**
+   * @swagger
+   * /api/produk/{id}/upload-image:
+   *   post:
+   *     tags: [Produk]
+   *     summary: Upload gambar produk
+   *     description: Upload gambar untuk produk dan update gambar_url
+   *     security:
+   *       - bearerAuth: []
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: string
+   *           format: uuid
+   *         description: ID produk
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         multipart/form-data:
+   *           schema:
+   *             type: object
+   *             properties:
+   *               image:
+   *                 type: string
+   *                 format: binary
+   *                 description: File gambar produk
+   *     responses:
+   *       200:
+   *         description: Gambar berhasil diupload
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: true
+   *                 data:
+   *                   type: object
+   *                   properties:
+   *                     gambar_url:
+   *                       type: string
+   *                       description: URL gambar yang telah diupload
+   *       400:
+   *         description: File tidak valid atau error upload
+   *       404:
+   *         description: Produk tidak ditemukan
+   */
+  static async uploadProductImage(req: Request, res: Response) {
+    try {
+      if (!req.user || !req.accessScope) {
+        return res.status(401).json({ success: false, message: 'Unauthorized' });
+      }
+
+      if (!req.file) {
+        return res.status(400).json({ success: false, message: 'No image file provided' });
+      }
+
+      const { id } = req.params;
+
+      // Verify product exists and user has access
+      await ProdukService.findById(req.accessScope, id);
+
+      // Upload image to MinIO with image category
+      const uploadConfig = {
+        kategori_dokumen: 'image' as const,
+        deskripsi: `Product image for product ${id}`,
+        is_public: true,
+        expires_at: undefined
+      };
+
+      const uploadResult = await DokumenService.uploadDocument(
+        req.accessScope,
+        req.file,
+        uploadConfig,
+        req.user.id
+      );
+
+      // Update product with image URL
+      const gambar_url = uploadResult.document.url_dokumen;
+      await ProdukService.update(req.accessScope, id, { gambar_url });
+
+      return res.json({
+        success: true,
+        data: { gambar_url },
+        message: 'Product image uploaded successfully'
+      });
+    } catch (error: any) {
+      console.error('Upload product image error:', error);
+      if (error.message === 'Product not found') {
+        return res.status(404).json({ success: false, message: error.message });
+      }
+      return res.status(400).json({
+        success: false,
+        message: error.message || 'Failed to upload product image'
+      });
+    }
+  }
+
+  /**
+   * @swagger
+   * /api/produk/{id}/remove-image:
+   *   delete:
+   *     tags: [Produk]
+   *     summary: Hapus gambar produk
+   *     description: Hapus gambar produk dan update gambar_url menjadi null
+   *     security:
+   *       - bearerAuth: []
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: string
+   *           format: uuid
+   *         description: ID produk
+   *     responses:
+   *       200:
+   *         description: Gambar berhasil dihapus
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: true
+   *                 message:
+   *                   type: string
+   *                   example: Product image removed successfully
+   *       404:
+   *         description: Produk tidak ditemukan
+   */
+  static async removeProductImage(req: Request, res: Response) {
+    try {
+      if (!req.user || !req.accessScope) {
+        return res.status(401).json({ success: false, message: 'Unauthorized' });
+      }
+
+      const { id } = req.params;
+
+      // Get current product to check if it has an image
+      const product = await ProdukService.findById(req.accessScope, id);
+
+      // Update product to remove image URL
+      await ProdukService.update(req.accessScope, id, { gambar_url: null });
+
+      // Note: We don't delete from MinIO here to preserve the file
+      // The document can be cleaned up later via cleanup routines
+
+      return res.json({
+        success: true,
+        message: 'Product image removed successfully'
+      });
+    } catch (error: any) {
+      console.error('Remove product image error:', error);
+      if (error.message === 'Product not found') {
+        return res.status(404).json({ success: false, message: error.message });
+      }
+      return res.status(400).json({
+        success: false,
+        message: error.message || 'Failed to remove product image'
       });
     }
   }

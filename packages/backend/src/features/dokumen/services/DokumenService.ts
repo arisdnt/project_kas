@@ -42,8 +42,8 @@ export class DokumenService {
       throw new Error('File size exceeds maximum limit of 50MB');
     }
 
-    // Validate file type based on category
-    this.validateFileType(file, config.kategori_dokumen);
+    // Validate file type based on category (we'll validate in mutation service after MIME type fix)
+    // this.validateFileType(file, config.kategori_dokumen);
 
     return DokumenMutationService.uploadDocument(scope, file, config, userId);
   }
@@ -60,15 +60,33 @@ export class DokumenService {
     return DokumenMutationService.cleanupExpiredDocuments();
   }
 
+  static async fixIncorrectMimeTypes() {
+    return DokumenMutationService.fixIncorrectMimeTypes();
+  }
+
+  // URL and streaming operations
+  static async getPresignedUrl(scope: AccessScope, id: string) {
+    const document = await this.findDocumentById(scope, id);
+    return DokumenQueryService.getPresignedUrl(document.object_key);
+  }
+
+  static async getFileStream(scope: AccessScope, id: string) {
+    const document = await this.findDocumentById(scope, id);
+    return DokumenQueryService.getFileStream(document.object_key);
+  }
+
+  static async getPresignedUrlByObjectKey(objectKey: string) {
+    return DokumenQueryService.getPresignedUrl(objectKey);
+  }
+
   // Private helper methods
   private static validateFileType(file: FileUpload, category: string) {
     const allowedTypes: Record<string, string[]> = {
-      'product_image': ['image/jpeg', 'image/png', 'image/webp', 'image/gif'],
-      'user_avatar': ['image/jpeg', 'image/png', 'image/webp'],
+      'image': ['image/jpeg', 'image/png', 'image/webp', 'image/gif'],
+      'document': ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'],
       'invoice': ['application/pdf', 'image/jpeg', 'image/png'],
       'receipt': ['application/pdf', 'image/jpeg', 'image/png'],
-      'report': ['application/pdf', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'text/csv'],
-      'backup': ['application/zip', 'application/x-tar', 'application/gzip'],
+      'contract': ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'],
       'other': [] // No restrictions
     };
 

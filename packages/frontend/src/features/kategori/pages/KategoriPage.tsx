@@ -9,7 +9,7 @@ import { ProductsByCategoryModal } from '@/features/kategori/components/Products
 import { useToast } from '@/core/hooks/use-toast'
 
 export function KategoriPage() {
-  const { createKategori, updateKategori } = useKategoriStore()
+  const { createKategori, updateKategori, uploadCategoryImage, removeCategoryImage } = useKategoriStore()
   const { toast } = useToast()
 
   const [detailOpen, setDetailOpen] = useState(false)
@@ -48,21 +48,58 @@ export function KategoriPage() {
     setProductsModalOpen(true)
   }
 
-  const onSave = async (data: CreateKategoriRequest) => {
+  const onSave = async (data: CreateKategoriRequest, imageFile?: File) => {
     setSaving(true)
     try {
       if (selected) {
         await updateKategori(selected.id, data)
         toast({ title: 'Kategori diperbarui' })
       } else {
-        await createKategori(data)
-        toast({ title: 'Kategori dibuat' })
+        // Create kategori first
+        const createdCategory = await createKategori(data)
+
+        // If there's an image file, upload it to the newly created category
+        if (imageFile && createdCategory) {
+          try {
+            await uploadCategoryImage(createdCategory.id, imageFile)
+            toast({ title: 'Kategori dan gambar berhasil dibuat' })
+          } catch (uploadError) {
+            console.error('Failed to upload image:', uploadError)
+            toast({
+              title: 'Kategori dibuat, tetapi gagal upload gambar',
+              description: 'Anda dapat upload gambar nanti melalui edit kategori'
+            })
+          }
+        } else {
+          toast({ title: 'Kategori dibuat' })
+        }
       }
     } catch (e: any) {
       toast({ title: 'Gagal menyimpan', description: e?.message || 'Terjadi kesalahan' })
       throw e
     } finally {
       setSaving(false)
+    }
+  }
+
+  const onUploadImage = async (categoryId: string, file: File): Promise<string> => {
+    try {
+      const iconUrl = await uploadCategoryImage(categoryId, file)
+      toast({ title: 'Gambar kategori berhasil diupload' })
+      return iconUrl
+    } catch (e: any) {
+      toast({ title: 'Gagal upload gambar', description: e?.message || 'Terjadi kesalahan' })
+      throw e
+    }
+  }
+
+  const onRemoveImage = async (categoryId: string): Promise<void> => {
+    try {
+      await removeCategoryImage(categoryId)
+      toast({ title: 'Gambar kategori berhasil dihapus' })
+    } catch (e: any) {
+      toast({ title: 'Gagal hapus gambar', description: e?.message || 'Terjadi kesalahan' })
+      throw e
     }
   }
 
@@ -84,6 +121,7 @@ export function KategoriPage() {
 
       <KategoriEditSidebar
         value={editing}
+        editingCategory={selected}
         open={editOpen}
         onOpenChange={(o) => {
           setEditOpen(o)
@@ -93,6 +131,8 @@ export function KategoriPage() {
           }
         }}
         onSave={onSave}
+        onUploadImage={onUploadImage}
+        onRemoveImage={onRemoveImage}
         isLoading={saving}
       />
 

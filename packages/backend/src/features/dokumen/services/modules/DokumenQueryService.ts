@@ -7,6 +7,7 @@ import { RowDataPacket } from 'mysql2/promise';
 import { pool } from '@/core/database/connection';
 import { AccessScope, applyScopeToSql } from '@/core/middleware/accessScope';
 import { SearchDokumenQuery, DokumenMinio } from '../../models/DokumenCore';
+import { getPresignedGetUrl, getObjectStream } from '@/core/storage/minioClient';
 
 export class DokumenQueryService {
   static async search(scope: AccessScope, query: SearchDokumenQuery) {
@@ -78,8 +79,9 @@ export class DokumenQueryService {
     const total = countRows[0].total;
 
     // Get paginated results
-    const finalSql = `${scopedQuery.sql} ORDER BY dm.dibuat_pada DESC LIMIT ? OFFSET ?`;
-    const finalParams = [...scopedQuery.params, Number(query.limit), offset];
+    // Menggunakan string interpolation untuk LIMIT dan OFFSET karena tidak bisa menggunakan prepared statement
+    const finalSql = `${scopedQuery.sql} ORDER BY dm.dibuat_pada DESC LIMIT ${Number(query.limit)} OFFSET ${offset}`;
+    const finalParams = scopedQuery.params;
 
     const [rows] = await pool.execute<RowDataPacket[]>(finalSql, finalParams);
 
@@ -111,7 +113,7 @@ export class DokumenQueryService {
     const sql = `
       SELECT dm.*
       FROM dokumen_minio dm
-      WHERE dm.kategori_dokumen = ? AND dm.status = 'uploaded'
+      WHERE dm.kategori_dokumen = ? AND dm.status IN ('uploaded', 'ready')
     `;
 
     const scopedQuery = applyScopeToSql(sql, [kategori], scope, {
@@ -134,7 +136,7 @@ export class DokumenQueryService {
         dm.kategori_dokumen,
         COUNT(*) as file_count
       FROM dokumen_minio dm
-      WHERE dm.status = 'uploaded'
+      WHERE dm.status IN ('uploaded', 'ready')
     `;
 
     const scopedQuery = applyScopeToSql(sql, [], scope, {
@@ -151,5 +153,13 @@ export class DokumenQueryService {
       file_count: Number(row.file_count),
       total_size: Number(row.total_size)
     }));
+  }
+
+  static async getPresignedUrl(objectKey: string): Promise<string> {
+    return getPresignedGetUrl(objectKey);
+  }
+
+  static async getFileStream(objectKey: string) {
+    return getObjectStream(objectKey);
   }
 }

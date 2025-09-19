@@ -79,7 +79,8 @@ export class ProdukQueryService {
       SELECT
         p.id, p.kode, p.nama, p.deskripsi, p.satuan,
         p.harga_beli, p.harga_jual, p.margin_persen, p.stok_minimum,
-        p.is_aktif, p.is_dijual_online,
+        p.is_aktif, p.is_dijual_online, p.gambar_url,
+        p.dibuat_pada, p.diperbarui_pada,
         k.nama as kategori_nama,
         b.nama as brand_nama,
         s.nama as supplier_nama,

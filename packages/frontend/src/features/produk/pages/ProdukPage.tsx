@@ -62,6 +62,7 @@ export function ProdukPage() {
       satuan: p.satuan || 'pcs',
       deskripsi: p.deskripsi || '',
       status: 'aktif',
+      gambar_url: p.gambar_url,
     })
     setEditOpen(true)
   }
@@ -72,9 +73,11 @@ export function ProdukPage() {
       if (selected) {
         await updateProduk(selected.id, data)
         toast({ title: 'Produk diperbarui' })
+        return null
       } else {
-        await createProduk(data)
+        const result = await createProduk(data)
         toast({ title: 'Produk dibuat' })
+        return result
       }
     } catch (e: any) {
       toast({ title: 'Gagal menyimpan', description: e?.message || 'Terjadi kesalahan' })
@@ -101,6 +104,7 @@ export function ProdukPage() {
       updatedAt: selected.diperbaruiPada || new Date().toISOString(),
       createdBy: '—',
       deskripsi: '',
+      gambar: selected.gambar_url,
     }
   }, [selected])
 
@@ -139,6 +143,7 @@ export function ProdukPage() {
         onSave={onSave}
         isLoading={saving}
         isCreate={!selected}
+        productId={selected?.id}
       />
     </div>
   )

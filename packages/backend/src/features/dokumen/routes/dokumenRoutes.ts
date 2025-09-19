@@ -446,4 +446,161 @@ router.post('/cleanup-expired',
   DokumenController.cleanupExpiredDocuments
 );
 
+/**
+ * @swagger
+ * /api/dokumen/fix-mime-types:
+ *   post:
+ *     summary: Perbaiki MIME type yang salah
+ *     description: Memperbarui MIME type application/octet-stream berdasarkan ekstensi file
+ *     tags: [Documents]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: MIME types berhasil diperbaiki
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     fixed:
+ *                       type: integer
+ *                     documents:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *       401:
+ *         description: Tidak terotorisasi
+ */
+router.post('/fix-mime-types',
+  requirePermission(PERMISSIONS.SYSTEM_MANAGE),
+  DokumenController.fixMimeTypes
+);
+
+/**
+ * @swagger
+ * /api/dokumen/{id}/url:
+ *   get:
+ *     summary: Mendapatkan URL akses file
+ *     description: Mendapatkan presigned URL untuk mengakses file
+ *     tags: [Documents]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: ID dokumen
+ *     responses:
+ *       200:
+ *         description: URL berhasil diambil
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     url:
+ *                       type: string
+ *       401:
+ *         description: Tidak terotorisasi
+ *       404:
+ *         description: Dokumen tidak ditemukan
+ */
+router.get('/:id/url',
+  requirePermission(PERMISSIONS.DOCUMENT_READ),
+  DokumenController.getFileUrl
+);
+
+/**
+ * @swagger
+ * /api/dokumen/{id}/stream:
+ *   get:
+ *     summary: Stream file dokumen
+ *     description: Stream langsung konten file
+ *     tags: [Documents]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: ID dokumen
+ *     responses:
+ *       200:
+ *         description: File berhasil distream
+ *         content:
+ *           application/octet-stream:
+ *             schema:
+ *               type: string
+ *               format: binary
+ *       401:
+ *         description: Tidak terotorisasi
+ *       404:
+ *         description: Dokumen tidak ditemukan
+ */
+router.get('/:id/stream',
+  requirePermission(PERMISSIONS.DOCUMENT_READ),
+  DokumenController.streamFile
+);
+
+/**
+ * @swagger
+ * /api/dokumen/object-url:
+ *   post:
+ *     summary: Mendapatkan URL untuk object key
+ *     description: Mendapatkan presigned URL berdasarkan object key
+ *     tags: [Documents]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               object_key:
+ *                 type: string
+ *                 description: Object key dari MinIO
+ *             required:
+ *               - object_key
+ *     responses:
+ *       200:
+ *         description: URL berhasil diambil
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     url:
+ *                       type: string
+ *       400:
+ *         description: Object key tidak disediakan
+ *       401:
+ *         description: Tidak terotorisasi
+ */
+router.post('/object-url',
+  requirePermission(PERMISSIONS.DOCUMENT_READ),
+  DokumenController.getObjectUrl
+);
+
 export default router;

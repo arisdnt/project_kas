@@ -28,14 +28,16 @@ export class DokumenController {
       const query = SearchDokumenQuerySchema.parse(req.query);
       const result = await DokumenService.searchDocuments(req.accessScope, query);
 
+      // Align response shape with frontend expectation (dokumenService.getList)
+      // Frontend expects: { success, data: { items, total, page, limit, totalPages } }
       return res.json({
         success: true,
-        data: result.data,
-        pagination: {
+        data: {
+          items: result.data,
           total: result.total,
           page: result.page,
-          totalPages: result.totalPages,
-          limit: Number(query.limit)
+          limit: Number(query.limit),
+          totalPages: result.totalPages
         }
       });
     } catch (error: any) {
@@ -184,6 +186,111 @@ export class DokumenController {
       return res.json({ success: true, data: result });
     } catch (error: any) {
       console.error('Cleanup expired documents error:', error);
+      return res.status(500).json({ success: false, message: 'Internal server error' });
+    }
+  }
+
+  static async fixMimeTypes(req: Request, res: Response) {
+    try {
+      if (!req.user || !req.accessScope) {
+        return res.status(401).json({ success: false, message: 'Unauthorized' });
+      }
+
+      // Only God and Admin users can fix MIME types
+      if (req.user.level && req.user.level > 2) {
+        return res.status(403).json({ success: false, message: 'Insufficient permissions' });
+      }
+
+      const result = await DokumenService.fixIncorrectMimeTypes();
+      return res.json({ success: true, data: result });
+    } catch (error: any) {
+      console.error('Fix MIME types error:', error);
+      return res.status(500).json({ success: false, message: 'Internal server error' });
+    }
+  }
+
+  static async getFileUrl(req: Request, res: Response) {
+    try {
+      if (!req.user || !req.accessScope) {
+        return res.status(401).json({ success: false, message: 'Unauthorized' });
+      }
+
+      const { id } = req.params;
+      const url = await DokumenService.getPresignedUrl(req.accessScope, id);
+
+      return res.json({
+        success: true,
+        data: { url }
+      });
+    } catch (error: any) {
+      console.error('Get file URL error:', error);
+      if (error.message === 'Document not found') {
+        return res.status(404).json({ success: false, message: error.message });
+      }
+      return res.status(500).json({ success: false, message: 'Internal server error' });
+    }
+  }
+
+  static async streamFile(req: Request, res: Response) {
+    try {
+      if (!req.user || !req.accessScope) {
+        return res.status(401).json({ success: false, message: 'Unauthorized' });
+      }
+
+      const { id } = req.params;
+      const streamData = await DokumenService.getFileStream(req.accessScope, id);
+
+      // Set headers
+      res.setHeader('Content-Type', streamData.contentType || 'application/octet-stream');
+      if (streamData.size) {
+        res.setHeader('Content-Length', streamData.size);
+      }
+
+      // Pipe the stream to response
+      return new Promise<void>((resolve) => {
+        streamData.stream.once('end', () => {
+          resolve();
+        });
+        streamData.stream.once('error', (err: any) => {
+          console.error('Stream piping error:', err);
+          if (!res.headersSent) {
+            res.status(500).json({ success: false, message: 'Stream error' });
+          } else {
+            try { res.end(); } catch {}
+          }
+          resolve();
+        });
+        streamData.stream.pipe(res);
+      });
+    } catch (error: any) {
+      console.error('Stream file error:', error);
+      if (error.message === 'Document not found') {
+        return res.status(404).json({ success: false, message: error.message });
+      }
+      return res.status(500).json({ success: false, message: 'Internal server error' });
+    }
+  }
+
+  static async getObjectUrl(req: Request, res: Response) {
+    try {
+      if (!req.user || !req.accessScope) {
+        return res.status(401).json({ success: false, message: 'Unauthorized' });
+      }
+
+      const { object_key } = req.body;
+      if (!object_key) {
+        return res.status(400).json({ success: false, message: 'Object key is required' });
+      }
+
+      // Generate presigned URL for the object key
+      const url = await DokumenService.getPresignedUrlByObjectKey(object_key);
+
+      return res.json({
+        success: true,
+        data: { url }
+      });
+    } catch (error: any) {
+      console.error('Get object URL error:', error);
       return res.status(500).json({ success: false, message: 'Internal server error' });
     }
   }

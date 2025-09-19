@@ -17,8 +17,8 @@ export interface DokumenItem {
   nama_file_asli: string
   ukuran_file: number
   tipe_mime: string
-  kategori: 'produk' | 'dokumen' | 'umum'
-  status: 'aktif' | 'dihapus' | 'arsip'
+  kategori: 'other' | 'image' | 'document' | 'invoice' | 'receipt' | 'contract'
+  status: 'uploaded' | 'ready' | 'processing' | 'error' | 'deleted'
   id_transaksi?: number
   deskripsi?: string
   diupload_oleh: number
@@ -38,12 +38,12 @@ export interface DokumenListResponse {
 }
 
 export interface CreateDokumenRequest {
-  status: 'aktif' | 'dihapus' | 'arsip'
+  status: 'uploaded' | 'ready' | 'processing' | 'error' | 'deleted'
   kunci_objek: string
   nama_file_asli: string
   ukuran_file: number
   tipe_mime: string
-  kategori: 'produk' | 'dokumen' | 'umum'
+  kategori: 'other' | 'image' | 'document' | 'invoice' | 'receipt' | 'contract'
   id_transaksi?: number
   deskripsi?: string
 }
@@ -51,7 +51,7 @@ export interface CreateDokumenRequest {
 export interface UpdateDokumenRequest {
   nama_file_asli?: string
   kategori?: 'produk' | 'dokumen' | 'umum'
-  status?: 'aktif' | 'dihapus' | 'arsip'
+  status?: 'uploaded' | 'ready' | 'processing' | 'error' | 'deleted'
   id_transaksi?: number
   deskripsi?: string
 }
@@ -60,14 +60,14 @@ export const dokumenService = {
   async getList(params?: {
     page?: number
     limit?: number
-    kategori?: string
+    kategori_dokumen?: string
     status?: string
     search?: string
   }): Promise<DokumenListResponse> {
     const searchParams = new URLSearchParams()
     if (params?.page) searchParams.set('page', params.page.toString())
     if (params?.limit) searchParams.set('limit', params.limit.toString())
-    if (params?.kategori) searchParams.set('kategori', params.kategori)
+    if (params?.kategori_dokumen) searchParams.set('kategori_dokumen', params.kategori_dokumen)
     if (params?.status) searchParams.set('status', params.status)
     if (params?.search) searchParams.set('search', params.search)
 
@@ -154,5 +154,19 @@ export const dokumenService = {
   getStreamUrl(id: string): string {
     // Same-origin API for streaming; components can fetch with Authorization
     return `${BASE}/${id}/stream`
+  },
+
+  // Debug method to test if stream endpoint is working
+  async testStream(id: string): Promise<boolean> {
+    try {
+      const response = await fetch(`${BASE}/${id}/stream`, {
+        method: 'HEAD', // Just check if endpoint exists
+        headers: authHeaders()
+      })
+      return response.ok
+    } catch (error) {
+      console.error('Stream test failed:', error)
+      return false
+    }
   }
 }

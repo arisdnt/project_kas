@@ -19,9 +19,11 @@ type KategoriActions = {
   setSearch: (v: string) => void
   loadFirst: () => Promise<void>
   loadNext: () => Promise<void>
-  createKategori: (data: CreateKategoriRequest) => Promise<void>
+  createKategori: (data: CreateKategoriRequest) => Promise<UIKategori>
   updateKategori: (id: string, data: UpdateKategoriRequest) => Promise<void>
   deleteKategori: (id: string) => Promise<void>
+  uploadCategoryImage: (categoryId: string, imageFile: File) => Promise<string>
+  removeCategoryImage: (categoryId: string) => Promise<void>
   getProductsByCategory: (categoryId: string, options?: { page?: number; limit?: number; search?: string }) => Promise<ProductsByCategoryResponse>
 }
 
@@ -82,7 +84,7 @@ export const useKategoriStore = create<KategoriState & KategoriActions>()(
       set({ items: slice, page: nextPage, hasNext: nextHas, loading: false })
     },
 
-    createKategori: async (data: CreateKategoriRequest) => {
+    createKategori: async (data: CreateKategoriRequest): Promise<UIKategori> => {
       const res = await fetch(API_BASE, {
         method: 'POST',
         headers: authHeaders(),
@@ -94,6 +96,7 @@ export const useKategoriStore = create<KategoriState & KategoriActions>()(
       const all = [created, ...get().all]
       const { slice, hasNext } = filterAndSlice(all, get().search, 1, get().limit)
       set({ all, items: slice, page: 1, hasNext })
+      return created
     },
 
     updateKategori: async (id: string, data: UpdateKategoriRequest) => {
@@ -117,6 +120,49 @@ export const useKategoriStore = create<KategoriState & KategoriActions>()(
       const all = get().all.filter((k) => k.id !== id)
       const { slice, hasNext } = filterAndSlice(all, get().search, 1, get().limit)
       set({ all, items: slice, page: 1, hasNext })
+    },
+
+    uploadCategoryImage: async (categoryId: string, imageFile: File): Promise<string> => {
+      const token = useAuthStore.getState().token;
+      const formData = new FormData();
+      formData.append('image', imageFile);
+
+      const res = await fetch(`${API_BASE}/${categoryId}/upload-image`, {
+        method: 'POST',
+        headers: {
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: formData,
+      });
+
+      const js = await res.json();
+      if (!res.ok || !js.success) throw new Error(js.message || 'Gagal upload gambar kategori');
+
+      // Update kategori in store
+      const updatedCategory = js.data.category;
+      const all = get().all.map((k) => (k.id === categoryId ? { ...k, icon_url: updatedCategory.icon_url } : k));
+      const { slice, hasNext } = filterAndSlice(all, get().search, get().page, get().limit);
+      set({ all, items: slice, hasNext });
+
+      return js.data.icon_url;
+    },
+
+    removeCategoryImage: async (categoryId: string): Promise<void> => {
+      const token = useAuthStore.getState().token;
+      const res = await fetch(`${API_BASE}/${categoryId}/remove-image`, {
+        method: 'DELETE',
+        headers: {
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+      });
+
+      const js = await res.json();
+      if (!res.ok || !js.success) throw new Error(js.message || 'Gagal hapus gambar kategori');
+
+      // Update kategori in store
+      const all = get().all.map((k) => (k.id === categoryId ? { ...k, icon_url: null } : k));
+      const { slice, hasNext } = filterAndSlice(all, get().search, get().page, get().limit);
+      set({ all, items: slice, hasNext });
     },
 
     getProductsByCategory: async (categoryId: string, options?: { page?: number; limit?: number; search?: string }) => {

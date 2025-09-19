@@ -17,6 +17,8 @@ function inferType(mime: string):
   | 'office'
   | 'archive'
   | 'unknown' {
+  console.log('Inferring type for MIME:', mime)
+
   if (mime.startsWith('image/')) return 'image'
   if (mime === 'application/pdf') return 'pdf'
   if (mime === 'text/plain') return 'text'
@@ -29,10 +31,15 @@ function inferType(mime: string):
       'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
       'application/vnd.ms-excel',
       'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'application/vnd.ms-powerpoint',
+      'application/vnd.openxmlformats-officedocument.presentationml.presentation',
     ].includes(mime)
   )
     return 'office'
-  if (['application/zip', 'application/x-rar-compressed'].includes(mime)) return 'archive'
+  if (['application/zip', 'application/x-rar-compressed', 'application/x-tar', 'application/gzip'].includes(mime)) return 'archive'
+
+  // Fallback to unknown but log it
+  console.warn('Unknown MIME type:', mime)
   return 'unknown'
 }
 
@@ -41,9 +48,44 @@ function getExt(name: string): string {
   return p.length > 1 ? p[p.length - 1].toLowerCase() : ''
 }
 
+// Function to fix MIME type based on filename
+function fixMimeType(mimeType: string, filename: string): string {
+  // If MIME type is application/octet-stream, try to infer from filename
+  if (mimeType === 'application/octet-stream') {
+    const ext = filename.split('.').pop()?.toLowerCase()
+    const mimeTypeMap: Record<string, string> = {
+      'jpg': 'image/jpeg',
+      'jpeg': 'image/jpeg',
+      'png': 'image/png',
+      'gif': 'image/gif',
+      'webp': 'image/webp',
+      'pdf': 'application/pdf',
+      'doc': 'application/msword',
+      'docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'txt': 'text/plain',
+      'csv': 'text/csv',
+      'xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'zip': 'application/zip'
+    }
+    return mimeTypeMap[ext || ''] || mimeType
+  }
+  return mimeType
+}
+
 export const DocumentPreview: React.FC<Props> = ({ name, mimeType, url }) => {
-  const kind = useMemo(() => inferType(mimeType), [mimeType])
+  // Fix MIME type if it's generic octet-stream
+  const correctedMimeType = fixMimeType(mimeType, name)
+  const kind = useMemo(() => inferType(correctedMimeType), [correctedMimeType])
   const token = useAuthStore.getState().token
+
+  // Debug logging
+  console.log('DocumentPreview:', {
+    name,
+    originalMimeType: mimeType,
+    correctedMimeType,
+    url,
+    kind
+  })
 
   const [textContent, setTextContent] = useState<string>('')
   const [textError, setTextError] = useState<string | null>(null)
@@ -62,9 +104,19 @@ export const DocumentPreview: React.FC<Props> = ({ name, mimeType, url }) => {
     setTextError(null)
     setTextContent('')
     fetch(url, { headers: { Authorization: `Bearer ${token}` } })
-      .then((r) => r.text())
-      .then(setTextContent)
-      .catch((e) => setTextError(e?.message || 'Gagal memuat konten'))
+      .then((r) => {
+        console.log('Text fetch response:', { url, status: r.status, ok: r.ok })
+        if (!r.ok) throw new Error(`HTTP ${r.status}: ${r.statusText}`)
+        return r.text()
+      })
+      .then((text) => {
+        console.log('Text content loaded:', { length: text.length })
+        setTextContent(text)
+      })
+      .catch((e) => {
+        console.error('Text fetch error:', e)
+        setTextError(e?.message || 'Gagal memuat konten')
+      })
   }, [url, kind, token])
 
   // Create object URL for binary preview types
@@ -75,13 +127,18 @@ export const DocumentPreview: React.FC<Props> = ({ name, mimeType, url }) => {
     let revoked = false
     fetch(url, { headers: { Authorization: `Bearer ${token}` } })
       .then(async (r) => {
-        if (!r.ok) throw new Error(`HTTP ${r.status}`)
+        console.log('Fetch response:', { url, status: r.status, ok: r.ok, headers: Object.fromEntries(r.headers.entries()) })
+        if (!r.ok) throw new Error(`HTTP ${r.status}: ${r.statusText}`)
         const blob = await r.blob()
+        console.log('Blob created:', { size: blob.size, type: blob.type })
         if (revoked) return
         const u = URL.createObjectURL(blob)
         setObjectUrl(u)
       })
-      .catch((e) => setBinaryError(e?.message || 'Gagal memuat file'))
+      .catch((e) => {
+        console.error('Binary fetch error:', e)
+        setBinaryError(e?.message || 'Gagal memuat file')
+      })
     return () => {
       revoked = true
       if (objectUrl) URL.revokeObjectURL(objectUrl)
@@ -158,7 +215,17 @@ export const DocumentPreview: React.FC<Props> = ({ name, mimeType, url }) => {
           {objectUrl ? (
             <img src={objectUrl} alt={name} className="max-w-full max-h-full object-contain" />
           ) : binaryError ? (
-            <div className="text-red-600 text-sm p-4">{binaryError}</div>
+            <div className="text-red-600 text-sm p-4 max-w-md text-center">
+              <div className="font-medium mb-2">Gagal memuat gambar</div>
+              <div className="text-xs">{binaryError}</div>
+              <details className="text-xs mt-2">
+                <summary className="cursor-pointer">Debug Info</summary>
+                <div className="mt-2 p-2 bg-red-50 rounded text-left">
+                  <div>URL: {url}</div>
+                  <div>MIME: {mimeType}</div>
+                </div>
+              </details>
+            </div>
           ) : (
             <div className="text-sm text-gray-600 p-4">Memuat gambar…</div>
           )}
@@ -251,8 +318,22 @@ export const DocumentPreview: React.FC<Props> = ({ name, mimeType, url }) => {
       })()}
 
       {(kind === 'archive' || kind === 'unknown') && (
-        <div className="w-full h-full flex items-center justify-center text-gray-600 p-4">
-          Pratinjau tidak tersedia
+        <div className="w-full h-full flex flex-col items-center justify-center text-gray-600 p-4 space-y-4">
+          <div className="text-lg font-medium">Pratinjau tidak tersedia</div>
+          <div className="text-sm text-gray-500 text-center max-w-md">
+            File dengan tipe {mimeType} tidak dapat dipratinjau secara langsung.
+            Gunakan tombol "Buka di tab baru" untuk melihat file atau "Unduh" untuk mengunduhnya.
+          </div>
+          {/* Debug info */}
+          <details className="text-xs text-gray-400 mt-4">
+            <summary className="cursor-pointer">Debug Info</summary>
+            <div className="mt-2 p-2 bg-gray-100 rounded text-left">
+              <div>Name: {name}</div>
+              <div>MIME: {mimeType}</div>
+              <div>URL: {url}</div>
+              <div>Kind: {kind}</div>
+            </div>
+          </details>
         </div>
       )}
     </div>
