@@ -5,9 +5,9 @@ import { Input } from '@/core/components/ui/input';
 import { Badge } from '@/core/components/ui/badge';
 import { PenggunaForm } from '../components/PenggunaForm';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/core/components/ui/dialog';
-import { Sidebar, SidebarContent, SidebarHeader, SidebarTitle } from '@/core/components/ui/sidebar';
+import { PenggunaDrawer, PenggunaDrawerContent, PenggunaDrawerHeader, PenggunaDrawerTitle } from '../components/PenggunaDrawer';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/core/components/ui/table';
-import { Search, UserPlus, Edit2, Trash2, Loader2 } from 'lucide-react';
+import { Search, UserPlus, Edit2, Trash2, Loader2, Users } from 'lucide-react';
 
 export function PenggunaPage() {
   const [items, setItems] = useState<PenggunaDTO[]>([]);
@@ -108,16 +108,33 @@ export function PenggunaPage() {
         </div>
       </div>
 
-      <Sidebar open={drawerOpen} onOpenChange={setDrawerOpen}>
-        <SidebarContent size="forty">
-          <SidebarHeader>
-            <SidebarTitle>{editing ? 'Edit Pengguna' : 'Tambah Pengguna'}</SidebarTitle>
-          </SidebarHeader>
+      <PenggunaDrawer open={drawerOpen} onOpenChange={setDrawerOpen}>
+        <PenggunaDrawerContent size="forty">
+          <PenggunaDrawerHeader className="border-b border-gray-200 pb-4 px-6 pt-6">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-indigo-100 text-indigo-600">
+                  {editing ? <Users className="h-5 w-5" /> : <UserPlus className="h-5 w-5" />}
+                </div>
+                <PenggunaDrawerTitle className="text-xl font-semibold">
+                  {editing ? 'Edit Pengguna' : 'Tambah Pengguna'}
+                </PenggunaDrawerTitle>
+              </div>
+            </div>
+          </PenggunaDrawerHeader>
           <div className="flex-1 overflow-y-auto p-6">
-            <PenggunaForm mode={editing? 'edit':'create'} initial={editing} onSuccess={() => { setDrawerOpen(false); load(); }} onCancel={() => setDrawerOpen(false)} />
+            <PenggunaForm
+              mode={editing? 'edit':'create'}
+              initial={editing}
+              onSuccess={() => {
+                setDrawerOpen(false);
+                load();
+              }}
+              onCancel={() => setDrawerOpen(false)}
+            />
           </div>
-        </SidebarContent>
-      </Sidebar>
+        </PenggunaDrawerContent>
+      </PenggunaDrawer>
 
       <Dialog open={!!confirmDelete} onOpenChange={o => { if(!o) setConfirmDelete(null); }}>
         <DialogContent>

@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import { devtools } from 'zustand/middleware'
 import { Toko, TokoFormData, TokoConfig, TokoOperatingHours, TokoStats } from '../types/toko'
-import { TokoApiService } from '../services/tokoApiService'
+import { TokoService } from '../services/tokoService'
 import { useAuthStore } from '@/core/store/authStore'
 
 type TokoState = {
@@ -137,7 +137,7 @@ export const useTokoStore = create<TokoState & TokoActions>()(
           return
         }
 
-        const store = await TokoApiService.findStoreById(userStoreId)
+        const store = await TokoService.findStoreById(userStoreId)
         set({ currentStore: store, loading: false })
       } catch (error: any) {
         console.error('Failed to load current store:', error)
@@ -152,7 +152,7 @@ export const useTokoStore = create<TokoState & TokoActions>()(
 
       set({ saving: true, error: undefined })
       try {
-        const updatedStore = await TokoApiService.updateStore(currentStore.id, data)
+        const updatedStore = await TokoService.updateStore(currentStore.id, data)
         set({ currentStore: updatedStore, saving: false })
       } catch (error: any) {
         console.error('Failed to update store:', error)
@@ -172,7 +172,7 @@ export const useTokoStore = create<TokoState & TokoActions>()(
 
       set({ loading: true, error: undefined })
       try {
-        const configs = await TokoApiService.getStoreConfigs(currentStore.id)
+        const configs = await TokoService.getStoreConfigs(currentStore.id)
         set({ currentStoreConfigs: configs, loading: false })
       } catch (error: any) {
         console.error('Failed to load store configs:', error)
@@ -190,9 +190,9 @@ export const useTokoStore = create<TokoState & TokoActions>()(
         const existingConfig = currentStoreConfigs.find(c => c.key === key)
 
         if (existingConfig) {
-          await TokoApiService.updateStoreConfig(currentStore.id, key, { value, deskripsi })
+          await TokoService.updateStoreConfig(currentStore.id, key, { value, deskripsi })
         } else {
-          await TokoApiService.setStoreConfig(currentStore.id, {
+          await TokoService.setStoreConfig(currentStore.id, {
             toko_id: currentStore.id,
             key,
             value,
@@ -218,7 +218,7 @@ export const useTokoStore = create<TokoState & TokoActions>()(
 
       set({ loading: true, error: undefined })
       try {
-        const hours = await TokoApiService.getOperatingHours(currentStore.id)
+        const hours = await TokoService.getOperatingHours(currentStore.id)
         set({ currentStoreOperatingHours: hours, loading: false })
       } catch (error: any) {
         console.error('Failed to load operating hours:', error)
@@ -241,7 +241,7 @@ export const useTokoStore = create<TokoState & TokoActions>()(
           catatan: h.catatan
         }))
 
-        await TokoApiService.updateOperatingHours(currentStore.id, {
+        await TokoService.updateOperatingHours(currentStore.id, {
           operating_hours: hoursData
         })
 
@@ -258,7 +258,7 @@ export const useTokoStore = create<TokoState & TokoActions>()(
       if (!currentStore) return
 
       try {
-        const stats = await TokoApiService.getStoreStats(currentStore.id)
+        const stats = await TokoService.getStoreStats(currentStore.id)
         set({ currentStoreStats: stats })
       } catch (error: any) {
         console.error('Failed to load store stats:', error)
@@ -270,7 +270,7 @@ export const useTokoStore = create<TokoState & TokoActions>()(
     loadAllStores: async () => {
       set({ loading: true, error: undefined })
       try {
-        const response = await TokoApiService.searchStores({ limit: 100 })
+        const response = await TokoService.searchStores({ limit: 100 })
         set({ allStores: response.data, loading: false })
       } catch (error: any) {
         console.error('Failed to load all stores:', error)
@@ -284,7 +284,7 @@ export const useTokoStore = create<TokoState & TokoActions>()(
         const authState = useAuthStore.getState()
         const tenantId = authState.user?.tenant_id || authState.user?.tenantId || 'tenant-001'
 
-        const newStore = await TokoApiService.createStore({
+        const newStore = await TokoService.createStore({
           ...data,
           tenant_id: tenantId
         })

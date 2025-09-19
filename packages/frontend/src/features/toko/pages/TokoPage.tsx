@@ -4,15 +4,15 @@ import { Button } from '@/core/components/ui/button';
 import { Input } from '@/core/components/ui/input';
 import { Badge } from '@/core/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/core/components/ui/dialog';
-import { Sidebar, SidebarContent, SidebarHeader, SidebarTitle } from '@/core/components/ui/sidebar';
+import { TokoDrawer, TokoDrawerContent, TokoDrawerHeader, TokoDrawerTitle } from '../components/TokoDrawer';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/core/components/ui/table';
-import { Toko } from './types/toko';
-import { TokoApiService } from './services/tokoApiService';
-import TokoForm from './components/TokoForm';
+import { Toko } from '../types/toko';
+import { TokoService } from '../services/tokoService';
+import TokoForm from '../components/TokoForm';
 import { useToast } from '@/core/hooks/use-toast';
 import { useAuthStore } from '@/core/store/authStore';
 
-export function PengaturanTokoPage() {
+export function TokoPage() {
   const [items, setItems] = useState<Toko[]>([]);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('');
@@ -35,7 +35,7 @@ export function PengaturanTokoPage() {
   const load = async () => {
     setLoading(true);
     try {
-      const res = await TokoApiService.searchStores({ search: search || undefined, status: statusFilter || undefined, page, limit });
+      const res = await TokoService.searchStores({ search: search || undefined, status: statusFilter || undefined, page, limit });
       setItems(res.data);
       setTotalPages(res.pagination.totalPages || 1);
     } catch (e) { console.error(e); } finally { setLoading(false); }
@@ -76,7 +76,7 @@ export function PengaturanTokoPage() {
     }
     if (!confirmDelete) return;
     try {
-      await TokoApiService.deleteStore(confirmDelete.id);
+      await TokoService.deleteStore(confirmDelete.id);
       toast({ title: 'Toko dihapus', description: `Toko ${confirmDelete.nama} berhasil dihapus.` });
       setConfirmDelete(null);
       load();
@@ -168,16 +168,38 @@ export function PengaturanTokoPage() {
         </div>
       </div>
 
-      <Sidebar open={drawerOpen} onOpenChange={setDrawerOpen}>
-        <SidebarContent className="!w-[40vw] !max-w-none">
-          <SidebarHeader>
-            <SidebarTitle>{editing ? 'Edit Toko' : 'Tambah Toko'}</SidebarTitle>
-          </SidebarHeader>
+      <TokoDrawer open={drawerOpen} onOpenChange={setDrawerOpen}>
+        <TokoDrawerContent className="!w-[40vw] !max-w-none">
+          <TokoDrawerHeader className="border-b border-gray-200 pb-4 px-6 pt-6">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-blue-100 text-blue-600">
+                  <Factory className="h-5 w-5" />
+                </div>
+                <TokoDrawerTitle className="text-xl font-semibold">
+                  {editing ? 'Edit Toko' : 'Tambah Toko'}
+                </TokoDrawerTitle>
+              </div>
+            </div>
+          </TokoDrawerHeader>
           <div className="flex-1 overflow-y-auto p-6">
-            <TokoForm mode={editing ? 'edit' : 'create'} initial={editing} tenantId={tenantId} onSuccess={() => { setDrawerOpen(false); toast({ title: editing ? 'Toko diperbarui' : 'Toko dibuat', description: editing ? 'Perubahan berhasil disimpan.' : 'Toko baru berhasil dibuat.' }); load(); }} onCancel={() => setDrawerOpen(false)} />
+            <TokoForm
+              mode={editing ? 'edit' : 'create'}
+              initial={editing}
+              tenantId={tenantId}
+              onSuccess={() => {
+                setDrawerOpen(false);
+                toast({
+                  title: editing ? 'Toko Diperbarui' : 'Toko Ditambahkan',
+                  description: editing ? 'Perubahan toko berhasil disimpan.' : 'Toko baru berhasil ditambahkan ke sistem.'
+                });
+                load();
+              }}
+              onCancel={() => setDrawerOpen(false)}
+            />
           </div>
-        </SidebarContent>
-      </Sidebar>
+        </TokoDrawerContent>
+      </TokoDrawer>
 
       <Dialog open={!!confirmDelete} onOpenChange={o => { if(!o) setConfirmDelete(null); }}>
         <DialogContent>
@@ -195,5 +217,5 @@ export function PengaturanTokoPage() {
   );
 }
 
-export default PengaturanTokoPage;
+export default TokoPage;
 

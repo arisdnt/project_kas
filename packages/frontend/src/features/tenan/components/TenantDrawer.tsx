@@ -4,15 +4,15 @@ import { cva, type VariantProps } from "class-variance-authority"
 import { X } from "lucide-react"
 import { cn } from "@/core/lib/utils"
 
-const TenanSidebar = DialogPrimitive.Root
+const TenantDrawer = DialogPrimitive.Root
 
-const TenanSidebarTrigger = DialogPrimitive.Trigger
+const TenantDrawerTrigger = DialogPrimitive.Trigger
 
-const TenanSidebarPortal = DialogPrimitive.Portal
+const TenantDrawerPortal = DialogPrimitive.Portal
 
-const TenanSidebarClose = DialogPrimitive.Close
+const TenantDrawerClose = DialogPrimitive.Close
 
-const TenanSidebarOverlay = React.forwardRef<
+const TenantDrawerOverlay = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Overlay>,
   React.ComponentPropsWithoutRef<typeof DialogPrimitive.Overlay>
 >(({ className, ...props }, ref) => (
@@ -25,9 +25,9 @@ const TenanSidebarOverlay = React.forwardRef<
     {...props}
   />
 ))
-TenanSidebarOverlay.displayName = DialogPrimitive.Overlay.displayName
+TenantDrawerOverlay.displayName = DialogPrimitive.Overlay.displayName
 
-const tenanSidebarVariants = cva(
+const tenantDrawerVariants = cva(
   "fixed z-50 gap-4 bg-background p-6 shadow-lg transition ease-in-out data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:duration-300 data-[state=open]:duration-500",
   {
     variants: {
@@ -53,19 +53,19 @@ const tenanSidebarVariants = cva(
   }
 )
 
-export interface TenanSidebarContentProps
+export interface TenantDrawerContentProps
   extends React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content>,
-    VariantProps<typeof tenanSidebarVariants> {}
+    VariantProps<typeof tenantDrawerVariants> {}
 
-const TenanSidebarContent = React.forwardRef<
+const TenantDrawerContent = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Content>,
-  TenanSidebarContentProps
+  TenantDrawerContentProps
 >(({ side = "right", size, className, children, ...props }, ref) => (
-  <TenanSidebarPortal>
-    <TenanSidebarOverlay />
+  <TenantDrawerPortal>
+    <TenantDrawerOverlay />
     <DialogPrimitive.Content
       ref={ref}
-      className={cn(tenanSidebarVariants({ side, size }), className)}
+      className={cn(tenantDrawerVariants({ side, size }), className)}
       {...props}
     >
       {children}
@@ -74,11 +74,11 @@ const TenanSidebarContent = React.forwardRef<
         <span className="sr-only">Tutup</span>
       </DialogPrimitive.Close>
     </DialogPrimitive.Content>
-  </TenanSidebarPortal>
+  </TenantDrawerPortal>
 ))
-TenanSidebarContent.displayName = DialogPrimitive.Content.displayName
+TenantDrawerContent.displayName = DialogPrimitive.Content.displayName
 
-const TenanSidebarHeader = ({
+const TenantDrawerHeader = ({
   className,
   ...props
 }: React.HTMLAttributes<HTMLDivElement>) => (
@@ -90,9 +90,9 @@ const TenanSidebarHeader = ({
     {...props}
   />
 )
-TenanSidebarHeader.displayName = "TenanSidebarHeader"
+TenantDrawerHeader.displayName = "TenantDrawerHeader"
 
-const TenanSidebarFooter = ({
+const TenantDrawerFooter = ({
   className,
   ...props
 }: React.HTMLAttributes<HTMLDivElement>) => (
@@ -104,9 +104,9 @@ const TenanSidebarFooter = ({
     {...props}
   />
 )
-TenanSidebarFooter.displayName = "TenanSidebarFooter"
+TenantDrawerFooter.displayName = "TenantDrawerFooter"
 
-const TenanSidebarTitle = React.forwardRef<
+const TenantDrawerTitle = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Title>,
   React.ComponentPropsWithoutRef<typeof DialogPrimitive.Title>
 >(({ className, ...props }, ref) => (
@@ -119,9 +119,9 @@ const TenanSidebarTitle = React.forwardRef<
     {...props}
   />
 ))
-TenanSidebarTitle.displayName = DialogPrimitive.Title.displayName
+TenantDrawerTitle.displayName = DialogPrimitive.Title.displayName
 
-const TenanSidebarDescription = React.forwardRef<
+const TenantDrawerDescription = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Description>,
   React.ComponentPropsWithoutRef<typeof DialogPrimitive.Description>
 >(({ className, ...props }, ref) => (
@@ -131,17 +131,17 @@ const TenanSidebarDescription = React.forwardRef<
     {...props}
   />
 ))
-TenanSidebarDescription.displayName = DialogPrimitive.Description.displayName
+TenantDrawerDescription.displayName = DialogPrimitive.Description.displayName
 
 export {
-  TenanSidebar,
-  TenanSidebarPortal,
-  TenanSidebarOverlay,
-  TenanSidebarTrigger,
-  TenanSidebarClose,
-  TenanSidebarContent,
-  TenanSidebarHeader,
-  TenanSidebarFooter,
-  TenanSidebarTitle,
-  TenanSidebarDescription,
+  TenantDrawer,
+  TenantDrawerPortal,
+  TenantDrawerOverlay,
+  TenantDrawerTrigger,
+  TenantDrawerClose,
+  TenantDrawerContent,
+  TenantDrawerHeader,
+  TenantDrawerFooter,
+  TenantDrawerTitle,
+  TenantDrawerDescription,
 }

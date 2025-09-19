@@ -66,8 +66,8 @@ export const pengaturanItems: MenuItem[] = [
   { name: 'Pengaturan Umum', href: '/dashboard/pengaturan', icon: Settings },
   { name: 'Manajemen Toko', href: '/dashboard/pengaturan/toko', icon: Factory },
   { name: 'Manajemen Tenan', href: '/dashboard/pengaturan/tenan', icon: Factory },
-  { name: 'Pengguna', href: '/dashboard/pengaturan/pengguna', icon: Users },
-  { name: 'Peran & Izin', href: '/dashboard/pengaturan/peran', icon: Users },
+  { name: 'Manajemen Pengguna', href: '/dashboard/pengaturan/pengguna', icon: Users },
+  { name: 'Manajemen Peran & Izin', href: '/dashboard/pengaturan/peran', icon: Users },
   { name: 'Printer & Perangkat', href: '/dashboard/pengaturan/printer', icon: Settings },
   { name: 'Pajak & Mata Uang', href: '/dashboard/pengaturan/pajak-dan-mata-uang', icon: Settings },
 ];

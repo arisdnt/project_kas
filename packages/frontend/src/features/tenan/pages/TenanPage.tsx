@@ -3,9 +3,16 @@ import { Search, Factory, Edit2, Trash2, Plus, Loader2 } from 'lucide-react';
 import { Button } from '@/core/components/ui/button';
 import { Input } from '@/core/components/ui/input';
 import { Badge } from '@/core/components/ui/badge';
-import { TenanSidebar, TenanSidebarContent, TenanSidebarHeader, TenanSidebarTitle } from '../components/TenanSidebar';
+import { TenantDrawer, TenantDrawerContent, TenantDrawerHeader, TenantDrawerTitle } from '../components/TenantDrawer';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/core/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/core/components/ui/table';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/core/components/ui/select";
 import { tenantService, TenantDTO } from '../services/tenantService';
 import TenantForm from '../components/TenantForm';
 import { useToast } from '@/core/hooks/use-toast';
@@ -17,8 +24,8 @@ export function TenanPage() {
   const { user } = useAuthStore();
   const [items, setItems] = useState<TenantDTO[]>([]);
   const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState('');
-  const [paketFilter, setPaketFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [paketFilter, setPaketFilter] = useState('all');
   const [loading, setLoading] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [editing, setEditing] = useState<TenantDTO | null>(null);
@@ -56,8 +63,8 @@ export function TenanPage() {
         page,
         limit,
         search: debouncedSearch || undefined,
-        status: statusFilter || undefined,
-        paket: paketFilter || undefined
+        status: statusFilter && statusFilter !== 'all' ? statusFilter : undefined,
+        paket: paketFilter && paketFilter !== 'all' ? paketFilter : undefined
       });
 
       console.log(`📡 [TENANT PAGE] Raw list response:`, res);
@@ -179,9 +186,9 @@ export function TenanPage() {
         <div className="flex gap-3 w-full md:w-auto flex-wrap">
           <div className="relative flex-1 md:w-64">
             {loading && search !== debouncedSearch ? (
-              <Loader2 className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 animate-spin" />
+              <Loader2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 animate-spin" />
             ) : (
-              <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
             )}
             <Input
               placeholder="Cari nama/email/telepon..."
@@ -190,43 +197,51 @@ export function TenanPage() {
                 console.log(`🔍 [TENANT PAGE] Search input changed: "${e.target.value}"`);
                 setSearch(e.target.value);
               }}
-              className="pl-8"
+              className="pl-9 focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 focus:border-indigo-500 border-gray-300 hover:border-gray-400"
             />
             {search !== debouncedSearch && (
-              <div className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-gray-400">
+              <div className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400">
                 Mencari...
               </div>
             )}
           </div>
 
-          <select
+          <Select
             value={statusFilter}
-            onChange={e => {
-              console.log(`📊 [TENANT PAGE] Status filter changed: "${e.target.value}"`);
-              setStatusFilter(e.target.value);
+            onValueChange={(value) => {
+              console.log(`📊 [TENANT PAGE] Status filter changed: "${value}"`);
+              setStatusFilter(value);
             }}
-            className="h-10 px-3 rounded-md border border-input bg-background text-sm ring-offset-background focus:ring-2 focus:ring-ring focus:ring-offset-2 md:w-32"
           >
-            <option value="">Aktif</option>
-            <option value="aktif">Aktif</option>
-            <option value="nonaktif">Nonaktif</option>
-            <option value="suspended">Suspended</option>
-          </select>
+            <SelectTrigger className="h-10 md:w-32 focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 focus:border-indigo-500 border-gray-300 hover:border-gray-400">
+              <SelectValue placeholder="Status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Semua Status</SelectItem>
+              <SelectItem value="aktif">Aktif</SelectItem>
+              <SelectItem value="nonaktif">Nonaktif</SelectItem>
+              <SelectItem value="suspended">Suspended</SelectItem>
+            </SelectContent>
+          </Select>
 
-          <select
+          <Select
             value={paketFilter}
-            onChange={e => {
-              console.log(`📦 [TENANT PAGE] Paket filter changed: "${e.target.value}"`);
-              setPaketFilter(e.target.value);
+            onValueChange={(value) => {
+              console.log(`📦 [TENANT PAGE] Paket filter changed: "${value}"`);
+              setPaketFilter(value);
             }}
-            className="h-10 px-3 rounded-md border border-input bg-background text-sm ring-offset-background focus:ring-2 focus:ring-ring focus:ring-offset-2 md:w-32"
           >
-            <option value="">Semua Paket</option>
-            <option value="basic">Basic</option>
-            <option value="standard">Standard</option>
-            <option value="premium">Premium</option>
-            <option value="enterprise">Enterprise</option>
-          </select>
+            <SelectTrigger className="h-10 md:w-32 focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 focus:border-indigo-500 border-gray-300 hover:border-gray-400">
+              <SelectValue placeholder="Paket" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Semua Paket</SelectItem>
+              <SelectItem value="basic">Basic</SelectItem>
+              <SelectItem value="standard">Standard</SelectItem>
+              <SelectItem value="premium">Premium</SelectItem>
+              <SelectItem value="enterprise">Enterprise</SelectItem>
+            </SelectContent>
+          </Select>
 
           <Button onClick={openCreate} className="bg-indigo-600 hover:bg-indigo-700">
             <Plus className="h-4 w-4 mr-1"/>Tambah
@@ -235,7 +250,7 @@ export function TenanPage() {
       </div>
 
       {/* Filter Status Bar */}
-      {(debouncedSearch || statusFilter || paketFilter) && (
+      {(debouncedSearch || (statusFilter && statusFilter !== 'all') || (paketFilter && paketFilter !== 'all')) && (
         <div className="bg-blue-50 border border-blue-200 rounded-md p-3 text-sm">
           <div className="flex items-center gap-2 flex-wrap">
             <span className="text-blue-700 font-medium">Filter aktif:</span>
@@ -244,12 +259,12 @@ export function TenanPage() {
                 Pencarian: "{debouncedSearch}"
               </span>
             )}
-            {statusFilter && (
+            {statusFilter && statusFilter !== 'all' && (
               <span className="bg-green-100 text-green-800 px-2 py-1 rounded">
                 Status: {statusFilter === 'aktif' ? 'Aktif' : statusFilter === 'nonaktif' ? 'Nonaktif' : 'Suspended'}
               </span>
             )}
-            {paketFilter && (
+            {paketFilter && paketFilter !== 'all' && (
               <span className="bg-purple-100 text-purple-800 px-2 py-1 rounded">
                 Paket: {paketFilter.charAt(0).toUpperCase() + paketFilter.slice(1)}
               </span>
@@ -258,8 +273,8 @@ export function TenanPage() {
               onClick={() => {
                 console.log(`🧹 [TENANT PAGE] Clearing all filters`);
                 setSearch('');
-                setStatusFilter('');
-                setPaketFilter('');
+                setStatusFilter('all');
+                setPaketFilter('all');
               }}
               className="bg-red-100 text-red-800 px-2 py-1 rounded hover:bg-red-200 transition-colors"
             >
@@ -312,16 +327,37 @@ export function TenanPage() {
         </div>
       </div>
 
-      <TenanSidebar open={drawerOpen} onOpenChange={setDrawerOpen}>
-        <TenanSidebarContent className="!w-[40vw] !max-w-none">
-          <TenanSidebarHeader>
-            <TenanSidebarTitle>{editing ? 'Edit Tenant' : 'Tambah Tenant'}</TenanSidebarTitle>
-          </TenanSidebarHeader>
+      <TenantDrawer open={drawerOpen} onOpenChange={setDrawerOpen}>
+        <TenantDrawerContent className="!w-[40vw] !max-w-none">
+          <TenantDrawerHeader className="border-b border-gray-200 pb-4 px-6 pt-6">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-indigo-100 text-indigo-600">
+                  <Factory className="h-5 w-5" />
+                </div>
+                <TenantDrawerTitle className="text-xl font-semibold">
+                  {editing ? 'Edit Tenant' : 'Tambah Tenant'}
+                </TenantDrawerTitle>
+              </div>
+            </div>
+          </TenantDrawerHeader>
           <div className="flex-1 overflow-y-auto p-6">
-            <TenantForm mode={editing ? 'edit' : 'create'} initial={editing} onSuccess={() => { setDrawerOpen(false); toast({ title: editing ? 'Tenant diperbarui' : 'Tenant dibuat', description: editing ? 'Perubahan berhasil disimpan.' : 'Tenant baru berhasil dibuat.' }); load(); }} onCancel={() => setDrawerOpen(false)} />
+            <TenantForm
+              mode={editing ? 'edit' : 'create'}
+              initial={editing}
+              onSuccess={() => {
+                setDrawerOpen(false);
+                toast({
+                  title: editing ? 'Tenant Diperbarui' : 'Tenant Ditambahkan',
+                  description: editing ? 'Perubahan tenant berhasil disimpan.' : 'Tenant baru berhasil ditambahkan ke sistem.'
+                });
+                load();
+              }}
+              onCancel={() => setDrawerOpen(false)}
+            />
           </div>
-        </TenanSidebarContent>
-      </TenanSidebar>
+        </TenantDrawerContent>
+      </TenantDrawer>
 
       <Dialog open={!!confirmDelete} onOpenChange={o => { if(!o) setConfirmDelete(null); }}>
         <DialogContent>
