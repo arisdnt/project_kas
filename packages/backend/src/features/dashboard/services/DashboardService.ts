@@ -31,4 +31,8 @@ export class DashboardService {
   static async getCategoryPerformance(scope: AccessScope, startDate: string, endDate: string) {
     return DashboardAnalyticsService.getCategoryPerformance(scope, startDate, endDate);
   }
+
+  static async getRecentTransactions(scope: AccessScope, startDate: string, endDate: string, limit: number = 10) {
+    return DashboardAnalyticsService.getRecentTransactions(scope, startDate, endDate, limit);
+  }
 }

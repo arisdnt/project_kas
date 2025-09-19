@@ -1,8 +1,15 @@
 import { useEffect, useMemo, useRef } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/core/components/ui/card'
 import { Button } from '@/core/components/ui/button'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/core/components/ui/dropdown-menu"
 import { useInventarisStore, UIInventaris } from '../store/inventarisStore'
-import { Eye, Pencil, Trash2 } from 'lucide-react'
+import { Eye, Pencil, Trash2, MoreHorizontal } from 'lucide-react'
 
 type Props = {
   onView: (p: UIInventaris) => void
@@ -104,17 +111,42 @@ export function InventarisTable({ onView, onEdit }: Props) {
                       </div>
                     </td>
                     <td className="px-4 py-3">
-                      <div className="flex items-center gap-2">
-                        <Button key={`view-${p.id}`} variant="ghost" size="sm" onClick={() => onView(p)} className="text-blue-600 hover:text-blue-700 hover:bg-blue-50">
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                        <Button key={`edit-${p.id}`} variant="ghost" size="sm" onClick={() => onEdit(p)} className="text-amber-600 hover:text-amber-700 hover:bg-amber-50">
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                        <Button key={`delete-${p.id}`} variant="ghost" size="sm" onClick={() => onDelete(p)} className="text-red-600 hover:text-red-700 hover:bg-red-50">
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 w-8 p-0 hover:bg-gray-100 focus:ring-2 focus:ring-blue-500 focus:ring-offset-1"
+                          >
+                            <span className="sr-only">Buka menu aksi</span>
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-40">
+                          <DropdownMenuItem
+                            onClick={() => onView(p)}
+                            className="cursor-pointer text-blue-600 hover:text-blue-700 hover:bg-blue-50 focus:bg-blue-50 focus:text-blue-700"
+                          >
+                            <Eye className="mr-2 h-4 w-4" />
+                            Lihat Detail
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => onEdit(p)}
+                            className="cursor-pointer text-amber-600 hover:text-amber-700 hover:bg-amber-50 focus:bg-amber-50 focus:text-amber-700"
+                          >
+                            <Pencil className="mr-2 h-4 w-4" />
+                            Edit
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem
+                            onClick={() => onDelete(p)}
+                            className="cursor-pointer text-red-600 hover:text-red-700 hover:bg-red-50 focus:bg-red-50 focus:text-red-700"
+                          >
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Hapus
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </td>
                   </tr>
                 )

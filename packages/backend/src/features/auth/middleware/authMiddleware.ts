@@ -173,8 +173,8 @@ export const ensureTenantAccess = (req: Request, res: Response, next: NextFuncti
   const requestTenantId = (req.params.tenantId || req.query.tenantId || req.body.tenantId) as string | undefined;
   
   if (requestTenantId && requestTenantId !== req.user.tenantId) {
-    // Level 1 (SUPER_ADMIN) dan Level 2 (ADMIN) bisa akses semua tenant
-    const canAccessAllTenants = req.user.role === UserRole.SUPER_ADMIN ||
+    // Level 1 (GOD) dan Level 2 (ADMIN) bisa akses semua tenant
+    const canAccessAllTenants = req.user.role === UserRole.GOD ||
                                 req.user.role === UserRole.ADMIN ||
                                 (req.user.level && req.user.level <= 2);
 

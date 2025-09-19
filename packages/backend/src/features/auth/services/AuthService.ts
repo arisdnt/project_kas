@@ -95,7 +95,7 @@ export class AuthService {
       namaLengkap: godUserConfig.namaLengkap,
       telepon: '',
       avatarUrl: '',
-      role: UserRole.SUPER_ADMIN,
+      role: UserRole.GOD,
       level: 1,
       peranId: undefined,
       status: UserStatus.AKTIF,
@@ -110,7 +110,7 @@ export class AuthService {
       tenantId: GOD_TENANT_ID,
       tokoId: GOD_STORE_ID,
       username: godUserConfig.username,
-      role: UserRole.SUPER_ADMIN,
+      role: UserRole.GOD,
       level: 1,
       peranId: undefined
     };
@@ -198,25 +198,26 @@ export class AuthService {
         [user.id]
       );
 
-      // Map role berdasarkan level dari tabel peran
+      // Map role berdasarkan level dari tabel peran (1-5)
       let mappedRole: UserRole;
   // level sudah dideklarasikan di atas
       
       switch (level) {
         case 1:
-          mappedRole = UserRole.SUPER_ADMIN;
+          mappedRole = UserRole.GOD;
           break;
         case 2:
-        case 8: // Admin level
           mappedRole = UserRole.ADMIN;
           break;
         case 3:
-          mappedRole = UserRole.MANAGER;
+          mappedRole = UserRole.ADMIN_TOKO;
           break;
         case 4:
+          mappedRole = UserRole.KASIR;
+          break;
         case 5:
         default:
-          mappedRole = UserRole.CASHIER;
+          mappedRole = UserRole.REVIEWER;
       }
 
       // Prepare user data
@@ -357,7 +358,7 @@ export class AuthService {
         namaLengkap: godUserConfig.namaLengkap,
         telepon: '',
         avatarUrl: '',
-        role: UserRole.SUPER_ADMIN,
+        role: UserRole.GOD,
         level: 1,
         peranId: undefined,
         status: UserStatus.AKTIF,
@@ -409,25 +410,26 @@ export class AuthService {
 
       const user = rows[0];
 
-      // Map role berdasarkan level dari tabel peran
+      // Map role berdasarkan level dari tabel peran (1-5)
       let mappedRole: UserRole;
       const level = user.level || 5;
       
       switch (level) {
         case 1:
-          mappedRole = UserRole.SUPER_ADMIN;
+          mappedRole = UserRole.GOD;
           break;
         case 2:
-        case 8: // Admin level dari tabel peran
           mappedRole = UserRole.ADMIN;
           break;
         case 3:
-          mappedRole = UserRole.MANAGER;
+          mappedRole = UserRole.ADMIN_TOKO;
           break;
         case 4:
+          mappedRole = UserRole.KASIR;
+          break;
         case 5:
         default:
-          mappedRole = UserRole.CASHIER;
+          mappedRole = UserRole.REVIEWER;
       }
 
       return {

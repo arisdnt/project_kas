@@ -1,4 +1,4 @@
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/core/components/ui/dialog'
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/core/components/ui/dialog'
 import { Button } from '@/core/components/ui/button'
 
 type Props = {
@@ -20,6 +20,9 @@ export function PaymentPreviewDialog({ open, onOpenChange, data, onCloseAndClear
       <DialogContent className="max-w-2xl">
         <DialogHeader>
           <DialogTitle>Preview Invoice {data?.kode_transaksi}</DialogTitle>
+          <DialogDescription>
+            Preview invoice sebelum dicetak atau disimpan sebagai PDF
+          </DialogDescription>
         </DialogHeader>
         {data && (
           <div className="space-y-2">

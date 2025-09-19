@@ -95,7 +95,7 @@ export function StokOpnameForm({
     (p.sku && p.sku.toLowerCase().includes(searchProduk.toLowerCase()))
   )
 
-  const selectedProduk = produkItems.find(p => p.id === formData.id_produk)
+  const selectedProduk = produkItems.find(p => p.id.toString() === formData.id_produk)
   const selisih = selectedProduk && formData.stok_fisik ?
     Number(formData.stok_fisik) - (selectedProduk.stok || 0) : 0
 
@@ -134,7 +134,7 @@ export function StokOpnameForm({
                     </SelectTrigger>
                     <SelectContent>
                       {produkLoading ? (
-                        <SelectItem value="" disabled>
+                        <SelectItem value="loading" disabled>
                           <div className="flex items-center gap-2">
                             <Loader2 className="h-4 w-4 animate-spin" />
                             Memuat produk...
@@ -142,7 +142,7 @@ export function StokOpnameForm({
                         </SelectItem>
                       ) : filteredProduk.length > 0 ? (
                         filteredProduk.map(produk => (
-                          <SelectItem key={produk.id} value={produk.id}>
+                          <SelectItem key={produk.id} value={produk.id.toString()}>
                             <div className="flex flex-col">
                               <span className="font-medium">{produk.nama}</span>
                               <span className="text-xs text-gray-500">
@@ -152,7 +152,7 @@ export function StokOpnameForm({
                           </SelectItem>
                         ))
                       ) : (
-                        <SelectItem value="" disabled>Tidak ada produk ditemukan</SelectItem>
+                        <SelectItem value="no-product" disabled>Tidak ada produk ditemukan</SelectItem>
                       )}
                     </SelectContent>
                   </Select>

@@ -42,4 +42,9 @@ router.get('/analytics/category-performance',
   DashboardController.getCategoryPerformance
 );
 
+router.get('/analytics/recent-transactions',
+  requirePermission(PERMISSIONS.REPORT_READ),
+  DashboardController.getRecentTransactions
+);
+
 export default router;

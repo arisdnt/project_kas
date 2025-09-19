@@ -834,6 +834,66 @@ CREATE TABLE `retur_penjualan` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
+-- Table structure for table `stock_opname`
+--
+
+DROP TABLE IF EXISTS `stock_opname`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `stock_opname` (
+  `id` char(36) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT (uuid()),
+  `tenant_id` char(36) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `toko_id` char(36) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `pengguna_id` char(36) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `nomor_opname` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `tanggal` datetime NOT NULL,
+  `keterangan` text COLLATE utf8mb4_unicode_ci,
+  `status` enum('draft','proses','selesai','dibatalkan') COLLATE utf8mb4_unicode_ci DEFAULT 'draft',
+  `total_item` int DEFAULT '0',
+  `total_selisih_nilai` decimal(15,2) DEFAULT '0.00',
+  `dibuat_pada` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `diperbarui_pada` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `nomor_opname` (`nomor_opname`),
+  KEY `idx_tenant_toko` (`tenant_id`,`toko_id`),
+  KEY `idx_tanggal` (`tanggal`),
+  KEY `idx_status` (`status`),
+  KEY `idx_nomor_opname` (`nomor_opname`),
+  KEY `fk_stock_opname_toko` (`toko_id`),
+  CONSTRAINT `fk_stock_opname_tenant` FOREIGN KEY (`tenant_id`) REFERENCES `tenants` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT `fk_stock_opname_toko` FOREIGN KEY (`toko_id`) REFERENCES `toko` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `stock_opname_items`
+--
+
+DROP TABLE IF EXISTS `stock_opname_items`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `stock_opname_items` (
+  `id` char(36) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT (uuid()),
+  `stock_opname_id` char(36) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `produk_id` char(36) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `stok_sistem` int NOT NULL DEFAULT '0',
+  `stok_fisik` int NOT NULL DEFAULT '0',
+  `selisih` int GENERATED ALWAYS AS ((`stok_fisik` - `stok_sistem`)) STORED,
+  `harga_satuan` decimal(15,2) NOT NULL DEFAULT '0.00',
+  `nilai_selisih` decimal(15,2) GENERATED ALWAYS AS ((`selisih` * `harga_satuan`)) STORED,
+  `keterangan` text COLLATE utf8mb4_unicode_ci,
+  `dibuat_pada` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `diperbarui_pada` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_stock_opname` (`stock_opname_id`),
+  KEY `idx_produk` (`produk_id`),
+  KEY `idx_selisih` (`selisih`),
+  CONSTRAINT `stock_opname_items_ibfk_1` FOREIGN KEY (`stock_opname_id`) REFERENCES `stock_opname` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `stock_opname_items_ibfk_2` FOREIGN KEY (`produk_id`) REFERENCES `produk` (`id`) ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
 -- Table structure for table `supplier`
 --
 
@@ -1133,4 +1193,4 @@ DELIMITER ;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2025-09-18  6:49:41
+-- Dump completed on 2025-09-19 22:52:21

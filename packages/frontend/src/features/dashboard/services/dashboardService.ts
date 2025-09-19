@@ -1,4 +1,5 @@
 import api from '@/core/lib/api';
+import { useAuthStore } from '@/core/store/authStore';
 
 // NOTE: Tipe generik sederhana untuk tangkap pola response backend
 // Backend relatif konsisten mengembalikan { success, data, message }
@@ -204,6 +205,12 @@ export class DashboardService {
       params.append('group_by', filter.group_by);
     }
 
+    // Tambahkan tenant_id dari user yang sedang login
+    const { user } = useAuthStore.getState();
+    if (user?.tenantId) {
+      params.append('tenant_id', user.tenantId);
+    }
+
     return params.toString();
   }
 
@@ -269,6 +276,12 @@ export class DashboardService {
         end_date: backendFilter.end_date,
         limit: (filter.limit || 10).toString()
       });
+
+      // Tambahkan tenant_id dari user yang sedang login
+      const { user } = useAuthStore.getState();
+      if (user?.tenantId) {
+        params.append('tenant_id', user.tenantId);
+      }
 
       const response = await api.get<ApiResponse<any>>(`/dashboard/analytics/recent-transactions?${params.toString()}`);
 
@@ -358,6 +371,12 @@ export class DashboardService {
         end_date: backendFilter.end_date,
         limit: (filter.limit || 5).toString()
       });
+
+      // Tambahkan tenant_id dari user yang sedang login
+      const { user } = useAuthStore.getState();
+      if (user?.tenantId) {
+        params.append('tenant_id', user.tenantId);
+      }
 
       const response = await api.get<ApiResponse<any>>(`/dashboard/analytics/top-products?${params.toString()}`);
 

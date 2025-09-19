@@ -19,6 +19,7 @@ import { FileManagerPage } from '@/features/storage/pages/FileManagerPage';
 import { LaporanPenjualanPage } from '@/features/laporan/penjualan/pages/LaporanPenjualanPage';
 import { LaporanStokPage } from '@/features/laporan/stok/pages/LaporanStokPage';
 import { KeuanganPage } from '@/features/laporan/keuangan/pages/KeuanganPage';
+import { LaporanHarianPage } from '@/features/laporan/harian/pages/LaporanHarianPage';
 import { PengaturanPage } from '@/features/pengaturan/pages/PengaturanPage';
 import PeranPage from '@/features/peran/pages/PeranPage';
 import { TokoPage } from '@/features/toko/pages/TokoPage';
@@ -27,6 +28,7 @@ import PenggunaPage from '@/features/pengguna/pages/PenggunaPage';
 import { StatusSistemPage } from '@/features/monitoring/pages/StatusSistemPage';
 import { ProfilSayaPage } from '@/features/profilsaya';
 import { PengaturanSaya } from '@/features/pengaturansaya';
+import { PajakMatauangPage } from '@/features/pengaturan/pajak-mata-uang/pages/PajakMatauangPage';
 
 export function DashboardRoutes() {
   return (
@@ -50,10 +52,7 @@ export function DashboardRoutes() {
       <Route path="/laporan/penjualan" element={<LaporanPenjualanPage />} />
       <Route path="/laporan/stok" element={<LaporanStokPage />} />
       <Route path="/laporan/keuangan" element={<KeuanganPage />} />
-      <Route
-        path="/laporan/harian"
-        element={<PlaceholderPage title="Laporan Harian" description="Ringkasan aktivitas harian, transaksi, dan performa toko." />}
-      />
+      <Route path="/laporan/harian" element={<LaporanHarianPage />} />
       <Route path="/pengaturan" element={<PengaturanPage />} />
       <Route path="/pengaturan/toko" element={<TokoPage />} />
       <Route path="/pengaturan/tenan" element={<TenanPage />} />
@@ -65,7 +64,7 @@ export function DashboardRoutes() {
       />
       <Route
         path="/pengaturan/pajak-dan-mata-uang"
-        element={<PlaceholderPage title="Pajak & Mata Uang" description="Pengaturan tarif pajak, mata uang, dan format." />}
+        element={<PajakMatauangPage />}
       />
       <Route path="/monitoring/status-sistem" element={<StatusSistemPage />} />
       <Route path="/profilsaya" element={<ProfilSayaPage />} />

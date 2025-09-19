@@ -1,15 +1,22 @@
 import React from 'react'
-import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow
 } from "@/core/components/ui/table"
 import { Badge } from "@/core/components/ui/badge"
 import { Button } from "@/core/components/ui/button"
-import { Eye, Check, X, RotateCcw } from 'lucide-react'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/core/components/ui/dropdown-menu"
+import { Eye, Check, X, RotateCcw, MoreHorizontal } from 'lucide-react'
 import type { RefundTransaction } from '../types'
 import { formatCurrency, getStatusColor, getStatusText } from '../data/sampleRefunds'
 
@@ -91,53 +98,63 @@ export function RefundTable({ refunds, onView, onApprove, onReject, onProcess }:
                   </span>
                 </TableCell>
                 <TableCell className="text-right">
-                  <div className="flex items-center justify-end gap-1">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => onView?.(refund)}
-                      className="h-8 w-8 p-0"
-                      title="Detail"
-                    >
-                      <Eye className="h-4 w-4" />
-                    </Button>
-                    
-                    {refund.status === 'PENDING' && onApprove && (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => onApprove(refund.id)}
-                        className="h-8 w-8 p-0 text-green-600 hover:text-green-700"
-                        title="Setujui"
+                        className="h-8 w-8 p-0 hover:bg-gray-100 focus:ring-2 focus:ring-blue-500 focus:ring-offset-1"
                       >
-                        <Check className="h-4 w-4" />
+                        <span className="sr-only">Buka menu aksi</span>
+                        <MoreHorizontal className="h-4 w-4" />
                       </Button>
-                    )}
-                    
-                    {refund.status === 'PENDING' && onReject && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => onReject(refund.id)}
-                        className="h-8 w-8 p-0 text-red-600 hover:text-red-700"
-                        title="Tolak"
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-40">
+                      <DropdownMenuItem
+                        onClick={() => onView?.(refund)}
+                        className="cursor-pointer text-blue-600 hover:text-blue-700 hover:bg-blue-50 focus:bg-blue-50 focus:text-blue-700"
                       >
-                        <X className="h-4 w-4" />
-                      </Button>
-                    )}
-                    
-                    {refund.status === 'APPROVED' && onProcess && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => onProcess(refund.id)}
-                        className="h-8 w-8 p-0 text-blue-600 hover:text-blue-700"
-                        title="Proses"
-                      >
-                        <RotateCcw className="h-4 w-4" />
-                      </Button>
-                    )}
-                  </div>
+                        <Eye className="mr-2 h-4 w-4" />
+                        Lihat Detail
+                      </DropdownMenuItem>
+
+                      {refund.status === 'PENDING' && onApprove && (
+                        <>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem
+                            onClick={() => onApprove(refund.id)}
+                            className="cursor-pointer text-green-600 hover:text-green-700 hover:bg-green-50 focus:bg-green-50 focus:text-green-700"
+                          >
+                            <Check className="mr-2 h-4 w-4" />
+                            Setujui
+                          </DropdownMenuItem>
+                        </>
+                      )}
+
+                      {refund.status === 'PENDING' && onReject && (
+                        <DropdownMenuItem
+                          onClick={() => onReject(refund.id)}
+                          className="cursor-pointer text-red-600 hover:text-red-700 hover:bg-red-50 focus:bg-red-50 focus:text-red-700"
+                        >
+                          <X className="mr-2 h-4 w-4" />
+                          Tolak
+                        </DropdownMenuItem>
+                      )}
+
+                      {refund.status === 'APPROVED' && onProcess && (
+                        <>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem
+                            onClick={() => onProcess(refund.id)}
+                            className="cursor-pointer text-blue-600 hover:text-blue-700 hover:bg-blue-50 focus:bg-blue-50 focus:text-blue-700"
+                          >
+                            <RotateCcw className="mr-2 h-4 w-4" />
+                            Proses
+                          </DropdownMenuItem>
+                        </>
+                      )}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </TableCell>
               </TableRow>
             ))

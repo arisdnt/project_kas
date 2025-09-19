@@ -158,4 +158,28 @@ export class DashboardController {
       });
     }
   }
+
+  static async getRecentTransactions(req: Request, res: Response) {
+    try {
+      if (!req.user || !req.accessScope) {
+        return res.status(401).json({ success: false, message: 'Unauthorized' });
+      }
+
+      const query = TopItemsQuerySchema.parse(req.query);
+      const transactions = await DashboardService.getRecentTransactions(
+        req.accessScope,
+        query.start_date || '',
+        query.end_date || '',
+        Number(query.limit)
+      );
+
+      return res.json({ success: true, data: transactions });
+    } catch (error: any) {
+      console.error('Get recent transactions error:', error);
+      return res.status(400).json({
+        success: false,
+        message: error.message || 'Failed to get recent transactions'
+      });
+    }
+  }
 }

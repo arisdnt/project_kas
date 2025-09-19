@@ -249,4 +249,40 @@ export class DashboardAnalyticsService {
       growth_rate: 0 // Calculate growth rate in a separate query if needed
     }));
   }
+
+  static async getRecentTransactions(scope: AccessScope, startDate: string, endDate: string, limit: number = 10) {
+    const sql = `
+      SELECT
+        tp.id,
+        tp.nomor_transaksi,
+        tp.tanggal,
+        tp.total,
+        tp.status,
+        p.nama as pelanggan_nama,
+        du.nama_lengkap as kasir_nama
+      FROM transaksi_penjualan tp
+      LEFT JOIN pelanggan p ON tp.pelanggan_id = p.id
+      LEFT JOIN users u ON tp.pengguna_id = u.id
+      LEFT JOIN detail_user du ON u.id = du.user_id
+      WHERE DATE(tp.tanggal) BETWEEN ? AND ?
+    `;
+
+    const scopedQuery = applyScopeToSql(sql, [startDate, endDate], scope, {
+      tenantColumn: 'tp.tenant_id',
+      storeColumn: 'tp.toko_id'
+    });
+
+    const finalSql = `${scopedQuery.sql} ORDER BY tp.tanggal DESC LIMIT ${limit}`;
+    const [rows] = await pool.execute<RowDataPacket[]>(finalSql, scopedQuery.params);
+
+    return rows.map(row => ({
+      id: row.id,
+      transaction_number: row.nomor_transaksi,
+      date: row.tanggal,
+      total: Number(row.total),
+      status: row.status,
+      customer_name: row.pelanggan_nama || 'Walk-in Customer',
+      cashier_name: row.kasir_nama || 'Unknown'
+    }));
+  }
 }

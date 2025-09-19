@@ -5,12 +5,13 @@
 
 import { z } from 'zod';
 
-// Enum untuk role user
+// Enum untuk role user berdasarkan level di tabel peran
 export enum UserRole {
-  SUPER_ADMIN = 'super_admin',
-  ADMIN = 'admin',
-  CASHIER = 'cashier',
-  MANAGER = 'manager'
+  GOD = 'god',           // Level 1 - God User
+  ADMIN = 'admin',       // Level 2 - Admin Tenant
+  ADMIN_TOKO = 'admin_toko', // Level 3 - Admin Toko
+  KASIR = 'kasir',       // Level 4 - Kasir
+  REVIEWER = 'reviewer'  // Level 5 - Reviewer
 }
 
 // Enum untuk status user sesuai database
@@ -201,7 +202,7 @@ export const PERMISSIONS = {
 
 // Role permissions mapping
 export const ROLE_PERMISSIONS = {
-  [UserRole.SUPER_ADMIN]: Object.values(PERMISSIONS),
+  [UserRole.GOD]: Object.values(PERMISSIONS),
   [UserRole.ADMIN]: [
     PERMISSIONS.USER_CREATE,
     PERMISSIONS.USER_READ,
@@ -229,23 +230,39 @@ export const ROLE_PERMISSIONS = {
     PERMISSIONS.BACKUP_UPDATE,
     PERMISSIONS.BACKUP_DELETE
   ],
-  [UserRole.MANAGER]: [
+  [UserRole.ADMIN_TOKO]: [
     PERMISSIONS.USER_READ,
+    PERMISSIONS.PRODUCT_CREATE,
     PERMISSIONS.PRODUCT_READ,
     PERMISSIONS.PRODUCT_UPDATE,
+    PERMISSIONS.PRODUCT_DELETE,
+    PERMISSIONS.CUSTOMER_CREATE,
     PERMISSIONS.CUSTOMER_READ,
     PERMISSIONS.CUSTOMER_UPDATE,
+    PERMISSIONS.CUSTOMER_DELETE,
+    PERMISSIONS.TRANSACTION_CREATE,
     PERMISSIONS.TRANSACTION_READ,
+    PERMISSIONS.TRANSACTION_UPDATE,
     PERMISSIONS.REPORT_READ,
     PERMISSIONS.REPORT_EXPORT,
+    PERMISSIONS.SETTINGS_READ,
+    PERMISSIONS.SETTINGS_UPDATE,
     PERMISSIONS.STORE_READ,
     PERMISSIONS.STORE_UPDATE
   ],
-  [UserRole.CASHIER]: [
+  [UserRole.KASIR]: [
     PERMISSIONS.PRODUCT_READ,
     PERMISSIONS.CUSTOMER_READ,
     PERMISSIONS.TRANSACTION_CREATE,
     PERMISSIONS.TRANSACTION_READ
+  ],
+  [UserRole.REVIEWER]: [
+    PERMISSIONS.USER_READ,
+    PERMISSIONS.PRODUCT_READ,
+    PERMISSIONS.CUSTOMER_READ,
+    PERMISSIONS.TRANSACTION_READ,
+    PERMISSIONS.REPORT_READ,
+    PERMISSIONS.STORE_READ
   ]
 };
 

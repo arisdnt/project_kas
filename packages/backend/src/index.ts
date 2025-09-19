@@ -136,6 +136,7 @@ import { KasirController } from '@/features/kasir/controllers/KasirController';
 import { KasirSocketService } from '@/features/kasir/services/KasirSocketService';
 import peranRoutes from '@/features/peran/routes/peranRoutes';
 import penggunaRoutes from '@/features/pengguna/routes/penggunaRoutes';
+import stokOpnameRoutes from '@/features/stok-opname/routes/stokOpnameRoutes';
 
 // Swagger removed: API docs endpoints have been disabled and code cleaned up.
 
@@ -167,6 +168,7 @@ app.use('/api/tokosaya', tokoSayaRoutes);
 app.use('/api/kasir', kasirRoutes);
 app.use('/api/peran', peranRoutes);
 app.use('/api/pengguna', penggunaRoutes);
+app.use('/api/stok-opname', stokOpnameRoutes);
 
 app.get('/api', (req, res) => {
   res.json({
