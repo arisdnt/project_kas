@@ -167,14 +167,6 @@ export function PenjualanPage() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-start justify-between">
-        <div>
-          <h2 className="text-xl font-bold text-gray-900">Pergerakan Penjualan</h2>
-          <p className="text-sm text-red-600 font-semibold">{tenantName} | {tokoName}</p>
-          <p className="text-sm text-gray-600">Pergerakan barang berdasarkan transaksi</p>
-        </div>
-      </div>
-
       {error && (
         <div className="bg-red-50 border border-red-200 rounded-md p-4">
           <p className="text-red-800 text-sm">{error}</p>

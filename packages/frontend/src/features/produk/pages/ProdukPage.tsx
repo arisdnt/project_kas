@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback } from 'react'
-import { ProdukToolbar } from '@/features/produk/components/ProdukToolbar'
 import { ProdukTable } from '@/features/produk/components/ProdukTable'
 import { useProdukStore, UIProduk } from '@/features/produk/store/produkStore'
 import { ProdukDrawer, ProdukDrawerContent, ProdukDrawerHeader, ProdukDrawerTitle } from '@/features/produk/components/ProdukDrawer'
@@ -99,12 +98,8 @@ export function ProdukPage() {
 
   return (
     <div className="flex flex-col min-h-0 h-[calc(100vh-4rem-3rem)] py-4 overflow-hidden">
-      <div className="mb-3">
-        <ProdukToolbar onCreate={openCreate} />
-      </div>
-
       <div className="flex-1 min-h-0">
-        <ProdukTable onView={onView} onEdit={onEdit} />
+        <ProdukTable onView={onView} onEdit={onEdit} onCreate={openCreate} />
       </div>
 
       <ProdukDrawer open={drawerOpen} onOpenChange={setDrawerOpen}>

@@ -261,7 +261,8 @@ export class CatatanQueryService {
     const connection = await pool.getConnection();
     
     try {
-      const visibilityFilter = this.buildVisibilityFilter(accessScope);
+      // Untuk stats, kita tidak perlu JOIN jadi tidak perlu alias 'c.'
+      const visibilityFilter = this.buildStatsVisibilityFilter(accessScope);
       
       // Query statistik umum
       const statsQuery = `
@@ -316,9 +317,9 @@ export class CatatanQueryService {
   }
 
   /**
-   * Membangun filter visibilitas berdasarkan access scope
+   * Membangun filter visibilitas untuk stats (tanpa alias)
    */
-  private static buildVisibilityFilter(accessScope: AccessScope): string {
+  private static buildStatsVisibilityFilter(accessScope: AccessScope): string {
     const conditions: string[] = [];
 
     // User dapat melihat catatan pribadi mereka sendiri
@@ -335,6 +336,36 @@ export class CatatanQueryService {
     // User dapat melihat catatan toko jika dalam toko yang sama
     if (accessScope.storeId) {
       conditions.push(`(visibilitas = 'toko' AND toko_id = '${accessScope.storeId}')`);
+    }
+
+    // God user dapat melihat semua
+    if (accessScope.isGod) {
+      return '1=1'; // No restriction
+    }
+
+    return `(${conditions.join(' OR ')})`;
+  }
+
+  /**
+   * Membangun filter visibilitas berdasarkan access scope
+   */
+  private static buildVisibilityFilter(accessScope: AccessScope): string {
+    const conditions: string[] = [];
+
+    // User dapat melihat catatan pribadi mereka sendiri
+    conditions.push(`(c.visibilitas = 'pribadi' AND c.user_id = '${accessScope.userId}')`);
+
+    // User dapat melihat catatan publik
+    conditions.push(`c.visibilitas = 'publik'`);
+
+    // User dapat melihat catatan tenant jika dalam tenant yang sama
+    if (accessScope.tenantId) {
+      conditions.push(`(c.visibilitas = 'tenant' AND c.tenant_id = '${accessScope.tenantId}')`);
+    }
+
+    // User dapat melihat catatan toko jika dalam toko yang sama
+    if (accessScope.storeId) {
+      conditions.push(`(c.visibilitas = 'toko' AND c.toko_id = '${accessScope.storeId}')`);
     }
 
     // God user dapat melihat semua

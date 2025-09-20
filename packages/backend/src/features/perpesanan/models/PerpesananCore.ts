@@ -74,7 +74,7 @@ export const SearchPerpesananSchema = z.object({
   page: z.string().optional().default('1'),
   limit: z.string().optional().default('20'),
   search: z.string().optional(),
-  status: z.enum(['dikirim', 'dibaca', 'dibalas', 'dihapus']).optional(),
+  status: z.enum(['dikirim', 'terkirim', 'dibaca', 'dibalas', 'dihapus']).optional(),
   prioritas: z.enum(['rendah', 'normal', 'tinggi', 'urgent']).optional(),
   pengirim_id: z.string().optional(),
   penerima_id: z.string().optional(),

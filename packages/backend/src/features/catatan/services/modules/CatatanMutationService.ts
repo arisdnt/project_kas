@@ -249,12 +249,14 @@ export class CatatanMutationService {
     const connection = await pool.getConnection();
     
     try {
+      const visibilityFilter = this.buildVisibilityFilter(accessScope);
       const query = `
         SELECT * FROM catatan 
-        WHERE id = ? AND (${this.buildVisibilityFilter(accessScope)})
+        WHERE id = ? AND (${visibilityFilter.filter})
       `;
 
-      const [rows] = await connection.execute(query, [id]) as any;
+      const params = [id, ...visibilityFilter.params];
+      const [rows] = await connection.execute(query, params) as any;
       
       if (rows.length === 0) {
         return null;
@@ -272,32 +274,36 @@ export class CatatanMutationService {
   }
 
   /**
-   * Build filter visibilitas untuk query
+   * Build filter visibilitas untuk query dengan parameterized queries
    */
-  private static buildVisibilityFilter(accessScope: AccessScope): string {
+  private static buildVisibilityFilter(accessScope: AccessScope): { filter: string; params: any[] } {
     const conditions: string[] = [];
+    const params: any[] = [];
 
     // User dapat melihat catatan pribadi mereka sendiri
-    conditions.push(`(visibilitas = 'pribadi' AND user_id = '${accessScope.userId}')`);
+    conditions.push(`(visibilitas = 'pribadi' AND user_id = ?)`);
+    params.push(accessScope.userId);
 
     // User dapat melihat catatan publik
     conditions.push(`visibilitas = 'publik'`);
 
     // User dapat melihat catatan tenant jika dalam tenant yang sama
     if (accessScope.tenantId) {
-      conditions.push(`(visibilitas = 'tenant' AND tenant_id = '${accessScope.tenantId}')`);
+      conditions.push(`(visibilitas = 'tenant' AND tenant_id = ?)`);
+      params.push(accessScope.tenantId);
     }
 
     // User dapat melihat catatan toko jika dalam toko yang sama
     if (accessScope.storeId) {
-      conditions.push(`(visibilitas = 'toko' AND toko_id = '${accessScope.storeId}')`);
+      conditions.push(`(visibilitas = 'toko' AND toko_id = ?)`);
+      params.push(accessScope.storeId);
     }
 
     // God user dapat melihat semua
     if (accessScope.isGod) {
-      return '1=1'; // No restriction
+      return { filter: '1=1', params: [] }; // No restriction
     }
 
-    return `(${conditions.join(' OR ')})`;
+    return { filter: `(${conditions.join(' OR ')})`, params };
   }
 }

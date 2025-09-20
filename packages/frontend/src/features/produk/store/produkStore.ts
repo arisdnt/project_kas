@@ -74,7 +74,18 @@ function mapProdukDto(p: any): UIProduk {
   }
 }
 
-type Filters = { kategoriFilter?: string; brandFilter?: string; supplierFilter?: string }
+type Range = { min?: number; max?: number }
+type DateRange = { from?: string; to?: string }
+
+type Filters = {
+  kategori?: string[]
+  brand?: string[]
+  supplier?: string[]
+  status?: ('aktif' | 'tidak aktif')[]
+  harga?: Range
+  stok?: Range
+  diperbarui?: DateRange
+}
 
 type ProdukState = {
   items: UIProduk[]
@@ -97,7 +108,7 @@ type ProdukState = {
 type ProdukActions = {
   reset: () => void
   setSearch: (v: string) => void
-  setFilters: (f: Filters) => void
+  setFilters: (update: Partial<Filters>, options?: { replace?: boolean }) => void
   loadFirst: () => Promise<void>
   loadNext: () => Promise<void>
   createProduk: (data: ProductFormData) => Promise<any>
@@ -134,7 +145,15 @@ export const useProdukStore = create<ProdukState & ProdukActions>()(
 
     reset: () => set({ items: [], page: 1, hasNext: true, error: undefined }),
     setSearch: (v) => set({ search: v }),
-    setFilters: (f) => set({ filters: f }),
+    setFilters: (update, options) =>
+      set(({ filters }) => ({
+        filters: options?.replace
+          ? ({ ...update } as Filters)
+          : ({
+              ...filters,
+              ...update,
+            } as Filters),
+      })),
 
     loadFirst: async () => {
       const state: any = get() as any
@@ -428,9 +447,41 @@ function matchesSearchFilters(p: UIProduk, search: string, filters: Filters): bo
     const hay = `${p.nama ?? ''} ${(p.sku ?? '').toString()}`.toLowerCase()
     if (!hay.includes(s)) return false
   }
-  if (filters.kategoriFilter && p.kategori?.nama !== filters.kategoriFilter) return false
-  if (filters.brandFilter && p.brand?.nama !== filters.brandFilter) return false
-  if (filters.supplierFilter && p.supplier?.nama !== filters.supplierFilter) return false
+  if (filters.kategori && filters.kategori.length > 0) {
+    if (!filters.kategori.includes(p.kategori?.nama ?? '')) return false
+  }
+  if (filters.brand && filters.brand.length > 0) {
+    if (!filters.brand.includes(p.brand?.nama ?? '')) return false
+  }
+  if (filters.supplier && filters.supplier.length > 0) {
+    if (!filters.supplier.includes(p.supplier?.nama ?? '')) return false
+  }
+  if (filters.status && filters.status.length > 0) {
+    if (!filters.status.includes((p.status as 'aktif' | 'tidak aktif') ?? 'aktif')) return false
+  }
+  if (filters.stok) {
+    const stok = p.stok ?? 0
+    if (typeof filters.stok.min === 'number' && stok < filters.stok.min) return false
+    if (typeof filters.stok.max === 'number' && stok > filters.stok.max) return false
+  }
+  if (filters.harga) {
+    const harga = p.harga ?? 0
+    if (typeof filters.harga.min === 'number' && harga < filters.harga.min) return false
+    if (typeof filters.harga.max === 'number' && harga > filters.harga.max) return false
+  }
+  if (filters.diperbarui && (filters.diperbarui.from || filters.diperbarui.to)) {
+    const updatedAt = p.diperbaruiPada || p.dibuatPada
+    if (!updatedAt) return false
+    const updated = new Date(updatedAt)
+    if (filters.diperbarui.from) {
+      const fromDate = new Date(filters.diperbarui.from)
+      if (updated < fromDate) return false
+    }
+    if (filters.diperbarui.to) {
+      const toDate = new Date(filters.diperbarui.to)
+      if (updated > toDate) return false
+    }
+  }
   return true
 }
 
@@ -445,9 +496,9 @@ async function fetchPage(
   params.set('page', String(page))
   params.set('limit', String(limit))
   if (search) params.set('search', search)
-  if (filters.kategoriFilter) params.set('kategori_nama', filters.kategoriFilter)
-  if (filters.brandFilter) params.set('brand_nama', filters.brandFilter)
-  if (filters.supplierFilter) params.set('supplier_nama', filters.supplierFilter)
+  if (filters.kategori && filters.kategori.length === 1) params.set('kategori_nama', filters.kategori[0])
+  if (filters.brand && filters.brand.length === 1) params.set('brand_nama', filters.brand[0])
+  if (filters.supplier && filters.supplier.length === 1) params.set('supplier_nama', filters.supplier[0])
 
   try {
     const res = await fetch(`${API_BASE}?${params.toString()}`, {
