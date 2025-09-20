@@ -5,14 +5,15 @@
 
 import { pool } from '@/core/database/connection';
 import { AccessScope, getInsertScope } from '@/core/middleware/accessScope';
-import { 
-  CreateBerita, 
-  UpdateBerita, 
+import {
+  CreateBerita,
+  UpdateBerita,
   BeritaWithUser,
   CreateBeritaSchema,
   UpdateBeritaSchema
 } from '../../models/BeritaCore';
 import { v4 as uuidv4 } from 'uuid';
+import { BeritaRealtimeService } from '../BeritaRealtimeService';
 
 export class BeritaMutationService {
   /**
@@ -78,7 +79,9 @@ export class BeritaMutationService {
       await connection.commit();
 
       // Ambil data berita yang baru dibuat
-      return await this.getBeritaById(beritaId, accessScope);
+      const berita = await this.getBeritaById(beritaId, accessScope);
+      BeritaRealtimeService.emitCreated(berita);
+      return berita;
 
     } catch (error) {
       await connection.rollback();
@@ -153,7 +156,9 @@ export class BeritaMutationService {
       await connection.commit();
 
       // Ambil data berita yang sudah diupdate
-      return await this.getBeritaById(id, accessScope);
+      const berita = await this.getBeritaById(id, accessScope);
+      BeritaRealtimeService.emitUpdated(berita);
+      return berita;
 
     } catch (error) {
       await connection.rollback();
@@ -182,6 +187,7 @@ export class BeritaMutationService {
 
     const deleteQuery = 'DELETE FROM berita WHERE id = ?';
     await pool.execute(deleteQuery, [id]);
+    BeritaRealtimeService.emitDeleted(id, existingBerita.tenantId, existingBerita.targetTenantIds ?? null);
   }
 
   /**

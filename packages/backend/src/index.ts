@@ -142,6 +142,7 @@ import { pajakMatauangRoutes } from '@/features/pengaturan/routes/pajakMatauangR
 import beritaRoutes from '@/features/berita/routes/beritaRoutes';
 import perpesananRoutes from '@/features/perpesanan/routes/perpesananRoutes';
 import catatanRoutes from '@/features/catatan/routes/catatanRoutes';
+import { BeritaRealtimeService } from '@/features/berita/services/BeritaRealtimeService';
 
 // Swagger removed: API docs endpoints have been disabled and code cleaned up.
 
@@ -200,6 +201,7 @@ app.get(['/dashboard', '/dashboard/*', '/'], (req, res) => {
 
 // Initialize Kasir Socket Service untuk real-time features
 KasirSocketService.initialize(io);
+BeritaRealtimeService.initialize(io);
 
 // Set Socket.IO instance di KasirController untuk real-time events
 KasirController.setSocketIO(io);

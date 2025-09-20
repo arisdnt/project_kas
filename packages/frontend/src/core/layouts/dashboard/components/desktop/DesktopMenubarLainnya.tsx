@@ -146,8 +146,24 @@ export function DesktopMenubarLainnya({ pathname }: Props) {
             <Menubar.Portal>
               <Menubar.SubContent side="right" align="start" sideOffset={4} className="min-w-[220px] bg-white rounded-md p-2 shadow-xl border border-gray-200 z-50">
                 {singleMenuItems.map((item) => {
-                  const desc = item.name === 'Promo' ? 'Atur promosi & diskon.' : item.name === 'Monitoring' ? 'Pantau status sistem.' : 'Kelola berkas.';
-                  const color = item.name === 'Promo' ? 'text-red-500' : item.name === 'Monitoring' ? 'text-cyan-500' : 'text-gray-500';
+                  const desc = item.name === 'Promo'
+                    ? 'Atur promosi & diskon.'
+                    : item.name === 'Monitoring'
+                      ? 'Pantau status sistem.'
+                      : item.name === 'Berita'
+                        ? 'Kelola ticker & pengumuman.'
+                        : item.name === 'Catatan'
+                          ? 'Kelola memo & SOP tim.'
+                          : 'Kelola berkas.';
+                  const color = item.name === 'Promo'
+                    ? 'text-red-500'
+                    : item.name === 'Monitoring'
+                      ? 'text-cyan-500'
+                      : item.name === 'Berita'
+                        ? 'text-amber-500'
+                        : item.name === 'Catatan'
+                          ? 'text-blue-600'
+                          : 'text-gray-500';
                   const Icon = item.icon ?? Wrench;
                   return (
                     <Menubar.Item key={item.name} asChild>

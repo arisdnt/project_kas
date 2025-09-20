@@ -132,15 +132,27 @@ export class PerpesananMutationService {
     try {
       await connection.beginTransaction();
 
-      // Cek apakah pesan ada dan user adalah pengirim
-      const checkQuery = `
-        SELECT * FROM perpesanan 
-        WHERE id = ? AND tenant_id = ? AND pengirim_id = ?
-      `;
+      // Untuk god user, bisa update pesan dari tenant manapun
+      let checkQuery: string;
+      let checkParams: any[];
+
+      if (accessScope.tenantId === 'god-tenant-bypass') {
+        checkQuery = `
+          SELECT * FROM perpesanan 
+          WHERE id = ? AND pengirim_id = ?
+        `;
+        checkParams = [id, accessScope.userId];
+      } else {
+        checkQuery = `
+          SELECT * FROM perpesanan 
+          WHERE id = ? AND tenant_id = ? AND pengirim_id = ?
+        `;
+        checkParams = [id, accessScope.tenantId, accessScope.userId];
+      }
       
       const [checkRows] = await connection.execute<RowDataPacket[]>(
         checkQuery,
-        [id, accessScope.tenantId, accessScope.userId]
+        checkParams
       );
 
       if (checkRows.length === 0) {
@@ -150,7 +162,7 @@ export class PerpesananMutationService {
       const existingPesan = checkRows[0];
 
       // Tidak bisa update pesan yang sudah dibaca
-      if (existingPesan.status !== 'terkirim') {
+      if (existingPesan.status !== 'dikirim') {
         throw new Error('Tidak dapat mengubah pesan yang sudah dibaca');
       }
 
@@ -173,15 +185,28 @@ export class PerpesananMutationService {
       }
 
       updateFields.push('diperbarui_pada = NOW()');
-      updateValues.push(id, accessScope.tenantId, accessScope.userId);
 
-      const updateQuery = `
-        UPDATE perpesanan 
-        SET ${updateFields.join(', ')}
-        WHERE id = ? AND tenant_id = ? AND pengirim_id = ?
-      `;
+      // Untuk god user, update berdasarkan ID dan pengirim saja
+      let updateQuery: string;
+      let finalUpdateValues: any[];
 
-      await connection.execute<ResultSetHeader>(updateQuery, updateValues);
+      if (accessScope.tenantId === 'god-tenant-bypass') {
+        updateQuery = `
+          UPDATE perpesanan 
+          SET ${updateFields.join(', ')}
+          WHERE id = ? AND pengirim_id = ?
+        `;
+        finalUpdateValues = [...updateValues, id, accessScope.userId];
+      } else {
+        updateQuery = `
+          UPDATE perpesanan 
+          SET ${updateFields.join(', ')}
+          WHERE id = ? AND tenant_id = ? AND pengirim_id = ?
+        `;
+        finalUpdateValues = [...updateValues, id, accessScope.tenantId, accessScope.userId];
+      }
+
+      await connection.execute<ResultSetHeader>(updateQuery, finalUpdateValues);
 
       // Ambil data pesan yang sudah diupdate
       const selectQuery = `
@@ -268,16 +293,29 @@ export class PerpesananMutationService {
     try {
       await connection.beginTransaction();
 
-      // Cek apakah pesan ada dan user memiliki akses (pengirim atau penerima)
-      const checkQuery = `
-        SELECT * FROM perpesanan 
-        WHERE id = ? AND tenant_id = ? 
-        AND (pengirim_id = ? OR penerima_id = ?)
-      `;
+      // Untuk god user, bisa hapus pesan dari tenant manapun
+      let checkQuery: string;
+      let checkParams: any[];
+
+      if (accessScope.tenantId === 'god-tenant-bypass') {
+        checkQuery = `
+          SELECT * FROM perpesanan 
+          WHERE id = ? 
+          AND (pengirim_id = ? OR penerima_id = ?)
+        `;
+        checkParams = [id, accessScope.userId, accessScope.userId];
+      } else {
+        checkQuery = `
+          SELECT * FROM perpesanan 
+          WHERE id = ? AND tenant_id = ? 
+          AND (pengirim_id = ? OR penerima_id = ?)
+        `;
+        checkParams = [id, accessScope.tenantId, accessScope.userId, accessScope.userId];
+      }
       
       const [checkRows] = await connection.execute<RowDataPacket[]>(
         checkQuery,
-        [id, accessScope.tenantId, accessScope.userId, accessScope.userId]
+        checkParams
       );
 
       if (checkRows.length === 0) {
@@ -285,13 +323,26 @@ export class PerpesananMutationService {
       }
 
       // Soft delete - update status menjadi dihapus
-      const deleteQuery = `
-        UPDATE perpesanan 
-        SET status = 'dihapus', diperbarui_pada = NOW()
-        WHERE id = ? AND tenant_id = ?
-      `;
+      let deleteQuery: string;
+      let deleteParams: any[];
 
-      await connection.execute<ResultSetHeader>(deleteQuery, [id, accessScope.tenantId]);
+      if (accessScope.tenantId === 'god-tenant-bypass') {
+        deleteQuery = `
+          UPDATE perpesanan 
+          SET status = 'dihapus', diperbarui_pada = NOW()
+          WHERE id = ?
+        `;
+        deleteParams = [id];
+      } else {
+        deleteQuery = `
+          UPDATE perpesanan 
+          SET status = 'dihapus', diperbarui_pada = NOW()
+          WHERE id = ? AND tenant_id = ?
+        `;
+        deleteParams = [id, accessScope.tenantId];
+      }
+
+      await connection.execute<ResultSetHeader>(deleteQuery, deleteParams);
 
       await connection.commit();
 

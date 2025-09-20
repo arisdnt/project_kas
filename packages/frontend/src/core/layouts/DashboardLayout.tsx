@@ -8,6 +8,7 @@ import { DashboardHeader } from '@/core/layouts/dashboard/components/DashboardHe
 import { NavMobile } from '@/core/layouts/dashboard/components/NavMobile';
 import { DashboardRoutes } from '@/core/layouts/dashboard/DashboardRoutes';
 import { useFullscreen } from '@/core/layouts/dashboard/hooks/useFullscreen';
+import { NewsTrackerBar } from '@/features/berita/components/NewsTrackerBar';
 
 export function DashboardLayout() {
   const { user, logout } = useAuthStore();
@@ -50,12 +51,13 @@ export function DashboardLayout() {
         />
       </nav>
       
-      <main className="flex-1 min-h-0 py-3 sm:py-4 px-2 sm:px-4 lg:px-6 pb-12">
+      <main className="flex-1 min-h-0 py-3 sm:py-4 px-2 sm:px-4 lg:px-6 pb-32">
         <div className="h-full w-full max-w-none flex flex-col">
           <DashboardRoutes />
         </div>
       </main>
       <footer>
+        <NewsTrackerBar />
         <StatusBar />
       </footer>
       

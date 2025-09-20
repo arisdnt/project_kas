@@ -31,6 +31,8 @@ import { ProfilSayaPage } from '@/features/profilsaya';
 import { PengaturanSaya } from '@/features/pengaturansaya';
 import { PajakMatauangPage } from '@/features/pengaturan/pajak-mata-uang/pages/PajakMatauangPage';
 import { PerpesananPage } from '@/features/perpesanan/pages/PerpesananPage';
+import { CatatanPage } from '@/features/catatan/pages/CatatanPage';
+import { BeritaPage } from '@/features/berita/pages/BeritaPage';
 
 export function DashboardRoutes() {
   return (
@@ -51,8 +53,10 @@ export function DashboardRoutes() {
       <Route path="/pembelian/restok" element={<RestokPage />} />
       <Route path="/pelanggan" element={<PelangganPage />} />
       <Route path="/promo" element={<PromoPage />} />
+      <Route path="/berita" element={<BeritaPage />} />
       <Route path="/berkas" element={<FileManagerPage />} />
       <Route path="/perpesanan" element={<PerpesananPage />} />
+      <Route path="/catatan" element={<CatatanPage />} />
       <Route path="/laporan/penjualan" element={<LaporanPenjualanPage />} />
       <Route path="/laporan/stok" element={<LaporanStokPage />} />
       <Route path="/laporan/keuangan" element={<KeuanganPage />} />

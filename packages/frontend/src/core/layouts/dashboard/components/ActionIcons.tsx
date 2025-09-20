@@ -1,6 +1,7 @@
 import { Calculator, Maximize, RefreshCw } from 'lucide-react';
 import { useState } from 'react';
 import { PerpesananQuickAction } from '@/features/perpesanan/components/PerpesananQuickAction';
+import { CatatanQuickAction } from '@/features/catatan/components/CatatanQuickAction';
 
 type Props = {
   isFullscreen: boolean;
@@ -48,6 +49,7 @@ export function ActionIcons({ isFullscreen, onToggleFullscreen, onOpenCalculator
         <Calculator className="h-5 w-5" />
       </button>
 
+      <CatatanQuickAction />
       <PerpesananQuickAction />
     </>
   );

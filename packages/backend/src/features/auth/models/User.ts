@@ -197,7 +197,13 @@ export const PERMISSIONS = {
   WEBHOOK_CREATE: 'webhook:create',
   WEBHOOK_READ: 'webhook:read',
   WEBHOOK_UPDATE: 'webhook:update',
-  WEBHOOK_DELETE: 'webhook:delete'
+  WEBHOOK_DELETE: 'webhook:delete',
+
+  // Catatan permissions
+  CATATAN_CREATE: 'catatan:create',
+  CATATAN_READ: 'catatan:read',
+  CATATAN_UPDATE: 'catatan:update',
+  CATATAN_DELETE: 'catatan:delete'
 } as const;
 
 // Role permissions mapping

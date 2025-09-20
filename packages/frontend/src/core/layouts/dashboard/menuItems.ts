@@ -22,6 +22,8 @@ import {
   Receipt,
   PackagePlus,
   MessageCircle,
+  BookOpen,
+  Newspaper,
 } from 'lucide-react';
 
 export type MenuItem = {
@@ -80,4 +82,6 @@ export const singleMenuItems: MenuItem[] = [
   { name: 'Monitoring', href: '/dashboard/monitoring/status-sistem', icon: Activity },
   { name: 'Berkas', href: '/dashboard/berkas', icon: FolderOpen },
   { name: 'Perpesanan', href: '/dashboard/perpesanan', icon: MessageCircle },
+  { name: 'Berita', href: '/dashboard/berita', icon: Newspaper },
+  { name: 'Catatan', href: '/dashboard/catatan', icon: BookOpen },
 ];

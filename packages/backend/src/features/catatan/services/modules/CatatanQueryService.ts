@@ -139,7 +139,7 @@ export class CatatanQueryService {
       const dataQuery = `
         SELECT 
           c.*,
-          u.nama as pembuat_nama,
+          u.username as pembuat_nama,
           u.username as pembuat_username,
           t.nama as toko_nama,
           t.kode as toko_kode
@@ -203,7 +203,7 @@ export class CatatanQueryService {
       const query = `
         SELECT 
           c.*,
-          u.nama as pembuat_nama,
+          u.username as pembuat_nama,
           u.username as pembuat_username,
           t.nama as toko_nama,
           t.kode as toko_kode
