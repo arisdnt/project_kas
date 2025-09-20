@@ -56,7 +56,7 @@ export class PelangganService {
 
   // Mutation operations
   static async createCustomer(scope: AccessScope, data: CreatePelanggan) {
-    if (scope.level && scope.level > 2) {
+    if (scope.level && scope.level > 4) {
       throw new Error('Insufficient permissions to create customers');
     }
 

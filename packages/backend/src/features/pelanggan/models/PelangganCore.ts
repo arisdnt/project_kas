@@ -14,8 +14,16 @@ export const PelangganSchema = z.object({
   email: z.string().email().optional(),
   telepon: z.string().max(20).optional(),
   alamat: z.string().optional(),
-  tanggal_lahir: z.date().optional(),
-  jenis_kelamin: z.enum(['pria', 'wanita']).optional(),
+  tanggal_lahir: z.union([
+    z.string().datetime(),
+    z.date()
+  ])
+    .optional()
+    .transform(val => {
+      if (!val) return undefined;
+      return val instanceof Date ? val : new Date(val);
+    }),
+  jenis_kelamin: z.enum(['L', 'P']).optional(),
   pekerjaan: z.string().max(100).optional(),
   tipe: z.enum(['reguler', 'vip', 'member', 'wholesale']).default('reguler'),
   diskon_persen: z.number().min(0).max(100).default(0),

@@ -7,12 +7,12 @@ import { KategoriPage } from '@/features/kategori/pages/KategoriPage';
 import { BrandPage } from '@/features/brand/pages/BrandPage';
 import { SupplierPage } from '@/features/supplier/pages/SupplierPage';
 import { InventarisPage } from '@/features/inventaris/pages/InventarisPage';
-import { StokOpnamePage } from '@/features/stok-opname/pages/StokOpnamePage';
+import { StokOpnamePageNew } from '@/features/stok-opname/pages/StokOpnamePageNew';
 import { MutasiStokPage } from '@/features/mutasi-stok/pages/MutasiStokPage';
-import { PenjualanPage } from '@/features/penjualan/pages/PenjualanPage';
+import { PenjualanPageNew } from '@/features/penjualan/pages/PenjualanPageNew';
 import { ReturPenjualanPage } from '@/features/retur-penjualan/pages/ReturPenjualanPage';
 import { ReturPembelianPage } from '@/features/retur-pembelian/pages/ReturPembelianPage';
-import { PembelianPage } from '@/features/pembelian/pages/PembelianPage';
+import { PembelianPageNew } from '@/features/pembelian/pages/PembelianPageNew';
 import { RestokPage } from '@/features/restok/pages/RestokPage';
 import { PelangganPage } from '@/features/pelanggan/pages/PelangganPage';
 import { PromoPage } from '@/features/promo/pages/PromoPage';
@@ -44,12 +44,12 @@ export function DashboardRoutes() {
       <Route path="/brand" element={<BrandPage />} />
       <Route path="/supplier" element={<SupplierPage />} />
       <Route path="/inventaris" element={<InventarisPage />} />
-      <Route path="/stok-opname" element={<StokOpnamePage />} />
+      <Route path="/stok-opname" element={<StokOpnamePageNew />} />
       <Route path="/mutasi-stok" element={<MutasiStokPage />} />
-      <Route path="/penjualan" element={<PenjualanPage />} />
+      <Route path="/penjualan" element={<PenjualanPageNew />} />
       <Route path="/retur-penjualan" element={<ReturPenjualanPage />} />
       <Route path="/retur-pembelian" element={<ReturPembelianPage />} />
-      <Route path="/pembelian" element={<PembelianPage />} />
+      <Route path="/pembelian" element={<PembelianPageNew />} />
       <Route path="/pembelian/restok" element={<RestokPage />} />
       <Route path="/pelanggan" element={<PelangganPage />} />
       <Route path="/promo" element={<PromoPage />} />
