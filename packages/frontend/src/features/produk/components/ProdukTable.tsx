@@ -90,7 +90,7 @@ export function ProdukTable({ onView, onEdit, onCreate }: Props) {
 
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border border-slate-200 bg-white">
         <ScrollArea ref={scrollAreaRef} className="h-full">
-          <Table className="min-w-full text-[13px] leading-[1.25] text-slate-700">
+          <Table className="min-w-full text-[15px] leading-[1.4] text-slate-700">
             <ProductTableHeader
               sortState={sortState}
               onToggleSort={toggleSort}

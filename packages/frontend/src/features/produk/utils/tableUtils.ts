@@ -31,8 +31,8 @@ export const COLUMN_CLASS = {
   aksi: 'w-[8%] min-w-[90px] pr-0',
 } as const
 
-export const ROW_HEIGHT_PX = 30
-export const CELL_VERTICAL_PADDING = 5
+export const ROW_HEIGHT_PX = 36
+export const CELL_VERTICAL_PADDING = 6
 
 export function formatCurrency(n: number) {
   return new Intl.NumberFormat('id-ID', {
