@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import { BrandToolbar } from '@/features/brand/components/BrandToolbar'
 import { BrandTable } from '@/features/brand/components/BrandTable'
 import { useBrandStore, UIBrand } from '@/features/brand/store/brandStore'
 import { BrandDrawer, BrandDrawerContent, BrandDrawerHeader, BrandDrawerTitle } from '@/features/brand/components/BrandDrawer'
@@ -112,12 +111,8 @@ export function BrandPage() {
 
   return (
     <div className="flex flex-col min-h-0 h-[calc(100vh-4rem-3rem)] py-4 overflow-hidden">
-      <div className="mb-3">
-        <BrandToolbar onCreate={openCreate} />
-      </div>
-
       <div className="flex-1 min-h-0">
-        <BrandTable onView={onView} onEdit={onEdit} />
+        <BrandTable onView={onView} onEdit={onEdit} onCreate={openCreate} />
       </div>
 
       <BrandDrawer open={drawerOpen} onOpenChange={setDrawerOpen}>
@@ -279,4 +274,3 @@ export function BrandPage() {
     </div>
   )
 }
-

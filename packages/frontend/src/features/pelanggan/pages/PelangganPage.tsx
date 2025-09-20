@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import { PelangganToolbar } from '@/features/pelanggan/components/PelangganToolbar'
 import { PelangganTable } from '@/features/pelanggan/components/PelangganTable'
 import { UIPelanggan } from '@/features/pelanggan/types/pelanggan'
 import { usePelangganStore } from '@/features/pelanggan/store/pelangganStore'
@@ -87,12 +86,8 @@ export function PelangganPage() {
 
   return (
     <div className="flex flex-col min-h-0 h-[calc(100vh-4rem-3rem)] py-4 overflow-hidden">
-      <div className="mb-3">
-        <PelangganToolbar onCreate={openCreate} />
-      </div>
-
       <div className="flex-1 min-h-0">
-        <PelangganTable onView={onView} onEdit={onEdit} />
+        <PelangganTable onView={onView} onEdit={onEdit} onCreate={openCreate} />
       </div>
 
       <PelangganDrawer open={drawerOpen} onOpenChange={setDrawerOpen}>
@@ -339,4 +334,3 @@ export function PelangganPage() {
 function formatCurrency(n: number) {
   return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(n)
 }
-

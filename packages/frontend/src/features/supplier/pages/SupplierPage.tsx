@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import { SupplierToolbar } from '@/features/supplier/components/SupplierToolbar'
 import { SupplierTable } from '@/features/supplier/components/SupplierTable'
 import { UISupplier } from '@/features/supplier/types/supplier'
 import { useSupplierStore } from '@/features/supplier/store/supplierStore'
@@ -87,12 +86,8 @@ export function SupplierPage() {
 
   return (
     <div className="flex flex-col min-h-0 h-[calc(100vh-4rem-3rem)] py-4 overflow-hidden">
-      <div className="mb-3">
-        <SupplierToolbar onCreate={openCreate} />
-      </div>
-
       <div className="flex-1 min-h-0">
-        <SupplierTable onView={onView} onEdit={onEdit} />
+        <SupplierTable onView={onView} onEdit={onEdit} onCreate={openCreate} />
       </div>
 
       <SupplierDrawer open={drawerOpen} onOpenChange={setDrawerOpen}>
@@ -317,4 +312,3 @@ export function SupplierPage() {
     </div>
   )
 }
-

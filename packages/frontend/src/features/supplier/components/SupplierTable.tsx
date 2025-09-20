@@ -1,120 +1,164 @@
-import { useEffect, useMemo, useRef } from 'react'
-import { Card, CardContent } from '@/core/components/ui/card'
-import { Button } from '@/core/components/ui/button'
-import { useSupplierStore, UISupplier } from '@/features/supplier/store/supplierStore'
-import { Eye, Pencil, Trash2 } from 'lucide-react'
+import { Table, TableBody } from '@/core/components/ui/table'
+import { ScrollArea } from '@/core/components/ui/scroll-area'
+import { DeleteConfirmationDialog } from '@/core/components/ui/delete-confirmation-dialog'
+import { useToast } from '@/core/hooks/use-toast'
+import { useSupplierTableState } from '@/features/supplier/hooks/useSupplierTableState'
+import { SupplierToolbar } from './SupplierToolbar'
+import { SupplierTableHeader } from './SupplierTableHeader'
+import { SupplierTableRow } from './SupplierTableRow'
+import { SupplierTableSkeletonLoader } from './SupplierTableSkeletonLoader'
+import { SupplierEmptyState } from './SupplierEmptyState'
+import { SupplierLoadingIndicator } from './SupplierLoadingIndicator'
+import type { UISupplier } from '@/features/supplier/store/supplierStore'
+import { SupplierFilters } from '@/features/supplier/utils/tableUtils'
+
+import type { KeyboardEvent } from 'react'
 
 type Props = {
-  onView: (s: UISupplier) => void
-  onEdit: (s: UISupplier) => void
+  onView: (supplier: UISupplier) => void
+  onEdit: (supplier: UISupplier) => void
+  onCreate: () => void
 }
 
-export function SupplierTable({ onView, onEdit }: Props) {
-  const { items, loading, hasNext, loadNext, loadFirst, deleteSupplier } = useSupplierStore()
-  const scrollerRef = useRef<HTMLDivElement | null>(null)
+export function SupplierTable({ onView, onEdit, onCreate }: Props) {
+  const {
+    items,
+    loading,
+    sortState,
+    filters,
+    sortedItems,
+    activeRowId,
+    deleteDialog,
+    headerElevated,
+    page,
+    totalCount,
+    filteredCount,
+    contactStats,
+    emailStats,
+    bankStats,
+    scrollAreaRef,
+    rowRefs,
+    setFilters,
+    toggleSort,
+    resetFilters,
+    openDeleteDialog,
+    closeDeleteDialog,
+    handleDeleteConfirm,
+    handleRowFocus,
+    handleKeyNavigation,
+  } = useSupplierTableState()
 
-  useEffect(() => {
-    loadFirst()
-  }, [loadFirst])
+  const { toast } = useToast()
 
-  useEffect(() => {
-    const el = scrollerRef.current
-    if (!el) return
-    const onScroll = () => {
-      if (!el) return
-      const threshold = 72
-      if (el.scrollTop + el.clientHeight >= el.scrollHeight - threshold) {
-        if (hasNext && !loading) loadNext()
-      }
+  const handleFiltersChange = (partial: Partial<SupplierFilters>) => {
+    setFilters((prev) => {
+      const next: SupplierFilters = { ...prev, ...partial }
+      // Ensure status default to 'all' when cleared
+      if (!next.status) next.status = 'all'
+      const keys = Object.keys(next) as Array<keyof SupplierFilters>
+      keys.forEach((key) => {
+        const value = next[key]
+        if (Array.isArray(value) && value.length === 0) {
+          delete next[key]
+        }
+      })
+      return next
+    })
+  }
+
+  const handleDelete = async () => {
+    const result = await handleDeleteConfirm()
+    if (result.success) {
+      toast({
+        title: 'Supplier dihapus',
+        description: `Supplier "${result.supplier.nama}" berhasil dihapus.`,
+      })
+      closeDeleteDialog()
+    } else if (result.error) {
+      toast({
+        title: 'Gagal menghapus supplier',
+        description: result.error,
+      })
     }
-    el.addEventListener('scroll', onScroll)
-    return () => el.removeEventListener('scroll', onScroll)
-  }, [hasNext, loading, loadNext])
+  }
 
-  const SkeletonRows = useMemo(() => (
-    <tbody>
-      {Array.from({ length: 8 }).map((_, i) => (
-        <tr key={i} className="animate-pulse">
-          <td className="px-4 py-3"><div className="h-3.5 bg-gray-200 rounded w-40" /></td>
-          <td className="px-4 py-3"><div className="h-3.5 bg-gray-200 rounded w-32" /></td>
-          <td className="px-4 py-3"><div className="h-3.5 bg-gray-200 rounded w-48" /></td>
-          <td className="px-4 py-3"><div className="h-3.5 bg-gray-200 rounded w-32" /></td>
-          <td className="px-4 py-3"><div className="h-5 bg-gray-200 rounded w-16" /></td>
-          <td className="px-4 py-3"><div className="h-6 bg-gray-200 rounded w-28" /></td>
-        </tr>
-      ))}
-    </tbody>
-  ), [])
+  const handleRowKeyDown = (event: KeyboardEvent<HTMLTableRowElement>, supplier: UISupplier) => {
+    const result = handleKeyNavigation(event, supplier)
+    if (result?.action === 'view') {
+      onView(result.supplier)
+    }
+  }
 
-  const onDelete = async (s: UISupplier) => {
-    if (!confirm(`Hapus supplier \"${s.nama}\"?`)) return
-    await deleteSupplier(s.id)
+  const handleResetFilters = () => {
+    resetFilters()
   }
 
   return (
-    <Card className="w-full h-full flex flex-col min-h-0">
-      <CardContent className="p-0 flex-1 flex flex-col min-h-0 overflow-hidden">
-        <div ref={scrollerRef} className="flex-1 overflow-auto scrollbar-thin table-scroll-container rounded-md border">
-          <table className="w-full text-sm">
-            <thead className="sticky top-0 z-10 bg-white border-b shadow-[0_1px_0_0_rgba(0,0,0,0.04)]">
-              <tr className="text-left text-gray-600">
-                <th className="px-4 py-3 font-medium">Nama</th>
-                <th className="px-4 py-3 font-medium">Kontak</th>
-                <th className="px-4 py-3 font-medium">Email</th>
-                <th className="px-4 py-3 font-medium">Telepon</th>
-                <th className="px-4 py-3 font-medium">Status</th>
-                <th className="px-4 py-3 font-medium">Aksi</th>
-              </tr>
-            </thead>
-            <tbody>
-              {items.map((s) => (
-                <tr key={s.id} className="border-b last:border-0 hover:bg-gray-50/50">
-                  <td className="px-4 py-3">
-                    <div className="font-medium text-gray-900">{s.nama}</div>
-                    {s.alamat && <div className="text-xs text-gray-500 line-clamp-1">{s.alamat}</div>}
-                  </td>
-                  <td className="px-4 py-3 text-gray-700">{s.kontak_person || '-'}</td>
-                  <td className="px-4 py-3 text-gray-700">{s.email || '-'}</td>
-                  <td className="px-4 py-3 text-gray-700">{s.telepon || '-'}</td>
-                  <td className="px-4 py-3">
-                    {s.status && (
-                      <span className={`px-2 py-1 rounded text-xs font-medium ${
-                        s.status === 'aktif' ? 'bg-green-100 text-green-800' :
-                        s.status === 'nonaktif' ? 'bg-gray-100 text-gray-800' :
-                        'bg-red-100 text-red-800'
-                      }`}>
-                        {s.status.charAt(0).toUpperCase() + s.status.slice(1)}
-                      </span>
-                    )}
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-2">
-                      <Button variant="ghost" size="sm" onClick={() => onView(s)} className="text-blue-600 hover:text-blue-700 hover:bg-blue-50">
-                        <Eye className="h-4 w-4" />
-                      </Button>
-                      <Button variant="ghost" size="sm" onClick={() => onEdit(s)} className="text-amber-600 hover:text-amber-700 hover:bg-amber-50">
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                      <Button variant="ghost" size="sm" onClick={() => onDelete(s)} className="text-red-600 hover:text-red-700 hover:bg-red-50">
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
+    <div className="flex h-full min-h-0 flex-col">
+      <div className="pb-3">
+        <SupplierToolbar
+          onCreate={onCreate}
+          filters={filters}
+          onFiltersChange={handleFiltersChange}
+          onResetFilters={handleResetFilters}
+          totalCount={totalCount}
+          filteredCount={filteredCount}
+          contactStats={contactStats}
+          emailStats={emailStats}
+          bankStats={bankStats}
+          page={page}
+        />
+      </div>
 
-            {loading && items.length === 0 ? SkeletonRows : null}
-          </table>
-
-          {loading && items.length > 0 && (
-            <div className="sticky bottom-0 left-0 right-0 bg-gradient-to-t from-white/90 to-transparent h-12 flex items-end justify-center pb-2 border-t">
-              <span className="text-xs text-gray-500">Memuat data…</span>
-            </div>
-          )}
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden border-l border-r border-t border-slate-200 bg-white">
+        <div className="border-b border-slate-200 bg-white">
+          <Table className="min-w-full text-[15px] leading-[1.4] text-slate-700">
+            <SupplierTableHeader
+              sortState={sortState}
+              onToggleSort={toggleSort}
+              headerElevated={headerElevated}
+            />
+          </Table>
         </div>
-      </CardContent>
-    </Card>
+
+        <ScrollArea ref={scrollAreaRef} className="h-full flex-1">
+          <Table className="min-w-full text-[15px] leading-[1.4] text-slate-700">
+            <TableBody className="divide-y divide-slate-100">
+              {sortedItems.map((supplier) => (
+                <SupplierTableRow
+                  key={supplier.id}
+                  ref={(el) => {
+                    rowRefs.current[supplier.id] = el
+                  }}
+                  supplier={supplier}
+                  isActive={activeRowId === supplier.id}
+                  onFocus={() => handleRowFocus(supplier)}
+                  onKeyDown={(event) => handleRowKeyDown(event, supplier)}
+                  onView={() => onView(supplier)}
+                  onEdit={() => onEdit(supplier)}
+                  onDelete={() => openDeleteDialog(supplier)}
+                />
+              ))}
+
+              {loading && items.length === 0 ? <SupplierTableSkeletonLoader /> : null}
+              {!loading && sortedItems.length === 0 ? <SupplierEmptyState /> : null}
+            </TableBody>
+          </Table>
+
+          {loading && items.length > 0 ? <SupplierLoadingIndicator /> : null}
+        </ScrollArea>
+      </div>
+
+      <DeleteConfirmationDialog
+        open={deleteDialog.open}
+        onOpenChange={closeDeleteDialog}
+        title="Hapus Supplier"
+        description="Apakah Anda yakin ingin menghapus supplier ini?"
+        itemName={deleteDialog.supplier?.nama}
+        onConfirm={handleDelete}
+        isLoading={deleteDialog.loading}
+        confirmText="Hapus Supplier"
+      />
+    </div>
   )
 }
-

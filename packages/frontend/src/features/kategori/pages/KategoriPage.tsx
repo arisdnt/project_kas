@@ -1,6 +1,5 @@
 import { useState } from 'react'
 import { useAuthStore } from '@/core/store/authStore'
-import { KategoriToolbar } from '@/features/kategori/components/KategoriToolbar'
 import { KategoriTable } from '@/features/kategori/components/KategoriTable'
 import { useKategoriStore } from '@/features/kategori/store/kategoriStore'
 import { UIKategori, CreateKategoriRequest } from '@/features/kategori/types/kategori'
@@ -113,13 +112,9 @@ export function KategoriPage() {
   }
 
   return (
-    <div className="flex flex-col min-h-0 h-[calc(100vh-4rem-3rem)] py-4 overflow-hidden">
-      <div className="mb-3">
-        <KategoriToolbar onCreate={openCreate} />
-      </div>
-
+    <div className="flex flex-col min-h-0 h-[calc(100vh-4rem-3rem)] pt-4 overflow-hidden">
       <div className="flex-1 min-h-0">
-        <KategoriTable onView={onView} onEdit={onEdit} />
+        <KategoriTable onView={onView} onEdit={onEdit} onCreate={openCreate} />
       </div>
 
       <KategoriDrawer open={drawerOpen} onOpenChange={setDrawerOpen}>
