@@ -7,7 +7,7 @@ import { z } from 'zod';
 
 // Enum untuk status pesan
 export const StatusPesan = {
-  TERKIRIM: 'terkirim',
+  DIKIRIM: 'dikirim',
   DIBACA: 'dibaca',
   DIBALAS: 'dibalas',
   DIHAPUS: 'dihapus'
@@ -31,7 +31,6 @@ export interface Perpesanan {
   status: keyof typeof StatusPesan;
   prioritas: keyof typeof PrioritasPesan;
   dibaca_pada?: Date;
-  dibalas_pada?: Date;
   dibuat_pada: Date;
   diperbarui_pada: Date;
 }
@@ -52,7 +51,7 @@ export interface PerpesananWithUsers extends Perpesanan {
 
 // Schema validasi untuk membuat pesan baru
 export const CreatePerpesananSchema = z.object({
-  penerima_id: z.string().uuid('ID penerima harus berupa UUID yang valid'),
+  penerima_id: z.string().min(1, 'ID penerima tidak boleh kosong'),
   pesan: z.string()
     .min(1, 'Pesan tidak boleh kosong')
     .max(5000, 'Pesan maksimal 5000 karakter'),
@@ -75,10 +74,10 @@ export const SearchPerpesananSchema = z.object({
   page: z.string().optional().default('1'),
   limit: z.string().optional().default('20'),
   search: z.string().optional(),
-  status: z.enum(['terkirim', 'dibaca', 'dibalas', 'dihapus']).optional(),
+  status: z.enum(['dikirim', 'dibaca', 'dibalas', 'dihapus']).optional(),
   prioritas: z.enum(['rendah', 'normal', 'tinggi', 'urgent']).optional(),
-  pengirim_id: z.string().uuid().optional(),
-  penerima_id: z.string().uuid().optional(),
+  pengirim_id: z.string().optional(),
+  penerima_id: z.string().optional(),
   tanggal_mulai: z.string().optional(),
   tanggal_selesai: z.string().optional(),
   sort_by: z.enum(['dibuat_pada', 'diperbarui_pada', 'prioritas']).optional().default('dibuat_pada'),
@@ -87,7 +86,7 @@ export const SearchPerpesananSchema = z.object({
 
 // Schema untuk menandai pesan sebagai dibaca
 export const MarkAsReadSchema = z.object({
-  pesan_ids: z.array(z.string().uuid()).min(1, 'Minimal satu ID pesan diperlukan')
+  pesan_ids: z.array(z.string()).min(1, 'Minimal satu ID pesan diperlukan')
 });
 
 // Tipe untuk request create

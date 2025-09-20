@@ -139,6 +139,9 @@ import peranRoutes from '@/features/peran/routes/peranRoutes';
 import penggunaRoutes from '@/features/pengguna/routes/penggunaRoutes';
 import stokOpnameRoutes from '@/features/stok-opname/routes/stokOpnameRoutes';
 import { pajakMatauangRoutes } from '@/features/pengaturan/routes/pajakMatauangRoutes';
+import beritaRoutes from '@/features/berita/routes/beritaRoutes';
+import perpesananRoutes from '@/features/perpesanan/routes/perpesananRoutes';
+import catatanRoutes from '@/features/catatan/routes/catatanRoutes';
 
 // Swagger removed: API docs endpoints have been disabled and code cleaned up.
 
@@ -173,6 +176,9 @@ app.use('/api/peran', peranRoutes);
 app.use('/api/pengguna', penggunaRoutes);
 app.use('/api/stok-opname', stokOpnameRoutes);
 app.use('/api/pajakmatauang', pajakMatauangRoutes);
+app.use('/api/berita', beritaRoutes);
+app.use('/api/perpesanan', perpesananRoutes);
+app.use('/api/catatan', catatanRoutes);
 
 app.get('/api', (req, res) => {
   res.json({

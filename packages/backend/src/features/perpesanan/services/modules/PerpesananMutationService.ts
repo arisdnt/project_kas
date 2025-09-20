@@ -23,6 +23,34 @@ export class PerpesananMutationService {
     try {
       await connection.beginTransaction();
 
+      // Debug log untuk memeriksa accessScope
+      logger.info('Debug accessScope:', {
+        tenantId: accessScope?.tenantId,
+        userId: accessScope?.userId,
+        isGod: accessScope?.isGod,
+        fullScope: accessScope
+      });
+
+      // Untuk god user, gunakan tenant_id dari penerima
+      let targetTenantId = accessScope.tenantId;
+      
+      if (accessScope.isGod && accessScope.tenantId === 'god-tenant-bypass') {
+        // Ambil tenant_id dari penerima untuk god user
+        const receiverTenantQuery = `
+          SELECT tenant_id FROM users WHERE id = ? AND status = 'aktif'
+        `;
+        const [receiverTenantRows] = await connection.execute<RowDataPacket[]>(
+          receiverTenantQuery,
+          [data.penerima_id]
+        );
+        
+        if (receiverTenantRows.length === 0) {
+          throw new Error('Penerima tidak ditemukan atau tidak aktif');
+        }
+        
+        targetTenantId = receiverTenantRows[0].tenant_id;
+      }
+
       // Validasi penerima ada dan dalam tenant yang sama
       const checkReceiverQuery = `
         SELECT id FROM users 
@@ -31,7 +59,7 @@ export class PerpesananMutationService {
       
       const [receiverRows] = await connection.execute<RowDataPacket[]>(
         checkReceiverQuery,
-        [data.penerima_id, accessScope.tenantId]
+        [data.penerima_id, targetTenantId]
       );
 
       if (receiverRows.length === 0) {
@@ -43,13 +71,13 @@ export class PerpesananMutationService {
       const insertQuery = `
         INSERT INTO perpesanan (
           id, tenant_id, pengirim_id, penerima_id, 
-          pesan, prioritas, status, dibuat_pada, diperbarui_pada
-        ) VALUES (?, ?, ?, ?, ?, ?, 'terkirim', NOW(), NOW())
+          pesan, prioritas, status, tipe_pesan, dibuat_pada, diperbarui_pada
+        ) VALUES (?, ?, ?, ?, ?, ?, 'dikirim', 'personal', NOW(), NOW())
       `;
 
       await connection.execute<ResultSetHeader>(insertQuery, [
         pesanId,
-        accessScope.tenantId,
+        targetTenantId,
         accessScope.userId,
         data.penerima_id,
         data.pesan,
@@ -78,7 +106,6 @@ export class PerpesananMutationService {
         status: pesan.status,
         prioritas: pesan.prioritas,
         dibaca_pada: pesan.dibaca_pada,
-        dibalas_pada: pesan.dibalas_pada,
         dibuat_pada: pesan.dibuat_pada,
         diperbarui_pada: pesan.diperbarui_pada
       };
@@ -178,7 +205,6 @@ export class PerpesananMutationService {
         status: pesan.status,
         prioritas: pesan.prioritas,
         dibaca_pada: pesan.dibaca_pada,
-        dibalas_pada: pesan.dibalas_pada,
         dibuat_pada: pesan.dibuat_pada,
         diperbarui_pada: pesan.diperbarui_pada
       };
@@ -359,7 +385,6 @@ export class PerpesananMutationService {
         status: reply.status,
         prioritas: reply.prioritas,
         dibaca_pada: reply.dibaca_pada,
-        dibalas_pada: reply.dibalas_pada,
         dibuat_pada: reply.dibuat_pada,
         diperbarui_pada: reply.diperbarui_pada
       };

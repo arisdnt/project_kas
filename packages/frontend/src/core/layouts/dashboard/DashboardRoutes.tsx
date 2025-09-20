@@ -30,6 +30,7 @@ import { StatusSistemPage } from '@/features/monitoring/pages/StatusSistemPage';
 import { ProfilSayaPage } from '@/features/profilsaya';
 import { PengaturanSaya } from '@/features/pengaturansaya';
 import { PajakMatauangPage } from '@/features/pengaturan/pajak-mata-uang/pages/PajakMatauangPage';
+import { PerpesananPage } from '@/features/perpesanan/pages/PerpesananPage';
 
 export function DashboardRoutes() {
   return (
@@ -51,6 +52,7 @@ export function DashboardRoutes() {
       <Route path="/pelanggan" element={<PelangganPage />} />
       <Route path="/promo" element={<PromoPage />} />
       <Route path="/berkas" element={<FileManagerPage />} />
+      <Route path="/perpesanan" element={<PerpesananPage />} />
       <Route path="/laporan/penjualan" element={<LaporanPenjualanPage />} />
       <Route path="/laporan/stok" element={<LaporanStokPage />} />
       <Route path="/laporan/keuangan" element={<KeuanganPage />} />

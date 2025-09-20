@@ -5,13 +5,15 @@
 
 import { Router } from 'express';
 import { authenticate, requirePermission } from '@/features/auth/middleware/authMiddleware';
+import { attachAccessScope } from '@/core/middleware/accessScope';
 import { PerpesananController } from '../controllers/PerpesananController';
 import { PerpesananControllerExtended } from '../controllers/PerpesananControllerExtended';
 
 const router = Router();
 
-// Middleware autentikasi untuk semua routes perpesanan
+// Middleware autentikasi dan access scope untuk semua routes perpesanan
 router.use(authenticate);
+router.use(attachAccessScope);
 
 /**
  * GET /api/perpesanan

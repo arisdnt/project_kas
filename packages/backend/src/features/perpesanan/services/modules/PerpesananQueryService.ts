@@ -38,20 +38,28 @@ export class PerpesananQueryService {
       const limitNum = parseInt(limit);
       const offset = (pageNum - 1) * limitNum;
 
-      // Base query dengan join untuk mendapatkan data pengirim dan penerima
+      // Untuk god user, ambil semua pesan dari semua tenant
       let baseQuery = `
         FROM perpesanan p
         INNER JOIN users pengirim ON p.pengirim_id = pengirim.id
         INNER JOIN users penerima ON p.penerima_id = penerima.id
-        WHERE p.tenant_id = ?
-        AND (p.pengirim_id = ? OR p.penerima_id = ?)
       `;
 
-      const params: any[] = [accessScope.tenantId, accessScope.userId, accessScope.userId];
+      const params: any[] = [];
+
+      // Kondisi WHERE berdasarkan user
+      if (accessScope.isGod && accessScope.tenantId === 'god-tenant-bypass') {
+        // God user dapat melihat semua pesan
+        baseQuery += ` WHERE 1=1`;
+      } else {
+        // User biasa hanya melihat pesan dalam tenant mereka
+        baseQuery += ` WHERE p.tenant_id = ? AND (p.pengirim_id = ? OR p.penerima_id = ?)`;
+        params.push(accessScope.tenantId, accessScope.userId, accessScope.userId);
+      }
 
       // Filter berdasarkan pencarian teks
       if (search) {
-        baseQuery += ` AND (p.pesan LIKE ? OR pengirim.nama LIKE ? OR penerima.nama LIKE ?)`;
+        baseQuery += ` AND (p.pesan LIKE ? OR pengirim.username LIKE ? OR penerima.username LIKE ?)`;
         const searchParam = `%${search}%`;
         params.push(searchParam, searchParam, searchParam);
       }
@@ -100,9 +108,9 @@ export class PerpesananQueryService {
       const dataQuery = `
         SELECT 
           p.*,
-          pengirim.nama as pengirim_nama,
+          pengirim.username as pengirim_nama,
           pengirim.username as pengirim_username,
-          penerima.nama as penerima_nama,
+          penerima.username as penerima_nama,
           penerima.username as penerima_username
         ${baseQuery}
         ORDER BY p.${sort_by} ${sort_order.toUpperCase()}
@@ -112,7 +120,7 @@ export class PerpesananQueryService {
       const [rows] = await connection.execute<RowDataPacket[]>(dataQuery, params);
 
       // Transform hasil query menjadi format yang diinginkan
-      const data: PerpesananWithUsers[] = rows.map((row: any) => ({
+      const data: PerpesananWithUsers[] = rows.map(row => ({
         id: row.id,
         tenant_id: row.tenant_id,
         pengirim_id: row.pengirim_id,
@@ -121,7 +129,6 @@ export class PerpesananQueryService {
         status: row.status,
         prioritas: row.prioritas,
         dibaca_pada: row.dibaca_pada,
-        dibalas_pada: row.dibalas_pada,
         dibuat_pada: row.dibuat_pada,
         diperbarui_pada: row.diperbarui_pada,
         pengirim: {
@@ -187,7 +194,6 @@ export class PerpesananQueryService {
         status: row.status,
         prioritas: row.prioritas,
         dibaca_pada: row.dibaca_pada,
-        dibalas_pada: row.dibalas_pada,
         dibuat_pada: row.dibuat_pada,
         diperbarui_pada: row.diperbarui_pada,
         pengirim: {
