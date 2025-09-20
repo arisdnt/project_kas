@@ -53,7 +53,11 @@ export function BrandFilter({ value, options, onChange }: BrandFilterProps) {
           <ChevronDown className="h-3 w-3" />
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent className="w-56" align="start">
+      <DropdownMenuContent
+        className="min-w-0"
+        align="start"
+        style={{ width: 'var(--radix-dropdown-menu-trigger-width)' }}
+      >
         <DropdownMenuLabel>Filter Brand</DropdownMenuLabel>
         <DropdownMenuSeparator />
         {options.length > 0 ? (
@@ -62,6 +66,7 @@ export function BrandFilter({ value, options, onChange }: BrandFilterProps) {
               key={brand}
               checked={value?.includes(brand) ?? false}
               onCheckedChange={(checked) => handleToggle(brand, checked)}
+              className="hover:bg-slate-600 hover:text-white focus:bg-slate-600 focus:text-white"
             >
               {brand}
             </DropdownMenuCheckboxItem>

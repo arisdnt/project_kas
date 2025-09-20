@@ -11,37 +11,31 @@ import { Button } from '@/core/components/ui/button'
 import { ChevronDown } from 'lucide-react'
 import { cn } from '@/core/lib/utils'
 
-type StatusFilterProps = {
-  value?: ('aktif' | 'tidak aktif')[]
-  onChange: (value?: ('aktif' | 'tidak aktif')[]) => void
+type SupplierFilterProps = {
+  value?: string[]
+  options: string[]
+  onChange: (value?: string[]) => void
 }
 
-const statusOptions = [
-  { value: 'aktif' as const, label: 'Aktif' },
-  { value: 'tidak aktif' as const, label: 'Tidak Aktif' },
-]
-
-export function StatusFilter({ value, onChange }: StatusFilterProps) {
+export function SupplierFilter({ value, options, onChange }: SupplierFilterProps) {
   const selectedCount = value?.length || 0
   const hasSelection = selectedCount > 0
 
-  const handleToggle = (status: 'aktif' | 'tidak aktif', checked: boolean) => {
+  const handleToggle = (supplier: string, checked: boolean) => {
     const next = new Set(value ?? [])
     if (checked) {
-      next.add(status)
+      next.add(supplier)
     } else {
-      next.delete(status)
+      next.delete(supplier)
     }
     const arr = Array.from(next)
     onChange(arr.length > 0 ? arr : undefined)
   }
 
   const displayText = useMemo(() => {
-    if (selectedCount === 0) return 'Status'
-    if (selectedCount === 1) {
-      return value![0] === 'aktif' ? 'Aktif' : 'Tidak Aktif'
-    }
-    return `${selectedCount} status`
+    if (selectedCount === 0) return 'Supplier'
+    if (selectedCount === 1) return value![0]
+    return `${selectedCount} supplier`
   }, [selectedCount, value])
 
   return (
@@ -64,18 +58,24 @@ export function StatusFilter({ value, onChange }: StatusFilterProps) {
         align="start"
         style={{ width: 'var(--radix-dropdown-menu-trigger-width)' }}
       >
-        <DropdownMenuLabel>Filter Status</DropdownMenuLabel>
+        <DropdownMenuLabel>Filter Supplier</DropdownMenuLabel>
         <DropdownMenuSeparator />
-        {statusOptions.map(({ value: statusValue, label }) => (
-          <DropdownMenuCheckboxItem
-            key={statusValue}
-            checked={value?.includes(statusValue) ?? false}
-            onCheckedChange={(checked) => handleToggle(statusValue, checked)}
-            className="hover:bg-slate-600 hover:text-white focus:bg-slate-600 focus:text-white"
-          >
-            {label}
-          </DropdownMenuCheckboxItem>
-        ))}
+        {options.length > 0 ? (
+          options.map((supplier) => (
+            <DropdownMenuCheckboxItem
+              key={supplier}
+              checked={value?.includes(supplier) ?? false}
+              onCheckedChange={(checked) => handleToggle(supplier, checked)}
+              className="hover:bg-slate-600 hover:text-white focus:bg-slate-600 focus:text-white"
+            >
+              {supplier}
+            </DropdownMenuCheckboxItem>
+          ))
+        ) : (
+          <DropdownMenuLabel className="text-xs text-slate-400">
+            Tidak ada supplier tersedia
+          </DropdownMenuLabel>
+        )}
       </DropdownMenuContent>
     </DropdownMenu>
   )

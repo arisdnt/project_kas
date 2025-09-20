@@ -6,8 +6,6 @@ import { ScrollArea } from '@/core/components/ui/scroll-area'
 import { Table, TableBody } from '@/core/components/ui/table'
 import { ProductTableHeader } from './ProductTableHeader'
 import { ProductTableRow } from './ProductTableRow'
-import { ActiveFiltersDisplay } from './ActiveFiltersDisplay'
-import { LiveUpdateBadge } from './LiveUpdateBadge'
 import { TableSkeletonLoader } from './TableSkeletonLoader'
 import { LoadingIndicator } from './LoadingIndicator'
 import { EmptyTableState } from './EmptyTableState'
@@ -79,16 +77,8 @@ export function ProdukTable({ onView, onEdit, onCreate }: Props) {
         <ProdukToolbar onCreate={onCreate} />
       </div>
 
-      <LiveUpdateBadge
-        lastUpdatedAt={lastUpdatedAt}
-        currentPage={page}
-        displayedCount={sortedItems.length}
-        totalCount={items.length}
-      />
 
-      <ActiveFiltersDisplay filters={filters} onReset={resetFilters} />
-
-      <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border border-slate-200 bg-white">
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden border border-slate-200 bg-white">
         {/* Fixed Header */}
         <div className="border-b border-slate-200 bg-white">
           <Table className="min-w-full text-[15px] leading-[1.4] text-slate-700">

@@ -43,9 +43,9 @@ export const ProductTableRow = forwardRef<HTMLTableRowElement, ProductTableRowPr
       className={cn(
         'group/table-row border-0 transition-colors',
         'odd:bg-slate-50/60',
-        'hover:bg-blue-50/40',
+        'hover:bg-sky-100 hover:text-slate-900',
         'focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-400/70',
-        'data-[active=true]:ring-2 data-[active=true]:ring-blue-400/60 data-[active=true]:ring-offset-0',
+        'data-[active=true]:bg-sky-100 data-[active=true]:text-slate-900',
       )}
       style={{ height: ROW_HEIGHT_PX }}
       aria-selected={isActive}
@@ -55,7 +55,7 @@ export const ProductTableRow = forwardRef<HTMLTableRowElement, ProductTableRowPr
           <ProductImage src={product.gambar_url} alt={product.nama} />
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2">
-              <span className="truncate font-medium text-slate-800" title={product.nama}>
+              <span className="truncate font-medium text-slate-800 group-hover/table-row:text-slate-900 group-data-[active=true]/table-row:text-slate-900" title={product.nama}>
                 {product.nama}
               </span>
               {recentlyTouched && (
@@ -71,7 +71,7 @@ export const ProductTableRow = forwardRef<HTMLTableRowElement, ProductTableRowPr
                 </span>
               )}
             </div>
-            <p className="text-[13px] text-slate-500">SKU: {product.sku || '—'}</p>
+            <p className="text-[13px] text-slate-500 group-hover/table-row:text-slate-700 group-data-[active=true]/table-row:text-slate-700">SKU: {product.sku || '—'}</p>
           </div>
         </div>
       </TableCell>
@@ -85,12 +85,12 @@ export const ProductTableRow = forwardRef<HTMLTableRowElement, ProductTableRowPr
         {product.supplier?.nama ?? '—'}
       </TableCell>
       <TableCell className={cn(COLUMN_CLASS.satuan, 'py-[5px] align-middle')}>
-        <span className="inline-flex items-center rounded bg-slate-100 px-2 text-[13px] text-slate-600">
+        <span className="inline-flex items-center rounded bg-slate-100 px-2 text-[13px] text-slate-600 group-hover/table-row:bg-sky-200 group-hover/table-row:text-slate-900 group-data-[active=true]/table-row:bg-sky-200 group-data-[active=true]/table-row:text-slate-900">
           {product.satuan ?? 'pcs'}
         </span>
       </TableCell>
       <TableCell className={cn(COLUMN_CLASS.stok, 'py-[5px] align-middle')}>
-        <span className="font-semibold text-slate-800">{stok}</span>
+        <span className="font-semibold text-slate-800 group-hover/table-row:text-slate-900 group-data-[active=true]/table-row:text-slate-900">{stok}</span>
       </TableCell>
       <TableCell className={cn(COLUMN_CLASS.hargaBeli, 'py-[5px] align-middle')}>
         {hargaBeli ? formatCurrency(hargaBeli) : '—'}

@@ -53,7 +53,11 @@ export function CategoryFilter({ value, options, onChange }: CategoryFilterProps
           <ChevronDown className="h-3 w-3" />
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent className="w-56" align="start">
+      <DropdownMenuContent
+        className="min-w-0"
+        align="start"
+        style={{ width: 'var(--radix-dropdown-menu-trigger-width)' }}
+      >
         <DropdownMenuLabel>Filter Kategori</DropdownMenuLabel>
         <DropdownMenuSeparator />
         {options.length > 0 ? (
@@ -62,6 +66,7 @@ export function CategoryFilter({ value, options, onChange }: CategoryFilterProps
               key={category}
               checked={value?.includes(category) ?? false}
               onCheckedChange={(checked) => handleToggle(category, checked)}
+              className="hover:bg-slate-600 hover:text-white focus:bg-slate-600 focus:text-white"
             >
               {category}
             </DropdownMenuCheckboxItem>

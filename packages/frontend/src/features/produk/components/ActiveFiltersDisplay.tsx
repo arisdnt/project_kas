@@ -1,4 +1,3 @@
-import { Button } from '@/core/components/ui/button'
 import { formatCurrency } from '@/features/produk/utils/tableUtils'
 import { Range, DateRange } from './RangeFilter'
 
@@ -14,10 +13,9 @@ type Filters = {
 
 type ActiveFiltersDisplayProps = {
   filters: Filters
-  onReset: () => void
 }
 
-export function ActiveFiltersDisplay({ filters, onReset }: ActiveFiltersDisplayProps) {
+export function ActiveFiltersDisplay({ filters }: ActiveFiltersDisplayProps) {
   const activeFilters: string[] = []
 
   if (filters.kategori?.length) activeFilters.push(`Kategori: ${filters.kategori.join(', ')}`)
@@ -59,14 +57,6 @@ export function ActiveFiltersDisplay({ filters, onReset }: ActiveFiltersDisplayP
           {label}
         </span>
       ))}
-      <Button
-        variant="ghost"
-        size="sm"
-        className="h-6 whitespace-nowrap px-2 text-slate-500"
-        onClick={onReset}
-      >
-        Bersihkan filter
-      </Button>
     </div>
   )
 }

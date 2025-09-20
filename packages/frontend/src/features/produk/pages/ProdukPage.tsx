@@ -97,7 +97,7 @@ export function ProdukPage() {
   }
 
   return (
-    <div className="flex flex-col min-h-0 h-[calc(100vh-4rem-3rem)] py-4 overflow-hidden">
+    <div className="flex flex-col min-h-0 h-[calc(100vh-4rem-3rem)] pt-4 overflow-hidden">
       <div className="flex-1 min-h-0">
         <ProdukTable onView={onView} onEdit={onEdit} onCreate={openCreate} />
       </div>
