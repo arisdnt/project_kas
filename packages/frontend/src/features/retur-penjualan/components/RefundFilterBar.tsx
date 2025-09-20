@@ -14,7 +14,7 @@ import {
   X
 } from 'lucide-react'
 import type { RefundFilters } from '../types'
-import type { PaymentMethod } from '@/features/laporan/penjualan/types'
+import type { PaymentMethod } from '@/features/laporan-penjualan/types'
 
 interface Props {
   filters: RefundFilters

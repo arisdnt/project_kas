@@ -5,11 +5,12 @@ export function DesktopMainLinks({ pathname }: { pathname: string }) {
   return (
     <>
       {mainMenuItems
-        .filter((item) => item.name === 'Dashboard' || item.name === 'Kasir')
+        .filter((item) => ['Dashboard', 'Kasir', 'Restok & Pembelian'].includes(item.name))
         .map((item) => {
         const Icon = item.icon;
         const isActive = pathname === item.href;
         const isKasir = item.name === 'Kasir';
+        const isRestok = item.name === 'Restok & Pembelian';
         return (
           <Link
             key={item.name}
@@ -22,7 +23,17 @@ export function DesktopMainLinks({ pathname }: { pathname: string }) {
                   : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
             }`}
           >
-            <Icon className={`h-4 w-4 ${item.name === 'Dashboard' ? 'text-blue-500' : 'text-green-600'}`} />
+            <Icon
+              className={`h-4 w-4 ${
+                item.name === 'Dashboard'
+                  ? 'text-blue-500'
+                  : isKasir
+                    ? 'text-green-600'
+                    : isRestok
+                      ? 'text-indigo-600'
+                      : 'text-gray-500'
+              }`}
+            />
             <span>{item.name}</span>
           </Link>
         );

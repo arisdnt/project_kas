@@ -1,4 +1,4 @@
-import { LedgerEntry, ProfitLoss } from '@/features/laporan/keuangan/types';
+import { LedgerEntry, ProfitLoss } from '@/features/laporan-keuangan/types';
 
 function toISO(date: Date) {
   const d = new Date(date);

@@ -20,6 +20,7 @@ import {
   Activity,
   FolderOpen,
   Receipt,
+  PackagePlus,
 } from 'lucide-react';
 
 export type MenuItem = {
@@ -31,6 +32,7 @@ export type MenuItem = {
 
 export const mainMenuItems: MenuItem[] = [
   { name: 'Dashboard', href: '/dashboard', icon: Home },
+  { name: 'Restok & Pembelian', href: '/dashboard/pembelian/restok', icon: PackagePlus },
   { name: 'Kasir', href: '/dashboard/kasir', icon: ShoppingCart },
 ];
 

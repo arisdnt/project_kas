@@ -4,6 +4,7 @@ import { Router } from 'express';
 import { authenticate, requirePermission } from '@/features/auth/middleware/authMiddleware';
 import { attachAccessScope, requireStoreWhenNeeded } from '@/core/middleware/accessScope';
 import { PERMISSIONS } from '@/features/auth/models/User';
+import { requireAdminTokoAccess, SystemModule, CrudOperation } from '@/features/auth/middleware/levelAccessMiddleware';
 import { PembelianController } from '../controllers/PembelianController';
 
 const router = Router();
@@ -29,6 +30,13 @@ router.post('/',
   requirePermission(PERMISSIONS.TRANSACTION_CREATE),
   requireStoreWhenNeeded,
   PembelianController.create
+);
+
+router.post('/restock',
+  requirePermission(PERMISSIONS.TRANSACTION_CREATE),
+  requireAdminTokoAccess(SystemModule.TRANSAKSI, CrudOperation.CREATE),
+  requireStoreWhenNeeded,
+  PembelianController.restock
 );
 
 router.put('/:id',

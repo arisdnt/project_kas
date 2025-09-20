@@ -1,4 +1,4 @@
-import { LedgerEntry } from '@/features/laporan/keuangan/types';
+import { LedgerEntry } from '@/features/laporan-keuangan/types';
 import { format } from 'date-fns';
 import id from 'date-fns/locale/id';
 import { ArrowDownRight, ArrowUpRight } from 'lucide-react';

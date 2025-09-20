@@ -1,4 +1,4 @@
-import type { PaymentMethod } from '@/features/laporan/penjualan/types'
+import type { PaymentMethod } from '@/features/laporan-penjualan/types'
 
 export interface RefundLine {
   productId: number

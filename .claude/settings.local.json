@@ -31,7 +31,8 @@
       "Bash(PORT=3001 npm run dev)",
       "Bash(kill:*)",
       "Bash(node:*)",
-      "Bash(mv:*)"
+      "Bash(mv:*)",
+      "Bash(cp:*)"
     ],
     "deny": [],
     "ask": []

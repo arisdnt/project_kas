@@ -1,4 +1,4 @@
-import { ProfitLoss } from '@/features/laporan/keuangan/types';
+import { ProfitLoss } from '@/features/laporan-keuangan/types';
 import { TrendingUp, CircleDollarSign } from 'lucide-react';
 
 function formatCurrency(n: number) {

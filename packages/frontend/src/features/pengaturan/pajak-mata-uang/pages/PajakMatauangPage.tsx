@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react'
+import React, { useState, useMemo, useEffect } from 'react'
 import { Plus, Search, Filter, MoreHorizontal, Eye, Edit, Trash2, ToggleLeft, ToggleRight, Receipt, DollarSign, Percent, TrendingUp } from 'lucide-react'
 import { Button } from '@/core/components/ui/button'
 import { Input } from '@/core/components/ui/input'
@@ -27,6 +27,7 @@ import {
   CreatePajakRequest,
   CreateMatauangRequest
 } from '../types'
+import pajakMatauangService from '../services/pajakMatauangService'
 
 export function PajakMatauangPage() {
   const [selectedTab, setSelectedTab] = useState<'pajak' | 'mata_uang'>('pajak')
@@ -40,90 +41,56 @@ export function PajakMatauangPage() {
     query: ''
   })
 
-  // Sample data - replace with actual API calls
-  const [pajakData] = useState<PajakSetting[]>([
-    {
-      id: 1,
-      nama: 'PPN',
-      persentase: 11,
-      deskripsi: 'Pajak Pertambahan Nilai untuk semua produk',
-      aktif: true,
-      default: true,
-      created_at: '2024-01-01T00:00:00Z',
-      updated_at: '2024-01-01T00:00:00Z'
-    },
-    {
-      id: 2,
-      nama: 'PPh 22',
-      persentase: 0.45,
-      deskripsi: 'Pajak Penghasilan untuk impor barang',
-      aktif: true,
-      default: false,
-      created_at: '2024-01-01T00:00:00Z',
-      updated_at: '2024-01-01T00:00:00Z'
-    },
-    {
-      id: 3,
-      nama: 'PPN Makanan',
-      persentase: 11,
-      deskripsi: 'PPN khusus untuk kategori makanan dan minuman',
-      aktif: false,
-      default: false,
-      created_at: '2024-01-01T00:00:00Z',
-      updated_at: '2024-01-01T00:00:00Z'
-    }
-  ])
+  // State for data from API
+  const [pajakData, setPajakData] = useState<PajakSetting[]>([])
+  const [matauangData, setMatauangData] = useState<MatauangSetting[]>([])
+  const [stats, setStats] = useState<PajakMatauangStats>({
+    total_pajak: 0,
+    pajak_aktif: 0,
+    total_mata_uang: 0,
+    mata_uang_aktif: 0
+  })
 
-  const [matauangData] = useState<MatauangSetting[]>([
-    {
-      id: 1,
-      kode: 'IDR',
-      nama: 'Rupiah Indonesia',
-      simbol: 'Rp',
-      format_tampilan: 'before',
-      pemisah_desimal: ',',
-      pemisah_ribuan: '.',
-      jumlah_desimal: 0,
-      aktif: true,
-      default: true,
-      created_at: '2024-01-01T00:00:00Z',
-      updated_at: '2024-01-01T00:00:00Z'
-    },
-    {
-      id: 2,
-      kode: 'USD',
-      nama: 'Dollar Amerika',
-      simbol: '$',
-      format_tampilan: 'before',
-      pemisah_desimal: '.',
-      pemisah_ribuan: ',',
-      jumlah_desimal: 2,
-      aktif: true,
-      default: false,
-      created_at: '2024-01-01T00:00:00Z',
-      updated_at: '2024-01-01T00:00:00Z'
-    },
-    {
-      id: 3,
-      kode: 'EUR',
-      nama: 'Euro',
-      simbol: '€',
-      format_tampilan: 'after',
-      pemisah_desimal: ',',
-      pemisah_ribuan: '.',
-      jumlah_desimal: 2,
-      aktif: false,
-      default: false,
-      created_at: '2024-01-01T00:00:00Z',
-      updated_at: '2024-01-01T00:00:00Z'
-    }
-  ])
+  // Load data on component mount and when filters change
+  useEffect(() => {
+    loadData()
+  }, [selectedTab, filters])
 
-  const stats: PajakMatauangStats = {
-    total_pajak: pajakData.length,
-    pajak_aktif: pajakData.filter(p => p.aktif).length,
-    total_mata_uang: matauangData.length,
-    mata_uang_aktif: matauangData.filter(m => m.aktif).length
+  // Load statistics on component mount
+  useEffect(() => {
+    loadStats()
+  }, [])
+
+  const loadData = async () => {
+    try {
+      setIsLoading(true)
+      if (selectedTab === 'pajak') {
+        const response = await pajakMatauangService.getPajak({
+          search: filters.query,
+          status: filters.status
+        })
+        setPajakData(response.data || [])
+      } else {
+        const response = await pajakMatauangService.getMatauang({
+          search: filters.query,
+          status: filters.status
+        })
+        setMatauangData(response.data || [])
+      }
+    } catch (error) {
+      console.error('Error loading data:', error)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const loadStats = async () => {
+    try {
+      const response = await pajakMatauangService.getStats()
+      setStats(response.data)
+    } catch (error) {
+      console.error('Error loading stats:', error)
+    }
   }
 
   // Check user access - replace with actual permission check
@@ -180,11 +147,16 @@ export function PajakMatauangPage() {
     if (confirm(`Apakah Anda yakin ingin menghapus ${selectedTab === 'pajak' ? 'pajak' : 'mata uang'} "${selectedTab === 'pajak' ? (item as PajakSetting).nama : (item as MatauangSetting).nama}"?`)) {
       try {
         setIsLoading(true)
-        // API call to delete item
-        console.log('Deleting item:', item)
-        // Refresh data after deletion
+        if (selectedTab === 'pajak') {
+          await pajakMatauangService.deletePajak(item.id)
+        } else {
+          await pajakMatauangService.deleteMatauang(item.id)
+        }
+        await loadData()
+        await loadStats()
       } catch (error) {
         console.error('Error deleting item:', error)
+        alert('Gagal menghapus data. Silakan coba lagi.')
       } finally {
         setIsLoading(false)
       }
@@ -194,11 +166,16 @@ export function PajakMatauangPage() {
   const handleToggleStatus = async (item: PajakSetting | MatauangSetting) => {
     try {
       setIsLoading(true)
-      // API call to toggle status
-      console.log('Toggling status for item:', item)
-      // Refresh data after update
+      if (selectedTab === 'pajak') {
+        await pajakMatauangService.togglePajakStatus(item.id)
+      } else {
+        await pajakMatauangService.toggleMatauangStatus(item.id)
+      }
+      await loadData()
+      await loadStats()
     } catch (error) {
       console.error('Error toggling status:', error)
+      alert('Gagal mengubah status. Silakan coba lagi.')
     } finally {
       setIsLoading(false)
     }
@@ -208,16 +185,24 @@ export function PajakMatauangPage() {
     try {
       setIsLoading(true)
       if (drawerMode === 'create') {
-        // API call to create new item
-        console.log('Creating new item:', data)
-      } else {
-        // API call to update item
-        console.log('Updating item:', data)
+        if (selectedTab === 'pajak') {
+          await pajakMatauangService.createPajak(data as CreatePajakRequest)
+        } else {
+          await pajakMatauangService.createMatauang(data as CreateMatauangRequest)
+        }
+      } else if (selectedItem) {
+        if (selectedTab === 'pajak') {
+          await pajakMatauangService.updatePajak(selectedItem.id, data as CreatePajakRequest)
+        } else {
+          await pajakMatauangService.updateMatauang(selectedItem.id, data as CreateMatauangRequest)
+        }
       }
       setIsDrawerOpen(false)
-      // Refresh data after operation
+      await loadData()
+      await loadStats()
     } catch (error) {
       console.error('Error saving item:', error)
+      alert('Gagal menyimpan data. Silakan coba lagi.')
     } finally {
       setIsLoading(false)
     }
@@ -401,7 +386,7 @@ export function PajakMatauangPage() {
                         </Badge>
                       </TableCell>
                       <TableCell>
-                        {pajak.default && (
+                        {pajak.is_default && (
                           <Badge variant="outline">Default</Badge>
                         )}
                       </TableCell>
@@ -502,7 +487,7 @@ export function PajakMatauangPage() {
                         </Badge>
                       </TableCell>
                       <TableCell>
-                        {matauang.default && (
+                        {matauang.is_default && (
                           <Badge variant="outline">Default</Badge>
                         )}
                       </TableCell>

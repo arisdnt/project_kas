@@ -497,6 +497,89 @@ CREATE TABLE `konfigurasi_sistem` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
+-- Table structure for table `mata_uang_setting`
+--
+
+DROP TABLE IF EXISTS `mata_uang_setting`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `mata_uang_setting` (
+  `id` char(36) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT (uuid()),
+  `tenant_id` char(36) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `toko_id` char(36) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `kode` varchar(3) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT 'ISO 4217 currency code (e.g., IDR, USD, EUR)',
+  `nama` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `simbol` varchar(10) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT 'Currency symbol (e.g., Rp, $, €)',
+  `format_tampilan` enum('before','after') CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'before' COMMENT 'Symbol position: before or after amount',
+  `pemisah_desimal` char(1) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT ',' COMMENT 'Decimal separator character',
+  `pemisah_ribuan` char(1) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '.' COMMENT 'Thousands separator character',
+  `jumlah_desimal` tinyint unsigned NOT NULL DEFAULT '0' COMMENT 'Number of decimal places (0-4)',
+  `aktif` tinyint(1) NOT NULL DEFAULT '1' COMMENT '1=active, 0=inactive',
+  `is_default` tinyint(1) NOT NULL DEFAULT '0' COMMENT '1=default currency for store, 0=not default',
+  `dibuat_pada` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `diperbarui_pada` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `dibuat_oleh` char(36) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `diperbarui_oleh` char(36) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `idx_mata_uang_tenant_toko_kode` (`tenant_id`,`toko_id`,`kode`),
+  KEY `idx_mata_uang_tenant` (`tenant_id`),
+  KEY `idx_mata_uang_toko` (`toko_id`),
+  KEY `idx_mata_uang_kode` (`kode`),
+  KEY `idx_mata_uang_aktif` (`aktif`),
+  KEY `idx_mata_uang_default` (`is_default`),
+  KEY `idx_mata_uang_created_by` (`dibuat_oleh`),
+  KEY `idx_mata_uang_updated_by` (`diperbarui_oleh`),
+  KEY `idx_mata_uang_tenant_toko_aktif` (`tenant_id`,`toko_id`,`aktif`),
+  KEY `idx_mata_uang_tenant_toko_default` (`tenant_id`,`toko_id`,`is_default`),
+  FULLTEXT KEY `idx_mata_uang_search` (`nama`),
+  CONSTRAINT `fk_mata_uang_setting_created_by` FOREIGN KEY (`dibuat_oleh`) REFERENCES `users` (`id`) ON DELETE SET NULL ON UPDATE CASCADE,
+  CONSTRAINT `fk_mata_uang_setting_tenant` FOREIGN KEY (`tenant_id`) REFERENCES `tenants` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT `fk_mata_uang_setting_toko` FOREIGN KEY (`toko_id`) REFERENCES `toko` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT `fk_mata_uang_setting_updated_by` FOREIGN KEY (`diperbarui_oleh`) REFERENCES `users` (`id`) ON DELETE SET NULL ON UPDATE CASCADE,
+  CONSTRAINT `chk_mata_uang_jumlah_desimal` CHECK (((`jumlah_desimal` >= 0) and (`jumlah_desimal` <= 4)))
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Currency settings configuration per tenant and store';
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `pajak_setting`
+--
+
+DROP TABLE IF EXISTS `pajak_setting`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `pajak_setting` (
+  `id` char(36) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT (uuid()),
+  `tenant_id` char(36) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `toko_id` char(36) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `nama` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `persentase` decimal(5,2) NOT NULL DEFAULT '0.00' COMMENT 'Tax percentage (0.00 to 100.00)',
+  `deskripsi` text CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+  `aktif` tinyint(1) NOT NULL DEFAULT '1' COMMENT '1=active, 0=inactive',
+  `is_default` tinyint(1) NOT NULL DEFAULT '0' COMMENT '1=default tax for new products, 0=not default',
+  `dibuat_pada` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `diperbarui_pada` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `dibuat_oleh` char(36) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `diperbarui_oleh` char(36) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `idx_pajak_tenant_toko_nama` (`tenant_id`,`toko_id`,`nama`),
+  KEY `idx_pajak_tenant` (`tenant_id`),
+  KEY `idx_pajak_toko` (`toko_id`),
+  KEY `idx_pajak_aktif` (`aktif`),
+  KEY `idx_pajak_default` (`is_default`),
+  KEY `idx_pajak_created_by` (`dibuat_oleh`),
+  KEY `idx_pajak_updated_by` (`diperbarui_oleh`),
+  KEY `idx_pajak_tenant_toko_aktif` (`tenant_id`,`toko_id`,`aktif`),
+  KEY `idx_pajak_tenant_toko_default` (`tenant_id`,`toko_id`,`is_default`),
+  FULLTEXT KEY `idx_pajak_search` (`nama`,`deskripsi`),
+  CONSTRAINT `fk_pajak_setting_created_by` FOREIGN KEY (`dibuat_oleh`) REFERENCES `users` (`id`) ON DELETE SET NULL ON UPDATE CASCADE,
+  CONSTRAINT `fk_pajak_setting_tenant` FOREIGN KEY (`tenant_id`) REFERENCES `tenants` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT `fk_pajak_setting_toko` FOREIGN KEY (`toko_id`) REFERENCES `toko` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT `fk_pajak_setting_updated_by` FOREIGN KEY (`diperbarui_oleh`) REFERENCES `users` (`id`) ON DELETE SET NULL ON UPDATE CASCADE,
+  CONSTRAINT `chk_pajak_persentase` CHECK (((`persentase` >= 0) and (`persentase` <= 100)))
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Tax settings configuration per tenant and store';
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
 -- Table structure for table `pelanggan`
 --
 
@@ -1193,4 +1276,4 @@ DELIMITER ;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2025-09-19 22:52:21
+-- Dump completed on 2025-09-20  7:17:49

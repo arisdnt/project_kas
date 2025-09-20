@@ -6,7 +6,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/core/compone
 import { Card, CardContent } from '@/core/components/ui/card'
 import { useReturPembelianStore } from '../store/returPembelianStore'
 import { useProdukStore } from '@/features/produk/store/produkStore'
-import { usePembelianStore } from '@/features/pembelian/store/pembelianStore'
+import { useRestokStore } from '@/features/restok/store/restokStore'
 import { useSupplierStore } from '@/features/supplier/store/supplierStore'
 import { ReturPembelianItem, ReturPembelianFormData } from '../types/returPembelian'
 import { ReturFormBasicFields } from './ReturFormBasicFields'
@@ -37,10 +37,7 @@ export function ReturPembelianForm({ isOpen, onClose, editingItem }: ReturPembel
     loadFirst: loadProdukFirst
   } = useProdukStore()
 
-  const {
-    items: pembelianItems,
-    loading: pembelianLoading
-  } = usePembelianStore()
+  const pembelianItems = useRestokStore((s) => s.items)
 
   const {
     items: supplierItems,

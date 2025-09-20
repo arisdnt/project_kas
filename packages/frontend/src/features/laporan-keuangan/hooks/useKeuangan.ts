@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { addDays, endOfDay, endOfMonth, endOfWeek, endOfYear, startOfDay, startOfMonth, startOfWeek, startOfYear } from 'date-fns';
-import { fetchLedger, fetchProfitLoss } from '@/features/laporan/keuangan/services/keuanganApi';
-import type { DateRange, KeuanganFilter, LedgerEntry, ProfitLoss } from '@/features/laporan/keuangan/types';
+import { fetchLedger, fetchProfitLoss } from '@/features/laporan-keuangan/services/keuanganApi';
+import type { DateRange, KeuanganFilter, LedgerEntry, ProfitLoss } from '@/features/laporan-keuangan/types';
 
 function buildPresetRange(preset: KeuanganFilter['preset']): DateRange {
   const now = new Date();

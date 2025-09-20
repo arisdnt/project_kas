@@ -2,7 +2,7 @@ import { Download } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { format } from 'date-fns';
 import id from 'date-fns/locale/id';
-import type { LedgerEntry } from '@/features/laporan/keuangan/types';
+import type { LedgerEntry } from '@/features/laporan-keuangan/types';
 
 type Props = {
   data: LedgerEntry[];

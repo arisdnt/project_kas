@@ -1,8 +1,5 @@
-export { LaporanPenjualanPage } from './penjualan/pages/LaporanPenjualanPage'
-export { LaporanStokPage } from './stok/pages/LaporanStokPage'
-export { SalesSummaryCards } from './penjualan/components/SummaryCards'
-export { StokSummaryCards } from './stok/components/StokSummaryCards'
-export { SalesChart } from './penjualan/components/SalesChart'
-export { StokChart } from './stok/components/StokChart'
-export { SalesTable } from './penjualan/components/SalesTable'
-export { StokTable } from './stok/components/StokTable'
+// This module is no longer used as laporan features have been moved to individual folders:
+// - laporan-harian
+// - laporan-keuangan
+// - laporan-penjualan
+// - laporan-stok

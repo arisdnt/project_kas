@@ -1,10 +1,10 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/core/components/ui/tabs';
-import { DateRangeFilter } from '@/features/laporan/keuangan/components/DateRangeFilter';
-import { LedgerTable } from '@/features/laporan/keuangan/components/LedgerTable';
-import { ProfitLossSummary } from '@/features/laporan/keuangan/components/ProfitLossSummary';
-import { useKeuangan } from '@/features/laporan/keuangan/hooks/useKeuangan';
-import { LedgerExportButtons } from '@/features/laporan/keuangan/components/LedgerExportButtons';
-import { ProfitLossExportButtons } from '@/features/laporan/keuangan/components/ProfitLossExportButtons';
+import { DateRangeFilter } from '@/features/laporan-keuangan/components/DateRangeFilter';
+import { LedgerTable } from '@/features/laporan-keuangan/components/LedgerTable';
+import { ProfitLossSummary } from '@/features/laporan-keuangan/components/ProfitLossSummary';
+import { useKeuangan } from '@/features/laporan-keuangan/hooks/useKeuangan';
+import { LedgerExportButtons } from '@/features/laporan-keuangan/components/LedgerExportButtons';
+import { ProfitLossExportButtons } from '@/features/laporan-keuangan/components/ProfitLossExportButtons';
 
 export function KeuanganPage() {
   const { filter, setPreset, setCustomRange, ledger, pl, loading, error } = useKeuangan();

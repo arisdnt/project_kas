@@ -1,16 +1,22 @@
 export interface PajakSetting {
-  id: number
+  id: string
+  tenant_id: string
+  toko_id: string
   nama: string
   persentase: number
   deskripsi?: string
   aktif: boolean
-  default: boolean
-  created_at: string
-  updated_at: string
+  is_default: boolean
+  dibuat_pada: string
+  diperbarui_pada: string
+  dibuat_oleh?: string
+  diperbarui_oleh?: string
 }
 
 export interface MatauangSetting {
-  id: number
+  id: string
+  tenant_id: string
+  toko_id: string
   kode: string
   nama: string
   simbol: string
@@ -19,9 +25,11 @@ export interface MatauangSetting {
   pemisah_ribuan: string
   jumlah_desimal: number
   aktif: boolean
-  default: boolean
-  created_at: string
-  updated_at: string
+  is_default: boolean
+  dibuat_pada: string
+  diperbarui_pada: string
+  dibuat_oleh?: string
+  diperbarui_oleh?: string
 }
 
 export interface CreatePajakRequest {
@@ -29,7 +37,7 @@ export interface CreatePajakRequest {
   persentase: number
   deskripsi?: string
   aktif?: boolean
-  default?: boolean
+  is_default?: boolean
 }
 
 export interface CreateMatauangRequest {
@@ -41,7 +49,7 @@ export interface CreateMatauangRequest {
   pemisah_ribuan: string
   jumlah_desimal: number
   aktif?: boolean
-  default?: boolean
+  is_default?: boolean
 }
 
 export interface UpdatePajakRequest extends Partial<CreatePajakRequest> {}

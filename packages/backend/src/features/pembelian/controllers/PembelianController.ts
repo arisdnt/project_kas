@@ -7,6 +7,8 @@ import { Request, Response } from 'express';
 import { PembelianService, CreatePembelianRequest } from '../services/PembelianService';
 import { SearchPembelianQuerySchema, CreateTransaksiPembelianSchema, UpdateTransaksiPembelianSchema } from '../models/TransaksiPembelianCore';
 import { CreateItemPembelianSchema } from '../models/ItemPembelianModel';
+import { RestockPembelianRequestSchema } from '../models/RestockPembelianModel';
+import { RestockPembelianService } from '../services/modules/RestockPembelianService';
 import { requireStoreWhenNeeded } from '@/core/middleware/accessScope';
 import { z } from 'zod';
 
@@ -83,6 +85,46 @@ export class PembelianController {
       return res.status(400).json({
         success: false,
         message: error.message || 'Failed to create purchase transaction'
+      });
+    }
+  }
+
+  static async restock(req: Request, res: Response) {
+    try {
+      if (!req.user || !req.accessScope) {
+        return res.status(401).json({ success: false, message: 'Unauthorized' });
+      }
+
+      await new Promise<void>((resolve, reject) =>
+        requireStoreWhenNeeded(req, res, (err?: any) => (err ? reject(err) : resolve()))
+      );
+
+      const payload = RestockPembelianRequestSchema.parse(req.body);
+      const result = await RestockPembelianService.executeRestock(
+        req.accessScope,
+        req.user.id,
+        payload.items,
+        { supplierId: payload.supplierId, note: payload.catatan }
+      );
+
+      return res.status(201).json({ success: true, data: result });
+    } catch (error: any) {
+      console.error('Quick restock purchase error:', error);
+
+      if (error instanceof z.ZodError) {
+        return res.status(422).json({
+          success: false,
+          message: 'Validasi data restok gagal',
+          errors: error.flatten().fieldErrors,
+        });
+      }
+
+      const message = error?.message || 'Gagal memproses restok barang';
+      const statusCode = message.includes('tidak ditemukan') ? 404 : 400;
+
+      return res.status(statusCode).json({
+        success: false,
+        message,
       });
     }
   }

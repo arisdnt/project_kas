@@ -1,18 +1,18 @@
-import { usePembelianStore, RestockItem } from '@/features/pembelian/store/pembelianStore'
-import { Button } from '@/core/components/ui/button'
-import { Input } from '@/core/components/ui/input'
-import { Trash2, Minus, Plus } from 'lucide-react'
+import { useRestokStore, RestokItem } from '@/features/restok/store/restokStore';
+import { Button } from '@/core/components/ui/button';
+import { Input } from '@/core/components/ui/input';
+import { Trash2, Minus, Plus } from 'lucide-react';
 
 type Props = {
-  items: RestockItem[]
-}
+  items: RestokItem[];
+};
 
-export function RestockTable({ items }: Props) {
-  const inc = usePembelianStore((s) => s.inc)
-  const dec = usePembelianStore((s) => s.dec)
-  const setQty = usePembelianStore((s) => s.setQty)
-  const setHargaBeli = usePembelianStore((s) => s.setHargaBeli)
-  const remove = usePembelianStore((s) => s.remove)
+export function RestokTable({ items }: Props) {
+  const inc = useRestokStore((s) => s.inc);
+  const dec = useRestokStore((s) => s.dec);
+  const setQty = useRestokStore((s) => s.setQty);
+  const setHargaBeli = useRestokStore((s) => s.setHargaBeli);
+  const remove = useRestokStore((s) => s.remove);
 
   return (
     <div className="border border-gray-200 rounded-lg overflow-hidden">
@@ -23,7 +23,7 @@ export function RestockTable({ items }: Props) {
             <th className="text-right px-3 py-2 w-44">Harga Beli</th>
             <th className="text-center px-3 py-2 w-40">Qty</th>
             <th className="text-right px-3 py-2 w-40">Total</th>
-            <th className="px-2 py-2 w-10"></th>
+            <th className="px-2 py-2 w-10" />
           </tr>
         </thead>
         <tbody className="divide-y divide-gray-100">
@@ -67,17 +67,17 @@ export function RestockTable({ items }: Props) {
           {items.length === 0 && (
             <tr>
               <td className="px-3 py-6 text-center text-gray-500 text-sm" colSpan={5}>
-                Daftar pembelian kosong. Pindai barcode atau cari produk.
+                Daftar restok kosong. Pindai barcode atau cari produk.
               </td>
             </tr>
           )}
         </tbody>
       </table>
     </div>
-  )
+  );
 }
 
 function formatCurrency(n: number) {
-  return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(n)
+  return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(n);
 }
 

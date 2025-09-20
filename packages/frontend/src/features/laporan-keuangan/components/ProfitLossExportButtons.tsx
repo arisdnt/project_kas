@@ -1,6 +1,6 @@
 import { Download } from 'lucide-react';
 import * as XLSX from 'xlsx';
-import type { ProfitLoss } from '@/features/laporan/keuangan/types';
+import type { ProfitLoss } from '@/features/laporan-keuangan/types';
 import { format } from 'date-fns';
 
 type Props = {
