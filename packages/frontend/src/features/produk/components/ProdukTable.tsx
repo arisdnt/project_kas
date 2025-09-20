@@ -89,7 +89,8 @@ export function ProdukTable({ onView, onEdit, onCreate }: Props) {
       <ActiveFiltersDisplay filters={filters} onReset={resetFilters} />
 
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border border-slate-200 bg-white">
-        <ScrollArea ref={scrollAreaRef} className="h-full">
+        {/* Fixed Header */}
+        <div className="border-b border-slate-200 bg-white">
           <Table className="min-w-full text-[15px] leading-[1.4] text-slate-700">
             <ProductTableHeader
               sortState={sortState}
@@ -101,6 +102,12 @@ export function ProdukTable({ onView, onEdit, onCreate }: Props) {
               supplierOptions={supplierOptions}
               headerElevated={headerElevated}
             />
+          </Table>
+        </div>
+
+        {/* Scrollable Body */}
+        <ScrollArea ref={scrollAreaRef} className="h-full flex-1">
+          <Table className="min-w-full text-[15px] leading-[1.4] text-slate-700">
             <TableBody className="divide-y divide-slate-100">
               {sortedItems.map((product) => {
                 const isActive = activeRowId === product.id

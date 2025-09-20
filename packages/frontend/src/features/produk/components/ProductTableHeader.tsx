@@ -48,7 +48,7 @@ export function ProductTableHeader({
   return (
     <TableHeader
       className={cn(
-        'sticky top-0 z-20 border-b border-slate-200 bg-white/95 backdrop-blur-sm transition-shadow',
+        'bg-slate-50/80 transition-shadow',
         headerElevated ? 'shadow-[0_6px_16px_-12px_rgba(15,23,42,0.55)]' : 'shadow-none',
       )}
     >
