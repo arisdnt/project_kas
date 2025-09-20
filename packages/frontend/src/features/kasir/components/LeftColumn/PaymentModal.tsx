@@ -113,9 +113,9 @@ export function PaymentModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-6xl max-h-[70vh] overflow-hidden p-0">
+      <DialogContent className="sm:max-w-6xl max-h-[50vh] overflow-hidden p-0">
         {/* 2 Column Layout */}
-        <div className="flex h-[60vh] min-h-[400px]">
+        <div className="flex h-[40vh] min-h-[300px]">
           {/* Left Column - Total & Payment Methods */}
           <div className="flex-1 p-6 bg-gray-50 border-r border-gray-200 overflow-y-auto">
             {/* Total Amount Display - Following kasir design pattern */}
@@ -133,12 +133,12 @@ export function PaymentModal({
               <label className="text-xs text-gray-600 uppercase tracking-wide mb-3 block">
                 Pilih Metode Pembayaran
               </label>
-              <div className="space-y-3">
+              <div className="grid grid-cols-2 gap-3">
                 {paymentMethods.map((method) => (
                   <button
                     key={method.id}
                     onClick={() => handleMethodChange(method.id)}
-                    className={`w-full flex items-center gap-4 p-4 rounded-lg border-2 transition-all ${
+                    className={`flex items-center gap-3 p-4 rounded-lg border-2 transition-all ${
                       selectedMethod === method.id
                         ? method.color + ' ring-2 ring-offset-1 shadow-sm'
                         : 'border-gray-200 hover:border-gray-300 bg-white hover:bg-gray-50'
@@ -146,7 +146,7 @@ export function PaymentModal({
                     disabled={isProcessing}
                   >
                     <method.icon className="h-6 w-6" />
-                    <span className="font-medium text-lg">{method.name}</span>
+                    <span className="font-medium text-base">{method.name}</span>
                     {selectedMethod === method.id && (
                       <div className="ml-auto w-3 h-3 bg-current rounded-full"></div>
                     )}
@@ -166,13 +166,13 @@ export function PaymentModal({
 
               {/* Quick amounts for cash only */}
               {selectedMethod === 'TUNAI' && (
-                <div className="grid grid-cols-1 gap-2 mb-4">
+                <div className="grid grid-cols-3 gap-2 mb-4">
                   {quickAmounts.map((amount) => (
                     <Button
                       key={amount}
                       variant="outline"
                       onClick={() => handleQuickAmount(amount)}
-                      className="h-12 text-base font-medium"
+                      className="h-12 text-sm font-medium"
                       disabled={isProcessing}
                     >
                       {formatCurrency(amount)}
@@ -227,67 +227,56 @@ export function PaymentModal({
           </div>
         </div>
 
-        {/* Footer Action Bar - Following kasir ActionBar pattern */}
+        {/* Footer Action Bar - Responsive Button Layout */}
         <div className="bg-white border-t border-gray-200 p-4 shadow-lg backdrop-blur-sm flex-shrink-0">
-          <div className="flex items-center justify-between gap-3">
-            {/* Status Info */}
-            <div className="flex-1">
-              <div className="text-xs text-gray-600 uppercase tracking-wide">Status Pembayaran</div>
-              <div className="text-sm font-medium text-gray-900">
-                {isValidPayment ? 'Siap untuk diproses' : 'Jumlah pembayaran tidak mencukupi'}
-              </div>
-            </div>
+          <div className="grid grid-cols-4 gap-3">
+            <Button
+              onClick={() => onOpenChange(false)}
+              variant="outline"
+              className="h-12 w-full border-red-300 text-red-700 hover:bg-red-50 disabled:opacity-50"
+              disabled={isProcessing}
+            >
+              <X className="h-4 w-4 mr-2" />
+              Batal
+            </Button>
 
-            {/* Action Buttons - Following kasir button pattern */}
-            <div className="flex items-center gap-2">
-              <Button
-                onClick={() => onOpenChange(false)}
-                variant="outline"
-                className="h-12 px-4 border-red-300 text-red-700 hover:bg-red-50 disabled:opacity-50"
-                disabled={isProcessing}
-              >
-                <X className="h-4 w-4 mr-2" />
-                Batal
-              </Button>
+            <Button
+              onClick={onPrint}
+              variant="outline"
+              className="h-12 w-full border-gray-300 hover:bg-gray-50 disabled:opacity-50"
+              disabled={isProcessing}
+            >
+              <Printer className="h-4 w-4 mr-2" />
+              Cetak Resi
+            </Button>
 
-              <Button
-                onClick={onPrint}
-                variant="outline"
-                className="h-12 px-4 border-gray-300 hover:bg-gray-50 disabled:opacity-50"
-                disabled={isProcessing}
-              >
-                <Printer className="h-4 w-4 mr-2" />
-                Cetak Resi
-              </Button>
+            <Button
+              onClick={handlePayment}
+              disabled={!isValidPayment || isProcessing}
+              variant="outline"
+              className="h-12 w-full border-blue-300 text-blue-700 hover:bg-blue-50 disabled:opacity-50"
+            >
+              <Calculator className="h-4 w-4 mr-2" />
+              Bayar
+            </Button>
 
-              <Button
-                onClick={handlePayment}
-                disabled={!isValidPayment || isProcessing}
-                variant="outline"
-                className="h-12 px-4 border-blue-300 text-blue-700 hover:bg-blue-50 disabled:opacity-50"
-              >
-                <Calculator className="h-4 w-4 mr-2" />
-                Bayar
-              </Button>
-
-              <Button
-                onClick={handlePaymentAndPrint}
-                disabled={!isValidPayment || isProcessing}
-                className="h-12 px-6 bg-blue-600 hover:bg-blue-700 text-white font-medium disabled:opacity-50"
-              >
-                {isProcessing ? (
-                  <>
-                    <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full mr-2"></div>
-                    Memproses...
-                  </>
-                ) : (
-                  <>
-                    <Calculator className="h-4 w-4 mr-2" />
-                    BAYAR & CETAK
-                  </>
-                )}
-              </Button>
-            </div>
+            <Button
+              onClick={handlePaymentAndPrint}
+              disabled={!isValidPayment || isProcessing}
+              className="h-12 w-full bg-blue-600 hover:bg-blue-700 text-white font-medium disabled:opacity-50"
+            >
+              {isProcessing ? (
+                <>
+                  <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full mr-2"></div>
+                  Memproses...
+                </>
+              ) : (
+                <>
+                  <Calculator className="h-4 w-4 mr-2" />
+                  BAYAR & CETAK
+                </>
+              )}
+            </Button>
           </div>
         </div>
       </DialogContent>
