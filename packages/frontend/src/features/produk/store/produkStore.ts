@@ -96,6 +96,7 @@ type ProdukState = {
   error?: string
   search: string
   filters: Filters
+  totalCount: number
   // Abort controller for in-flight requests (to keep results fresh)
   currentAbort?: AbortController
   // Master data
@@ -138,12 +139,13 @@ export const useProdukStore = create<ProdukState & ProdukActions>()(
     loading: false,
     search: '',
     filters: {},
+    totalCount: 0,
     categories: [],
     brands: [],
     suppliers: [],
     masterDataLoading: false,
 
-    reset: () => set({ items: [], page: 1, hasNext: true, error: undefined }),
+    reset: () => set({ items: [], page: 1, hasNext: true, error: undefined, totalCount: 0 }),
     setSearch: (v) => set({ search: v }),
     setFilters: (update, options) =>
       set(({ filters }) => ({
@@ -509,11 +511,13 @@ async function fetchPage(
     if (!res.ok || !js.success) throw new Error(js.message || 'Gagal memuat produk')
     const newItems = (js.data || []).map(mapProdukDto)
     const hasNext = Boolean(js.pagination?.hasNextPage ?? (js.pagination ? page < (js.pagination.totalPages || 1) : false))
+    const totalCount = js.pagination?.total ?? 0
     set({
       items: page === 1 ? newItems : [...get().items, ...newItems],
       page,
       hasNext,
       loading: false,
+      totalCount,
     })
   } catch (e: any) {
     // Ignore abort errors; a new request is in-flight

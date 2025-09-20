@@ -8,6 +8,7 @@ import { CategoryFilter } from './CategoryFilter'
 import { BrandFilter } from './BrandFilter'
 import { SupplierFilter } from './SupplierFilter'
 import { StatusFilter } from './StatusFilter'
+import { getFilteredItems } from '@/features/produk/utils/tableUtils'
 
 type Props = {
   onCreate: () => void
@@ -17,6 +18,7 @@ export function ProdukToolbar({ onCreate }: Props) {
   const {
     items,
     page,
+    totalCount,
     categories,
     brands,
     suppliers,
@@ -104,6 +106,9 @@ export function ProdukToolbar({ onCreate }: Props) {
   }
 
   const hasActiveFilters = filters.kategori?.length || filters.brand?.length || filters.supplier?.length || filters.status?.length
+
+  const filteredItems = useMemo(() => getFilteredItems(items, filters), [items, filters])
+  const displayedCount = filteredItems.length
 
   return (
     <div className="space-y-3">
@@ -200,8 +205,8 @@ export function ProdukToolbar({ onCreate }: Props) {
                 second: '2-digit',
               })}
             </div>
-            <span>Halaman 1</span>
-            <span>Menampilkan 1 dari 25 produk</span>
+            <span>Halaman {page}</span>
+            <span>Menampilkan {displayedCount} dari {totalCount} produk</span>
           </div>
         </div>
 
