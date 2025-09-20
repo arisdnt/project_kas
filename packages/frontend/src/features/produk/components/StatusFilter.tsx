@@ -8,7 +8,7 @@ import {
   DropdownMenuTrigger,
 } from '@/core/components/ui/dropdown-menu'
 import { Button } from '@/core/components/ui/button'
-import { ChevronDown } from 'lucide-react'
+import { ChevronDown, ToggleLeft } from 'lucide-react'
 import { cn } from '@/core/lib/utils'
 
 type StatusFilterProps = {
@@ -55,6 +55,7 @@ export function StatusFilter({ value, onChange }: StatusFilterProps) {
             hasSelection && 'bg-blue-50 text-blue-700 border-blue-200'
           )}
         >
+          <ToggleLeft className="h-3.5 w-3.5 text-indigo-500" />
           {displayText}
           <ChevronDown className="h-3 w-3" />
         </Button>

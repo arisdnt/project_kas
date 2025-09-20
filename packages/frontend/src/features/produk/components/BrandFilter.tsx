@@ -8,7 +8,7 @@ import {
   DropdownMenuTrigger,
 } from '@/core/components/ui/dropdown-menu'
 import { Button } from '@/core/components/ui/button'
-import { ChevronDown } from 'lucide-react'
+import { ChevronDown, Award } from 'lucide-react'
 import { cn } from '@/core/lib/utils'
 
 type BrandFilterProps = {
@@ -49,6 +49,7 @@ export function BrandFilter({ value, options, onChange }: BrandFilterProps) {
             hasSelection && 'bg-blue-50 text-blue-700 border-blue-200'
           )}
         >
+          <Award className="h-3.5 w-3.5 text-amber-500" />
           {displayText}
           <ChevronDown className="h-3 w-3" />
         </Button>

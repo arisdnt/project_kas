@@ -16,6 +16,7 @@ type Props = {
 export function ProdukToolbar({ onCreate }: Props) {
   const {
     items,
+    page,
     categories,
     brands,
     suppliers,

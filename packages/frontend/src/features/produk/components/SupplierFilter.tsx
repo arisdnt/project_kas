@@ -8,7 +8,7 @@ import {
   DropdownMenuTrigger,
 } from '@/core/components/ui/dropdown-menu'
 import { Button } from '@/core/components/ui/button'
-import { ChevronDown } from 'lucide-react'
+import { ChevronDown, Truck } from 'lucide-react'
 import { cn } from '@/core/lib/utils'
 
 type SupplierFilterProps = {
@@ -49,6 +49,7 @@ export function SupplierFilter({ value, options, onChange }: SupplierFilterProps
             hasSelection && 'bg-blue-50 text-blue-700 border-blue-200'
           )}
         >
+          <Truck className="h-3.5 w-3.5 text-emerald-500" />
           {displayText}
           <ChevronDown className="h-3 w-3" />
         </Button>

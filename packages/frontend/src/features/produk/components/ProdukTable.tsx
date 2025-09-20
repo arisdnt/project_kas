@@ -78,7 +78,7 @@ export function ProdukTable({ onView, onEdit, onCreate }: Props) {
       </div>
 
 
-      <div className="flex min-h-0 flex-1 flex-col overflow-hidden border border-slate-200 bg-white">
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden border-t border-l border-r border-slate-200 bg-white">
         {/* Fixed Header */}
         <div className="border-b border-slate-200 bg-white">
           <Table className="min-w-full text-[15px] leading-[1.4] text-slate-700">
