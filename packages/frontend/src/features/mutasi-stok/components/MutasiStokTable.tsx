@@ -1,184 +1,131 @@
-import { useEffect, useMemo, useRef } from 'react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/core/components/ui/card'
-import { Button } from '@/core/components/ui/button'
-import { useMutasiStokStore, UIMutasiStok } from '../store/mutasiStokStore'
-import { Eye, Pencil, Trash2, TrendingUp, TrendingDown } from 'lucide-react'
+import { DeleteConfirmationDialog } from '@/core/components/ui/delete-confirmation-dialog'
+import { UIMutasiStok } from '../store/mutasiStokStore'
+import { useToast } from '@/core/hooks/use-toast'
+import { ScrollArea } from '@/core/components/ui/scroll-area'
+import { Table, TableBody } from '@/core/components/ui/table'
+import { MutasiStokTableHeader } from './MutasiStokTableHeader'
+import { MutasiStokTableRow } from './MutasiStokTableRow'
+import { TableSkeletonLoader } from '../../stok-opname/components/TableSkeletonLoader'
+import { LoadingIndicator } from '../../stok-opname/components/LoadingIndicator'
+import { EmptyTableState } from './EmptyTableState'
+import { MutasiStokToolbar } from './MutasiStokToolbar'
+import { useMutasiStokTableState } from '../hooks/useMutasiStokTableState'
 
 type Props = {
-  onView: (p: UIMutasiStok) => void
-  onEdit: (p: UIMutasiStok) => void
+  onView: (s: UIMutasiStok) => void
+  onEdit: (s: UIMutasiStok) => void
+  onCreate: () => void
 }
 
-export function MutasiStokTable({ onView, onEdit }: Props) {
-  const { items, loading, hasNext, loadNext, loadFirst, deleteMutasiStok } = useMutasiStokStore()
-  const scrollerRef = useRef<HTMLDivElement | null>(null)
+export function MutasiStokTable({ onView, onEdit, onCreate }: Props) {
+  const {
+    items,
+    loading,
+    sortedItems,
+    sortState,
+    activeRowId,
+    deleteDialog,
+    headerElevated,
+    lastUpdatedAt,
+    recentlyTouched,
+    scrollAreaRef,
+    rowRefs,
+    toggleSort,
+    openDeleteDialog,
+    closeDeleteDialog,
+    handleDeleteConfirm,
+    handleRowFocus,
+    handleKeyNavigation,
+  } = useMutasiStokTableState()
 
-  useEffect(() => {
-    loadFirst()
-  }, [loadFirst])
+  const { toast } = useToast()
 
-  // Infinite scroll handler
-  useEffect(() => {
-    const el = scrollerRef.current
-    if (!el) return
-    const onScroll = () => {
-      if (!el) return
-      const threshold = 72 // px from bottom
-      if (el.scrollTop + el.clientHeight >= el.scrollHeight - threshold) {
-        if (hasNext && !loading) loadNext()
-      }
-    }
-    el.addEventListener('scroll', onScroll)
-    return () => el.removeEventListener('scroll', onScroll)
-  }, [hasNext, loading, loadNext])
-
-  const SkeletonRows = useMemo(() => (
-    <tbody>
-      {Array.from({ length: 8 }).map((_, i) => (
-        <tr key={i} className="animate-pulse">
-          <td className="px-4 py-3"><div className="h-3.5 bg-gray-200 rounded w-40" /></td>
-          <td className="px-4 py-3"><div className="h-3.5 bg-gray-200 rounded w-24" /></td>
-          <td className="px-4 py-3"><div className="h-3.5 bg-gray-200 rounded w-28" /></td>
-          <td className="px-4 py-3"><div className="h-3.5 bg-gray-200 rounded w-28" /></td>
-          <td className="px-4 py-3"><div className="h-3.5 bg-gray-200 rounded w-20" /></td>
-          <td className="px-4 py-3"><div className="h-3.5 bg-gray-200 rounded w-20" /></td>
-          <td className="px-4 py-3"><div className="h-3.5 bg-gray-200 rounded w-24" /></td>
-          <td className="px-4 py-3"><div className="h-3.5 bg-gray-200 rounded w-24" /></td>
-          <td className="px-4 py-3"><div className="h-8 bg-gray-200 rounded w-32" /></td>
-        </tr>
-      ))}
-    </tbody>
-  ), [])
-
-  const onDelete = async (p: UIMutasiStok) => {
-    if (!confirm(`Hapus mutasi stok "${p.nama_produk}"?`)) return
-    await deleteMutasiStok(p.id)
-  }
-
-  const getJenisMutasiBadge = (jenis: 'masuk' | 'keluar') => {
-    switch (jenis) {
-      case 'masuk':
-        return { 
-          text: 'Masuk', 
-          color: 'text-green-600 bg-green-50',
-          icon: TrendingUp
-        }
-      case 'keluar':
-        return { 
-          text: 'Keluar', 
-          color: 'text-red-600 bg-red-50',
-          icon: TrendingDown
-        }
+  const handleDelete = async () => {
+    const result = await handleDeleteConfirm()
+    if (result.success) {
+      toast({
+        title: 'Mutasi stok dihapus',
+        description: `Mutasi stok "${result.mutasiStok.namaProduk}" berhasil dihapus.`,
+      })
+      closeDeleteDialog()
+    } else {
+      toast({
+        title: 'Gagal menghapus mutasi stok',
+        description: result.error,
+      })
     }
   }
 
-  const getJumlahBadge = (jenis: 'masuk' | 'keluar', jumlah: number) => {
-    const color = jenis === 'masuk' ? 'text-green-600' : 'text-red-600'
-    const prefix = jenis === 'masuk' ? '+' : '-'
-    return {
-      text: `${prefix}${jumlah}`,
-      color
+  const handleRowKeyDown = (event: any, mutasiStok: UIMutasiStok) => {
+    const result = handleKeyNavigation(event, mutasiStok)
+    if (result?.action === 'view') {
+      onView(result.mutasiStok)
     }
   }
 
   return (
-    <Card className="w-full h-full flex flex-col min-h-0">
-      <CardContent className="p-0 flex-1 flex flex-col min-h-0 overflow-hidden">
-        <div
-          ref={scrollerRef}
-          className="flex-1 overflow-auto scrollbar-thin table-scroll-container rounded-md border"
-        >
-          <table className="w-full text-sm">
-            <thead className="sticky top-0 z-10 bg-white border-b shadow-[0_1px_0_0_rgba(0,0,0,0.04)]">
-              <tr className="text-left text-gray-600">
-                <th className="px-4 py-3 font-medium">Nama Produk</th>
-                <th className="px-4 py-3 font-medium">SKU</th>
-                <th className="px-4 py-3 font-medium">Kategori</th>
-                <th className="px-4 py-3 font-medium">Brand</th>
-                <th className="px-4 py-3 font-medium">Jenis Mutasi</th>
-                <th className="px-4 py-3 font-medium text-right">Jumlah</th>
-                <th className="px-4 py-3 font-medium text-right">Stok Sebelum</th>
-                <th className="px-4 py-3 font-medium text-right">Stok Sesudah</th>
-                <th className="px-4 py-3 font-medium">Tanggal</th>
-                <th className="px-4 py-3 font-medium">Aksi</th>
-              </tr>
-            </thead>
-            <tbody>
-              {items.map((p) => {
-                const jenisBadge = getJenisMutasiBadge(p.jenis_mutasi)
-                const jumlahBadge = getJumlahBadge(p.jenis_mutasi, p.jumlah)
-                const IconComponent = jenisBadge.icon
+    <div className="flex h-full min-h-0 flex-col">
+      <div className="pb-3">
+        <MutasiStokToolbar onCreate={onCreate} />
+      </div>
+
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden border-t border-l border-r border-slate-200 bg-white">
+        {/* Fixed Header */}
+        <div className="border-b border-slate-200 bg-white">
+          <Table className="min-w-full text-[15px] leading-[1.4] text-slate-700">
+            <MutasiStokTableHeader
+              sortState={sortState}
+              onToggleSort={toggleSort}
+              headerElevated={headerElevated}
+            />
+          </Table>
+        </div>
+
+        {/* Scrollable Body */}
+        <ScrollArea ref={scrollAreaRef} className="h-full flex-1">
+          <Table className="min-w-full text-[15px] leading-[1.4] text-slate-700">
+            <TableBody className="divide-y divide-slate-100">
+              {sortedItems.map((mutasiStok) => {
+                const isActive = activeRowId === mutasiStok.id
+                const touch = recentlyTouched[mutasiStok.id]
+
                 return (
-                  <tr key={p.id} className="border-b last:border-0 hover:bg-gray-50/50">
-                    <td className="px-4 py-3">
-                      <div className="font-medium text-gray-900">{p.nama_produk}</div>
-                    </td>
-                    <td className="px-4 py-3 text-gray-700">{p.sku ?? '-'}</td>
-                    <td className="px-4 py-3 text-gray-700">{p.kategori?.nama ?? '-'}</td>
-                    <td className="px-4 py-3 text-gray-700">{p.brand?.nama ?? '-'}</td>
-                    <td className="px-4 py-3">
-                      <span className={`text-sm font-medium ${jenisBadge.color} px-2 py-1 rounded-full inline-flex items-center gap-1`}>
-                        <IconComponent className="h-3 w-3" />
-                        {jenisBadge.text}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-gray-900 text-right font-medium">
-                      <span className={jumlahBadge.color}>
-                        {jumlahBadge.text}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-gray-900 text-right">{p.stok_sebelum}</td>
-                    <td className="px-4 py-3 text-gray-900 text-right font-medium">{p.stok_sesudah}</td>
-                    <td className="px-4 py-3 text-gray-700">
-                      {p.tanggal_mutasi ? new Date(p.tanggal_mutasi).toLocaleDateString('id-ID') : '-'}
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-2">
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
-                          onClick={() => onView(p)} 
-                          className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-                          title="Detail"
-                        >
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
-                          onClick={() => onEdit(p)} 
-                          className="text-amber-600 hover:text-amber-700 hover:bg-amber-50"
-                          title="Edit"
-                        >
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
-                          onClick={() => onDelete(p)} 
-                          className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                          title="Hapus"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </td>
-                  </tr>
+                  <MutasiStokTableRow
+                    key={mutasiStok.id}
+                    ref={(el) => {
+                      rowRefs.current[mutasiStok.id] = el
+                    }}
+                    mutasiStok={mutasiStok}
+                    isActive={isActive}
+                    recentlyTouched={touch}
+                    onFocus={() => handleRowFocus(mutasiStok)}
+                    onKeyDown={(event) => handleRowKeyDown(event, mutasiStok)}
+                    onView={() => onView(mutasiStok)}
+                    onEdit={() => onEdit(mutasiStok)}
+                    onDelete={() => openDeleteDialog(mutasiStok)}
+                  />
                 )
               })}
-            </tbody>
 
-            {loading && items.length === 0 ? SkeletonRows : null}
-          </table>
-          
-          {/* Lazy-loading indicator - positioned outside scroll area */}
-          {loading && items.length > 0 && (
-            <div className="sticky bottom-0 left-0 right-0 bg-gradient-to-t from-white/90 to-transparent h-12 flex items-end justify-center pb-2 border-t">
-              <span className="text-xs text-gray-500">Memuat data…</span>
-            </div>
-          )}
-        </div>
-      </CardContent>
-    </Card>
+              {loading && items.length === 0 ? <TableSkeletonLoader /> : null}
+              {!loading && sortedItems.length === 0 ? <EmptyTableState /> : null}
+            </TableBody>
+          </Table>
+
+          {loading && items.length > 0 && <LoadingIndicator />}
+        </ScrollArea>
+      </div>
+
+      <DeleteConfirmationDialog
+        open={deleteDialog.open}
+        onOpenChange={closeDeleteDialog}
+        title="Hapus Mutasi Stok"
+        description="Apakah Anda yakin ingin menghapus data mutasi stok ini? Data yang dihapus tidak dapat dikembalikan."
+        itemName={deleteDialog.mutasiStok?.namaProduk}
+        onConfirm={handleDelete}
+        isLoading={deleteDialog.loading}
+        confirmText="Hapus Mutasi Stok"
+      />
+    </div>
   )
 }

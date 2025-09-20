@@ -9,7 +9,7 @@ import { SupplierPage } from '@/features/supplier/pages/SupplierPage';
 import { InventarisPage } from '@/features/inventaris/pages/InventarisPage';
 import { StokOpnamePageNew } from '@/features/stok-opname/pages/StokOpnamePageNew';
 import { MutasiStokPage } from '@/features/mutasi-stok/pages/MutasiStokPage';
-import { PenjualanPageNew } from '@/features/penjualan/pages/PenjualanPageNew';
+import { PenjualanPage } from '@/features/penjualan/pages/PenjualanPage';
 import { ReturPenjualanPage } from '@/features/retur-penjualan/pages/ReturPenjualanPage';
 import { ReturPembelianPage } from '@/features/retur-pembelian/pages/ReturPembelianPage';
 import { PembelianPageNew } from '@/features/pembelian/pages/PembelianPageNew';
@@ -46,7 +46,7 @@ export function DashboardRoutes() {
       <Route path="/inventaris" element={<InventarisPage />} />
       <Route path="/stok-opname" element={<StokOpnamePageNew />} />
       <Route path="/mutasi-stok" element={<MutasiStokPage />} />
-      <Route path="/penjualan" element={<PenjualanPageNew />} />
+      <Route path="/penjualan" element={<PenjualanPage />} />
       <Route path="/retur-penjualan" element={<ReturPenjualanPage />} />
       <Route path="/retur-pembelian" element={<ReturPembelianPage />} />
       <Route path="/pembelian" element={<PembelianPageNew />} />

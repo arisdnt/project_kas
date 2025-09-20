@@ -14,11 +14,10 @@ import { usePenjualanTableState } from '../hooks/usePenjualanTableState'
 type Props = {
   onView: (p: UIPenjualan) => void
   onEdit: (p: UIPenjualan) => void
-  onCreate: () => void
   onPrint?: (p: UIPenjualan) => void
 }
 
-export function PenjualanTable({ onView, onEdit, onCreate, onPrint }: Props) {
+export function PenjualanTable({ onView, onEdit, onPrint }: Props) {
   const {
     items,
     loading,
@@ -67,7 +66,7 @@ export function PenjualanTable({ onView, onEdit, onCreate, onPrint }: Props) {
   return (
     <div className="flex h-full min-h-0 flex-col">
       <div className="pb-3">
-        <PenjualanToolbar onCreate={onCreate} />
+        <PenjualanToolbar />
       </div>
 
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden border-t border-l border-r border-slate-200 bg-white">

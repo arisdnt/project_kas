@@ -1,201 +1,307 @@
-import { useMemo, useState, useEffect } from 'react'
-import { Card, CardContent } from '@/core/components/ui/card'
-import { MovementFilterBar } from '../components/MovementFilterBar'
-import { MovementTable } from '../components/MovementTable'
-import { Filters, SaleTransaction } from '../types'
-import { exportMovementCSV } from '../utils/exporters'
-import { printStrukFromServer, previewStrukFallback } from '../utils/print'
-import { PenjualanService, TransaksiPenjualan } from '../services/penjualanService'
-import { useTenantToko } from '@/core/hooks/useTenantToko'
-
-function withinRange(d: string, from?: string, to?: string) {
-  if (!from && !to) return true
-  const x = d
-  if (from && x < from) return false
-  if (to && x > to) return false
-  return true
-}
+import { useState, useEffect, useCallback } from 'react'
+import { PenjualanTable } from '@/features/penjualan/components/PenjualanTable'
+import { usePenjualanStore, UIPenjualan } from '@/features/penjualan/store/penjualanStore'
+import { PenjualanDrawer, PenjualanDrawerContent, PenjualanDrawerHeader, PenjualanDrawerTitle } from '@/features/penjualan/components/PenjualanDrawer'
+import { useDataRefresh } from '@/core/hooks/useDataRefresh'
+import { useToast } from '@/core/hooks/use-toast'
+import { useAuthStore } from '@/core/store/authStore'
+import { Edit2, Eye, Receipt, User, CreditCard, Calendar, DollarSign, Hash, FileText } from 'lucide-react'
+import { Button } from '@/core/components/ui/button'
 
 export function PenjualanPage() {
-  const { tenantName, tokoName } = useTenantToko()
-  const [apiTxs, setApiTxs] = useState<TransaksiPenjualan[]>([])
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const today = new Date()
-  const dateStr = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-  const [filters, setFilters] = useState<Filters>({ range: '7d', payment: 'ALL' as any })
+  const { loadPenjualan } = usePenjualanStore()
+  const { toast } = useToast()
+  const { user } = useAuthStore()
 
-  // Fetch data dari API
-  const fetchTransactions = async (dateRange: { from?: string; to?: string }) => {
-    setLoading(true)
-    setError(null)
+  const [drawerOpen, setDrawerOpen] = useState(false)
+  const [drawerMode, setDrawerMode] = useState<'view' | 'edit'>('view')
+  const [selected, setSelected] = useState<UIPenjualan | null>(null)
 
-    try {
-      const response = await PenjualanService.searchTransaksi({
-        start_date: dateRange.from,
-        end_date: dateRange.to,
-        limit: 100 // Ambil lebih banyak data untuk UX yang lebih baik
-      })
+  // Refresh handler untuk navbar refresh button
+  const handleRefresh = useCallback(async () => {
+    await loadPenjualan()
+  }, [loadPenjualan])
 
-      setApiTxs(response.data)
-    } catch (err) {
-      console.error('Failed to fetch transactions:', err)
-      setError('Gagal memuat data transaksi dari server.')
-      setApiTxs([]) // Set ke array kosong jika gagal
-    } finally {
-      setLoading(false)
-    }
-  }
+  // Hook untuk menangani refresh data
+  useDataRefresh(handleRefresh)
 
-  // Fungsi untuk konversi data API ke format lokal
-  const convertApiToLocal = (apiData: any[]): SaleTransaction[] => {
-    if (!apiData || !Array.isArray(apiData)) {
-      return []
-    }
-    return apiData.map((tx) => ({
-      id: parseInt(tx.id),
-      code: tx.nomor_transaksi || tx.transaction_code || '',
-      date: tx.tanggal ? tx.tanggal.split(' ')[0] : (tx.transaction_date ? tx.transaction_date.split('T')[0] : ''), // Ambil tanggal saja
-      time: tx.tanggal ? new Date(tx.tanggal).toLocaleTimeString('id-ID', { 
-        hour: '2-digit', 
-        minute: '2-digit' 
-      }) : (tx.transaction_date ? new Date(tx.transaction_date).toLocaleTimeString('id-ID', { 
-        hour: '2-digit', 
-        minute: '2-digit' 
-      }) : ''),
-      cashier: tx.kasir_nama || tx.cashier_name || '',
-      payment: (tx.metode_bayar || tx.payment_method || 'tunai') as any,
-      status: (tx.status || 'selesai') as any,
-      total: parseFloat(tx.total || '0'),
-      lines: (tx.items || []).map((item: any) => ({
-        productId: parseInt(item.product_id || item.produk_id || '0'),
-        productName: item.product_name || item.produk_nama || '',
-        sku: item.sku || item.produk_kode || '',
-        qty: item.quantity || item.kuantitas || 0,
-        unit: 'pcs', // Default unit
-        price: item.unit_price || item.harga_satuan || 0,
-        discount: 0, // Default discount
-        tax: 0, // Default tax
-        total: item.total_price || item.total_harga || 0,
-      })),
-    }))
-  }
-
-  // Normalize filters untuk menghitung rentang tanggal
-  const normalized = useMemo(() => {
-    if (filters.range !== 'custom') {
-      let from: string | undefined
-      if (filters.range === 'today') from = dateStr(today)
-      if (filters.range === '7d') { const d = new Date(today); d.setDate(today.getDate() - 6); from = dateStr(d) }
-      if (filters.range === '30d') { const d = new Date(today); d.setDate(today.getDate() - 29); from = dateStr(d) }
-      return { ...filters, from, to: dateStr(today) }
-    }
-    return filters
-  }, [filters])
-
-  // Effect untuk fetch data ketika filter berubah
+  // Load data on component mount
   useEffect(() => {
-    const { from, to } = normalized
-    fetchTransactions({ from, to })
-  }, [normalized.from, normalized.to])
+    loadPenjualan()
+  }, [loadPenjualan])
 
-  const filtered = useMemo(() => {
-    // Pastikan apiTxs adalah array sebelum dikonversi
-    if (!Array.isArray(apiTxs)) {
-      return []
-    }
 
-    // Gunakan data API yang sudah dikonversi
-    const sourceData = convertApiToLocal(apiTxs)
-
-    return sourceData.filter((t: SaleTransaction) => {
-      if (!withinRange(t.date, normalized.from, normalized.to)) return false
-      if (normalized.cashier && t.cashier !== normalized.cashier) return false
-      if (normalized.payment && normalized.payment !== 'ALL' && t.payment !== normalized.payment) return false
-      if (normalized.query) {
-        const q = normalized.query.toLowerCase()
-        const hasLine = t.lines.some((l: any) => l.productName.toLowerCase().includes(q) || (l.sku || '').toLowerCase().includes(q))
-        if (!(t.code.toLowerCase().includes(q) || hasLine)) return false
-      }
-      return true
-    })
-  }, [apiTxs, normalized])
-
-  const onExport = () => exportMovementCSV(filtered)
-  const onPrintAll = () => {
-    // Print preview kompak dari semua baris yang terlihat
-    const total = filtered.reduce((acc: number, t: SaleTransaction) => acc + t.lines.reduce((a: number, b: any) => a + b.total, 0), 0)
-    const lines = filtered.flatMap((t: SaleTransaction) => t.lines.map((l: any) => `${t.date} ${t.time || ''} ${t.code} ${l.productName} ${l.qty}${l.unit} Rp${l.total.toLocaleString('id-ID')}`)).join('\n')
-    const text = `Pergerakan Penjualan\n\n${lines}\n\nTotal: Rp${total.toLocaleString('id-ID')}`
-    
-    // Buat window baru untuk preview
-    const w = window.open('', '_blank')
-    if (!w) return
-    w.document.write(`<pre style="font: 12px/1.4 ui-monospace, SFMono-Regular; white-space: pre-wrap;">${text}</pre>`)
-    w.document.close()
-    w.focus()
+  const onView = (p: UIPenjualan) => {
+    setSelected(p)
+    setDrawerMode('view')
+    setDrawerOpen(true)
   }
 
-  const onPrintTx = (trxId: number) => {
-    const tx = filtered.find((t) => t.id === trxId)
-    if (!tx) return
-    
-    printStrukFromServer(trxId).catch(() => {
-      // Fallback jika server print gagal
-      previewStrukFallback(tx)
+  const onEdit = (p: UIPenjualan) => {
+    setSelected(p)
+    setDrawerMode('edit')
+    setDrawerOpen(true)
+  }
+
+  const onPrint = (p: UIPenjualan) => {
+    // Implement print functionality
+    console.log('Print transaction:', p.kode)
+    toast({ title: 'Print', description: `Mencetak struk transaksi ${p.kode}` })
+  }
+
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('id-ID', {
+      style: 'currency',
+      currency: 'IDR',
+      minimumFractionDigits: 0
+    }).format(amount)
+  }
+
+  const formatDate = (dateStr: string) => {
+    const date = new Date(dateStr)
+    return date.toLocaleDateString('id-ID', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric'
     })
   }
 
-  // Ambil daftar kasir unik dari data API
-  const cashiers = useMemo(() => {
-    if (!apiTxs || !Array.isArray(apiTxs)) {
-      return []
-    }
-    const uniqueCashiers = [...new Set(apiTxs.map(tx => tx.cashier_name).filter(Boolean))]
-    return uniqueCashiers.length > 0 ? uniqueCashiers : []
-  }, [apiTxs])
+  const formatDateTime = (dateStr: string) => {
+    const date = new Date(dateStr)
+    return date.toLocaleDateString('id-ID', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    })
+  }
 
-  const onPrintStruk = async (id: number) => {
-    const ok = await printStrukFromServer(id)
-    if (!ok) {
-      const tx = filtered.find((t) => t.id === id)
-      if (tx) {
-        previewStrukFallback(tx)
-      }
+  const getStatusBadge = (status: string) => {
+    const statusConfig = {
+      'completed': { label: 'Selesai', className: 'bg-green-100 text-green-800' },
+      'selesai': { label: 'Selesai', className: 'bg-green-100 text-green-800' },
+      'pending': { label: 'Menunggu', className: 'bg-yellow-100 text-yellow-800' },
+      'menunggu': { label: 'Menunggu', className: 'bg-yellow-100 text-yellow-800' },
+      'cancelled': { label: 'Dibatalkan', className: 'bg-red-100 text-red-800' },
+      'dibatalkan': { label: 'Dibatalkan', className: 'bg-red-100 text-red-800' },
     }
+
+    const config = statusConfig[status.toLowerCase() as keyof typeof statusConfig] || {
+      label: status,
+      className: 'bg-gray-100 text-gray-800'
+    }
+
+    return (
+      <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${config.className}`}>
+        {config.label}
+      </span>
+    )
   }
 
   return (
-    <div className="space-y-4">
-      {error && (
-        <div className="bg-red-50 border border-red-200 rounded-md p-4">
-          <p className="text-red-800 text-sm">{error}</p>
-        </div>
-      )}
+    <div className="flex flex-col min-h-0 h-[calc(100vh-4rem-3rem)] pt-4 overflow-hidden">
+      <div className="flex-1 min-h-0">
+        <PenjualanTable onView={onView} onEdit={onEdit} onPrint={onPrint} />
+      </div>
 
-      <Card>
-        <CardContent className="p-4">
-          <MovementFilterBar
-            filters={normalized}
-            cashiers={cashiers}
-            onChange={(p) => setFilters((f) => ({ ...f, ...p }))}
-            onExport={onExport}
-            onPrint={onPrintAll}
-          />
-        </CardContent>
-      </Card>
+      <PenjualanDrawer open={drawerOpen} onOpenChange={setDrawerOpen}>
+        <PenjualanDrawerContent className="!w-[40vw] !max-w-none">
+          <PenjualanDrawerHeader className="border-b border-gray-200 pb-4 px-6 pt-6">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className={`p-2 rounded-lg ${
+                  drawerMode === 'edit' ? 'bg-amber-100 text-amber-600' :
+                  'bg-green-100 text-green-600'
+                }`}>
+                  {drawerMode === 'edit' ? (
+                    <Edit2 className="h-5 w-5" />
+                  ) : (
+                    <Eye className="h-5 w-5" />
+                  )}
+                </div>
+                <PenjualanDrawerTitle className="text-xl font-semibold">
+                  {drawerMode === 'edit' ? 'Edit Transaksi' : 'Detail Transaksi'}
+                </PenjualanDrawerTitle>
+              </div>
+            </div>
+          </PenjualanDrawerHeader>
+          <div className="flex-1 overflow-y-auto p-6">
+            {drawerMode === 'view' && selected ? (
+              <div className="space-y-6">
+                <div className="flex items-center justify-center">
+                  <div className="w-32 h-32 rounded-lg border-2 border-dashed border-gray-300 flex items-center justify-center bg-gray-50">
+                    <Receipt className="h-12 w-12 text-gray-400" />
+                  </div>
+                </div>
 
-      <Card>
-        <CardContent className="p-4">
-          <MovementTable 
-            transactions={filtered} 
-            onPrint={onPrintTx}
-          />
-        </CardContent>
-      </Card>
+                <div className="space-y-4">
+                  <div className="flex items-center gap-3 pb-3 border-b">
+                    <div className="p-2 rounded-lg bg-blue-100 text-blue-600">
+                      <Receipt className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-500">Kode Transaksi</p>
+                      <p className="text-lg font-semibold font-mono">{selected.kode}</p>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="flex gap-3">
+                      <div className="p-2 rounded-lg bg-purple-100 text-purple-600">
+                        <Calendar className="h-5 w-5" />
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-sm text-gray-500">Tanggal</p>
+                        <p className="text-gray-700">{formatDate(selected.tanggal)}</p>
+                      </div>
+                    </div>
+                    <div className="flex gap-3">
+                      <div className="p-2 rounded-lg bg-indigo-100 text-indigo-600">
+                        <Hash className="h-5 w-5" />
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-sm text-gray-500">Waktu</p>
+                        <p className="text-gray-700">{selected.waktu || '-'}</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="flex gap-3">
+                      <div className="p-2 rounded-lg bg-green-100 text-green-600">
+                        <User className="h-5 w-5" />
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-sm text-gray-500">Kasir</p>
+                        <p className="text-gray-700">{selected.kasir}</p>
+                      </div>
+                    </div>
+                    <div className="flex gap-3">
+                      <div className="p-2 rounded-lg bg-orange-100 text-orange-600">
+                        <User className="h-5 w-5" />
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-sm text-gray-500">Pelanggan</p>
+                        <p className="text-gray-700">{selected.pelanggan || '-'}</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="flex gap-3">
+                      <div className="p-2 rounded-lg bg-blue-100 text-blue-600">
+                        <CreditCard className="h-5 w-5" />
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-sm text-gray-500">Metode Bayar</p>
+                        <p className="text-gray-700">{selected.metodeBayar}</p>
+                      </div>
+                    </div>
+                    <div className="flex gap-3">
+                      <div className="p-2 rounded-lg bg-yellow-100 text-yellow-600">
+                        <FileText className="h-5 w-5" />
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-sm text-gray-500">Status</p>
+                        {getStatusBadge(selected.status)}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex gap-3">
+                    <div className="p-2 rounded-lg bg-green-100 text-green-600">
+                      <DollarSign className="h-5 w-5" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-sm text-gray-500">Total Transaksi</p>
+                      <p className="text-2xl font-bold text-green-600">{formatCurrency(selected.total)}</p>
+                    </div>
+                  </div>
+
+                  {/* Items */}
+                  {selected.items && selected.items.length > 0 && (
+                    <div className="space-y-3">
+                      <h4 className="font-semibold text-gray-800">Detail Produk</h4>
+                      <div className="space-y-2">
+                        {selected.items.map((item, index) => (
+                          <div key={index} className="border rounded-lg p-3 bg-gray-50">
+                            <div className="flex justify-between items-start">
+                              <div className="flex-1">
+                                <p className="font-medium">{item.produkNama}</p>
+                                {item.sku && (
+                                  <p className="text-sm text-gray-500 font-mono">{item.sku}</p>
+                                )}
+                                <p className="text-sm text-gray-600">
+                                  {item.kuantitas} × {formatCurrency(item.hargaSatuan)}
+                                </p>
+                              </div>
+                              <div className="text-right">
+                                <p className="font-semibold">{formatCurrency(item.totalHarga)}</p>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="grid grid-cols-2 gap-4 pt-3 border-t">
+                    <div>
+                      <p className="text-sm text-gray-500">Dibuat</p>
+                      <p className="text-sm font-medium">
+                        {selected.dibuatPada ? formatDateTime(selected.dibuatPada) : '-'}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-500">Diperbarui</p>
+                      <p className="text-sm font-medium">
+                        {selected.diperbaruiPada ? formatDateTime(selected.diperbaruiPada) : '-'}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex justify-end gap-3 pt-4 border-t">
+                  <Button
+                    variant="outline"
+                    onClick={() => setDrawerOpen(false)}
+                    className="px-5 py-2 h-10 border-gray-300 hover:bg-gray-50"
+                  >
+                    Tutup
+                  </Button>
+                  <Button
+                    onClick={() => onEdit(selected)}
+                    className="px-5 py-2 h-10 bg-amber-600 hover:bg-amber-700"
+                  >
+                    <Edit2 className="h-4 w-4 mr-2" />
+                    Edit Transaksi
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center h-full py-12">
+                <div className="text-center">
+                  <Receipt className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">
+                    Edit Transaksi
+                  </h3>
+                  <p className="text-gray-500 mb-6 max-w-sm">
+                    Fitur untuk mengedit transaksi akan segera tersedia.
+                  </p>
+                  <Button
+                    variant="outline"
+                    onClick={() => setDrawerOpen(false)}
+                    className="px-6 py-2 h-10 border-gray-300 hover:bg-gray-50"
+                  >
+                    Tutup
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
+        </PenjualanDrawerContent>
+      </PenjualanDrawer>
     </div>
   )
 }
-
-export default PenjualanPage
-

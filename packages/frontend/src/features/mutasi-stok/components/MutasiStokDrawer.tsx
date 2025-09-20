@@ -1,92 +1,66 @@
 import * as React from "react"
-import * as DialogPrimitive from "@radix-ui/react-dialog"
-import { cva, type VariantProps } from "class-variance-authority"
-import { X } from "lucide-react"
+import { Drawer as DrawerPrimitive } from "vaul"
+
 import { cn } from "@/core/lib/utils"
 
-const MutasiStokDrawer = DialogPrimitive.Root
+const MutasiStokDrawer = ({
+  shouldScaleBackground = true,
+  ...props
+}: React.ComponentProps<typeof DrawerPrimitive.Root> & {
+  shouldScaleBackground?: boolean
+}) => (
+  <DrawerPrimitive.Root
+    shouldScaleBackground={shouldScaleBackground}
+    {...props}
+  />
+)
+MutasiStokDrawer.displayName = "MutasiStokDrawer"
 
-const MutasiStokDrawerTrigger = DialogPrimitive.Trigger
+const MutasiStokDrawerTrigger = DrawerPrimitive.Trigger
 
-const MutasiStokDrawerPortal = DialogPrimitive.Portal
+const MutasiStokDrawerPortal = DrawerPrimitive.Portal
 
-const MutasiStokDrawerClose = DialogPrimitive.Close
+const MutasiStokDrawerClose = DrawerPrimitive.Close
 
 const MutasiStokDrawerOverlay = React.forwardRef<
-  React.ElementRef<typeof DialogPrimitive.Overlay>,
-  React.ComponentPropsWithoutRef<typeof DialogPrimitive.Overlay>
+  React.ElementRef<typeof DrawerPrimitive.Overlay>,
+  React.ComponentPropsWithoutRef<typeof DrawerPrimitive.Overlay>
 >(({ className, ...props }, ref) => (
-  <DialogPrimitive.Overlay
+  <DrawerPrimitive.Overlay
     ref={ref}
-    className={cn(
-      "fixed inset-0 z-50 bg-background/80 backdrop-blur-sm data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
-      className
-    )}
+    className={cn("fixed inset-0 z-50 bg-black/80", className)}
     {...props}
   />
 ))
-MutasiStokDrawerOverlay.displayName = DialogPrimitive.Overlay.displayName
-
-const mutasiStokDrawerVariants = cva(
-  "fixed z-50 gap-4 bg-background p-6 shadow-lg transition ease-in-out data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:duration-300 data-[state=open]:duration-500",
-  {
-    variants: {
-      side: {
-        top: "inset-x-0 top-0 border-b data-[state=closed]:slide-out-to-top data-[state=open]:slide-in-from-top",
-        bottom:
-          "inset-x-0 bottom-0 border-t data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom",
-        left: "inset-y-0 left-0 h-full border-r data-[state=closed]:slide-out-to-left data-[state=open]:slide-in-from-left",
-        right:
-          "inset-y-0 right-0 h-full border-l data-[state=closed]:slide-out-to-right data-[state=open]:slide-in-from-right",
-      },
-      size: {
-        default: "w-3/4 sm:max-w-sm md:max-w-md lg:max-w-lg",
-        full: "w-full max-w-none",
-        forty: "w-[90vw] max-w-none md:w-[40%] lg:w-[40%]",
-        fifty: "w-[90vw] max-w-none md:w-[50%] lg:w-[50%]",
-      },
-    },
-    defaultVariants: {
-      side: "right",
-      size: "default",
-    },
-  }
-)
-
-export interface MutasiStokDrawerContentProps
-  extends React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content>,
-    VariantProps<typeof mutasiStokDrawerVariants> {}
+MutasiStokDrawerOverlay.displayName = DrawerPrimitive.Overlay.displayName
 
 const MutasiStokDrawerContent = React.forwardRef<
-  React.ElementRef<typeof DialogPrimitive.Content>,
-  MutasiStokDrawerContentProps
->(({ side = "right", size, className, children, ...props }, ref) => (
+  React.ElementRef<typeof DrawerPrimitive.Content>,
+  React.ComponentPropsWithoutRef<typeof DrawerPrimitive.Content>
+>(({ className, children, ...props }, ref) => (
   <MutasiStokDrawerPortal>
     <MutasiStokDrawerOverlay />
-    <DialogPrimitive.Content
+    <DrawerPrimitive.Content
       ref={ref}
-      className={cn(mutasiStokDrawerVariants({ side, size }), className)}
+      className={cn(
+        "fixed inset-y-0 right-0 z-50 h-full w-3/4 gap-4 border-l bg-background p-6 shadow-lg transition ease-in-out data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:slide-out-to-right data-[state=open]:slide-in-from-right sm:max-w-sm",
+        className
+      )}
       {...props}
     >
+      <div className="mx-auto mt-4 h-2 w-[100px] rounded-full bg-muted" />
       {children}
-      <DialogPrimitive.Close className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-secondary">
-        <X className="h-4 w-4" />
-        <span className="sr-only">Tutup</span>
-      </DialogPrimitive.Close>
-    </DialogPrimitive.Content>
+    </DrawerPrimitive.Content>
   </MutasiStokDrawerPortal>
 ))
-MutasiStokDrawerContent.displayName = DialogPrimitive.Content.displayName
+MutasiStokDrawerContent.displayName = "MutasiStokDrawerContent"
 
 const MutasiStokDrawerHeader = ({
   className,
   ...props
 }: React.HTMLAttributes<HTMLDivElement>) => (
   <div
-    className={cn(
-      "flex flex-col space-y-1.5 text-center sm:text-left",
-      className
-    )}
+    className={cn("grid gap-1.5 p-4 text-center sm:text-left", className)}
     {...props}
   />
 )
@@ -97,20 +71,17 @@ const MutasiStokDrawerFooter = ({
   ...props
 }: React.HTMLAttributes<HTMLDivElement>) => (
   <div
-    className={cn(
-      "flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2",
-      className
-    )}
+    className={cn("mt-auto flex flex-col gap-2 p-4", className)}
     {...props}
   />
 )
 MutasiStokDrawerFooter.displayName = "MutasiStokDrawerFooter"
 
 const MutasiStokDrawerTitle = React.forwardRef<
-  React.ElementRef<typeof DialogPrimitive.Title>,
-  React.ComponentPropsWithoutRef<typeof DialogPrimitive.Title>
+  React.ElementRef<typeof DrawerPrimitive.Title>,
+  React.ComponentPropsWithoutRef<typeof DrawerPrimitive.Title>
 >(({ className, ...props }, ref) => (
-  <DialogPrimitive.Title
+  <DrawerPrimitive.Title
     ref={ref}
     className={cn(
       "text-lg font-semibold leading-none tracking-tight",
@@ -119,19 +90,20 @@ const MutasiStokDrawerTitle = React.forwardRef<
     {...props}
   />
 ))
-MutasiStokDrawerTitle.displayName = DialogPrimitive.Title.displayName
+MutasiStokDrawerTitle.displayName = DrawerPrimitive.Title.displayName
 
 const MutasiStokDrawerDescription = React.forwardRef<
-  React.ElementRef<typeof DialogPrimitive.Description>,
-  React.ComponentPropsWithoutRef<typeof DialogPrimitive.Description>
+  React.ElementRef<typeof DrawerPrimitive.Description>,
+  React.ComponentPropsWithoutRef<typeof DrawerPrimitive.Description>
 >(({ className, ...props }, ref) => (
-  <DialogPrimitive.Description
+  <DrawerPrimitive.Description
     ref={ref}
     className={cn("text-sm text-muted-foreground", className)}
     {...props}
   />
 ))
-MutasiStokDrawerDescription.displayName = DialogPrimitive.Description.displayName
+MutasiStokDrawerDescription.displayName =
+  DrawerPrimitive.Description.displayName
 
 export {
   MutasiStokDrawer,

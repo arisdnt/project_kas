@@ -1,34 +1,36 @@
-import { useState } from 'react'
-import { MutasiStokToolbar } from '@/features/mutasi-stok/components/MutasiStokToolbar'
+import { useState, useEffect, useCallback } from 'react'
 import { MutasiStokTable } from '@/features/mutasi-stok/components/MutasiStokTable'
-import { UIMutasiStok } from '@/features/mutasi-stok/store/mutasiStokStore'
-import { useMutasiStokStore } from '@/features/mutasi-stok/store/mutasiStokStore'
+import { useMutasiStokStore, UIMutasiStok } from '@/features/mutasi-stok/store/mutasiStokStore'
+import { MutasiStokDrawer, MutasiStokDrawerContent, MutasiStokDrawerHeader, MutasiStokDrawerTitle } from '@/features/mutasi-stok/components/MutasiStokDrawer'
+import { useDataRefresh } from '@/core/hooks/useDataRefresh'
 import { useToast } from '@/core/hooks/use-toast'
 import { useAuthStore } from '@/core/store/authStore'
-import { MutasiStokDrawer, MutasiStokDrawerContent, MutasiStokDrawerHeader, MutasiStokDrawerTitle } from '@/features/mutasi-stok/components/MutasiStokDrawer'
-import { MutasiStokForm, MutasiStokFormData } from '@/features/mutasi-stok/components/MutasiStokForm'
-import { MutasiStokAccessPlaceholder } from '@/features/mutasi-stok/components/MutasiStokAccessPlaceholder'
 import { Plus, Edit2, Eye, Package, Hash, Calculator, Calendar, Building, ArrowUp, ArrowDown, FileText } from 'lucide-react'
 import { Button } from '@/core/components/ui/button'
 
 export function MutasiStokPage() {
-  const { createMutasiStok, updateMutasiStok } = useMutasiStokStore()
+  const { loadMutasiStok, createMutasiStok, updateMutasiStok } = useMutasiStokStore()
   const { toast } = useToast()
   const { user } = useAuthStore()
 
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [drawerMode, setDrawerMode] = useState<'view' | 'edit' | 'create'>('create')
   const [selected, setSelected] = useState<UIMutasiStok | null>(null)
-  const [editing, setEditing] = useState<MutasiStokFormData | null>(null)
-  const [saving, setSaving] = useState(false)
+
+  // Refresh handler untuk navbar refresh button
+  const handleRefresh = useCallback(async () => {
+    await loadMutasiStok()
+  }, [loadMutasiStok])
+
+  // Hook untuk menangani refresh data
+  useDataRefresh(handleRefresh)
+
+  // Load data on component mount
+  useEffect(() => {
+    loadMutasiStok()
+  }, [loadMutasiStok])
 
   const openCreate = () => {
-    setEditing({
-      id_produk: '',
-      jenis_mutasi: 'masuk',
-      jumlah: '',
-      keterangan: ''
-    })
     setSelected(null)
     setDrawerMode('create')
     setDrawerOpen(true)
@@ -42,57 +44,66 @@ export function MutasiStokPage() {
 
   const onEdit = (m: UIMutasiStok) => {
     setSelected(m)
-    setEditing({
-      id_produk: m.id_produk.toString(),
-      jenis_mutasi: m.jenis_mutasi,
-      jumlah: m.jumlah.toString(),
-      keterangan: m.keterangan || ''
-    })
     setDrawerMode('edit')
     setDrawerOpen(true)
   }
 
-  const onSave = async (data: MutasiStokFormData) => {
-    setSaving(true)
-    try {
-      if (selected) {
-        await updateMutasiStok(selected.id, {
-          jenis_mutasi: data.jenis_mutasi,
-          jumlah: parseInt(data.jumlah),
-          keterangan: data.keterangan || undefined
-        })
-        toast({ title: 'Mutasi stok diperbarui' })
-      } else {
-        await createMutasiStok({
-          id_produk: parseInt(data.id_produk),
-          jenis_mutasi: data.jenis_mutasi,
-          jumlah: parseInt(data.jumlah),
-          keterangan: data.keterangan || undefined,
-          tanggal_mutasi: new Date().toISOString().split('T')[0]
-        })
-        toast({ title: 'Mutasi stok dibuat' })
-      }
-      setDrawerOpen(false)
-      setSelected(null)
-      setEditing(null)
-    } catch (e: any) {
-      toast({ title: 'Gagal menyimpan', description: e?.message || 'Terjadi kesalahan' })
-      throw e
-    } finally {
-      setSaving(false)
-    }
+  const formatDate = (dateStr?: string) => {
+    if (!dateStr) return '-'
+    const date = new Date(dateStr)
+    return date.toLocaleDateString('id-ID', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric'
+    })
+  }
+
+  const formatDateTime = (dateStr?: string) => {
+    if (!dateStr) return '-'
+    const date = new Date(dateStr)
+    return date.toLocaleDateString('id-ID', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    })
+  }
+
+  const getJenisMutasiIcon = (jenis: 'masuk' | 'keluar') => {
+    return jenis === 'masuk' ? (
+      <ArrowUp className="h-5 w-5" />
+    ) : (
+      <ArrowDown className="h-5 w-5" />
+    )
+  }
+
+  const getJenisMutasiColor = (jenis: 'masuk' | 'keluar') => {
+    return jenis === 'masuk' ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'
+  }
+
+  const getJenisMutasiText = (jenis: 'masuk' | 'keluar') => {
+    return jenis === 'masuk' ? 'Stok Masuk' : 'Stok Keluar'
+  }
+
+  const getJumlahDisplay = (jumlah: number, jenis: 'masuk' | 'keluar') => {
+    const prefix = jenis === 'masuk' ? '+' : '-'
+    const className = jenis === 'masuk' ? 'text-green-600' : 'text-red-600'
+
+    return (
+      <span className={`font-semibold ${className}`}>
+        {prefix}{jumlah}
+      </span>
+    )
   }
 
   return (
-    <div className="flex flex-col min-h-0 h-[calc(100vh-4rem-3rem)] py-4 overflow-hidden">
-      <div className="mb-3">
-        <MutasiStokToolbar onCreate={openCreate} />
-      </div>
-
+    <div className="flex flex-col min-h-0 h-[calc(100vh-4rem-3rem)] pt-4 overflow-hidden">
       <div className="flex-1 min-h-0">
         <MutasiStokTable
           onView={onView}
           onEdit={onEdit}
+          onCreate={openCreate}
         />
       </div>
 
@@ -102,9 +113,9 @@ export function MutasiStokPage() {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className={`p-2 rounded-lg ${
-                  drawerMode === 'create' ? 'bg-green-100 text-green-600' :
-                  drawerMode === 'edit' ? 'bg-blue-100 text-blue-600' :
-                  'bg-purple-100 text-purple-600'
+                  drawerMode === 'create' ? 'bg-blue-100 text-blue-600' :
+                  drawerMode === 'edit' ? 'bg-amber-100 text-amber-600' :
+                  'bg-green-100 text-green-600'
                 }`}>
                   {drawerMode === 'create' ? (
                     <Plus className="h-5 w-5" />
@@ -115,7 +126,7 @@ export function MutasiStokPage() {
                   )}
                 </div>
                 <MutasiStokDrawerTitle className="text-xl font-semibold">
-                  {drawerMode === 'create' ? 'Tambah Mutasi Stok' :
+                  {drawerMode === 'create' ? 'Mutasi Stok Baru' :
                    drawerMode === 'edit' ? 'Edit Mutasi Stok' : 'Detail Mutasi Stok'}
                 </MutasiStokDrawerTitle>
               </div>
@@ -124,6 +135,12 @@ export function MutasiStokPage() {
           <div className="flex-1 overflow-y-auto p-6">
             {drawerMode === 'view' && selected ? (
               <div className="space-y-6">
+                <div className="flex items-center justify-center">
+                  <div className="w-32 h-32 rounded-lg border-2 border-dashed border-gray-300 flex items-center justify-center bg-gray-50">
+                    <Package className="h-12 w-12 text-gray-400" />
+                  </div>
+                </div>
+
                 <div className="space-y-4">
                   <div className="flex items-center gap-3 pb-3 border-b">
                     <div className="p-2 rounded-lg bg-blue-100 text-blue-600">
@@ -131,7 +148,7 @@ export function MutasiStokPage() {
                     </div>
                     <div>
                       <p className="text-sm text-gray-500">Produk</p>
-                      <p className="text-lg font-semibold">{selected.nama_produk}</p>
+                      <p className="text-lg font-semibold">{selected.namaProduk}</p>
                     </div>
                   </div>
 
@@ -142,7 +159,7 @@ export function MutasiStokPage() {
                       </div>
                       <div className="flex-1">
                         <p className="text-sm text-gray-500">SKU</p>
-                        <p className="text-gray-700">{selected.sku}</p>
+                        <p className="text-gray-700 font-mono">{selected.sku}</p>
                       </div>
                     </div>
                   )}
@@ -172,24 +189,23 @@ export function MutasiStokPage() {
                     )}
                   </div>
 
-                  <div className="space-y-3">
+                  {/* Mutation Information */}
+                  <div className="space-y-3 bg-gray-50 p-4 rounded-lg">
                     <div className="flex items-center gap-2 text-sm font-medium text-gray-700 pb-2 border-b">
                       <Calculator className="h-4 w-4" />
                       Informasi Mutasi
                     </div>
 
                     <div className="flex gap-3">
-                      <div className={`p-2 rounded-lg ${
-                        selected.jenis_mutasi === 'masuk' ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'
-                      }`}>
-                        {selected.jenis_mutasi === 'masuk' ? <ArrowUp className="h-5 w-5" /> : <ArrowDown className="h-5 w-5" />}
+                      <div className={`p-2 rounded-lg ${getJenisMutasiColor(selected.jenisMutasi)}`}>
+                        {getJenisMutasiIcon(selected.jenisMutasi)}
                       </div>
                       <div className="flex-1">
                         <p className="text-sm text-gray-500">Jenis Mutasi</p>
                         <p className={`font-medium ${
-                          selected.jenis_mutasi === 'masuk' ? 'text-green-600' : 'text-red-600'
+                          selected.jenisMutasi === 'masuk' ? 'text-green-600' : 'text-red-600'
                         }`}>
-                          {selected.jenis_mutasi === 'masuk' ? 'Stok Masuk' : 'Stok Keluar'}
+                          {getJenisMutasiText(selected.jenisMutasi)}
                         </p>
                       </div>
                     </div>
@@ -201,21 +217,17 @@ export function MutasiStokPage() {
                         </div>
                         <div className="flex-1">
                           <p className="text-sm text-gray-500">Stok Sebelum</p>
-                          <p className="text-gray-700 font-medium">{selected.stok_sebelum}</p>
+                          <p className="text-gray-700 font-semibold text-lg">{selected.stokSebelum}</p>
                         </div>
                       </div>
                       <div className="flex gap-3">
-                        <div className={`p-2 rounded-lg ${
-                          selected.jenis_mutasi === 'masuk' ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'
-                        }`}>
+                        <div className={`p-2 rounded-lg ${getJenisMutasiColor(selected.jenisMutasi)}`}>
                           <Calculator className="h-5 w-5" />
                         </div>
                         <div className="flex-1">
                           <p className="text-sm text-gray-500">Jumlah</p>
-                          <p className={`font-medium ${
-                            selected.jenis_mutasi === 'masuk' ? 'text-green-600' : 'text-red-600'
-                          }`}>
-                            {selected.jenis_mutasi === 'masuk' ? '+' : '-'}{selected.jumlah}
+                          <p className="font-semibold text-lg">
+                            {getJumlahDisplay(selected.jumlah, selected.jenisMutasi)}
                           </p>
                         </div>
                       </div>
@@ -225,7 +237,7 @@ export function MutasiStokPage() {
                         </div>
                         <div className="flex-1">
                           <p className="text-sm text-gray-500">Stok Sesudah</p>
-                          <p className="text-gray-700 font-medium">{selected.stok_sesudah}</p>
+                          <p className="text-gray-700 font-semibold text-lg">{selected.stokSesudah}</p>
                         </div>
                       </div>
                     </div>
@@ -244,19 +256,38 @@ export function MutasiStokPage() {
                   )}
 
                   <div className="grid grid-cols-2 gap-4 pt-3 border-t">
+                    <div className="flex gap-3">
+                      <div className="p-2 rounded-lg bg-purple-100 text-purple-600">
+                        <Calendar className="h-5 w-5" />
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-sm text-gray-500">Tanggal Mutasi</p>
+                        <p className="text-sm font-medium">{formatDate(selected.tanggalMutasi)}</p>
+                      </div>
+                    </div>
+                    <div className="flex gap-3">
+                      <div className="p-2 rounded-lg bg-yellow-100 text-yellow-600">
+                        <FileText className="h-5 w-5" />
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-sm text-gray-500">Dibuat Oleh</p>
+                        <p className="text-sm font-medium">{selected.dibuatOleh || '-'}</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4 pt-3 border-t">
                     <div>
-                      <p className="text-sm text-gray-500">Tanggal Mutasi</p>
+                      <p className="text-sm text-gray-500">Dibuat</p>
                       <p className="text-sm font-medium">
-                        {selected.tanggal_mutasi ? new Date(selected.tanggal_mutasi).toLocaleDateString('id-ID', {
-                          day: 'numeric',
-                          month: 'long',
-                          year: 'numeric'
-                        }) : '-'}
+                        {formatDateTime(selected.dibuatPada)}
                       </p>
                     </div>
                     <div>
-                      <p className="text-sm text-gray-500">Dibuat Oleh</p>
-                      <p className="text-sm font-medium">{selected.dibuat_oleh || '-'}</p>
+                      <p className="text-sm text-gray-500">Diperbarui</p>
+                      <p className="text-sm font-medium">
+                        {formatDateTime(selected.diperbaruiPada)}
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -279,34 +310,26 @@ export function MutasiStokPage() {
                 </div>
               </div>
             ) : (
-              // Show access placeholder for unauthorized users in create or edit mode
-              (drawerMode === 'create' || drawerMode === 'edit') && user?.level !== 3 && user?.level !== 4 ? (
-                <div className="flex flex-col items-center justify-center h-full py-12">
-                  <MutasiStokAccessPlaceholder />
-                  <div className="mt-6">
-                    <Button
-                      variant="outline"
-                      onClick={() => setDrawerOpen(false)}
-                      className="px-6 py-2 h-10 border-gray-300 hover:bg-gray-50"
-                    >
-                      Tutup
-                    </Button>
-                  </div>
+              <div className="flex flex-col items-center justify-center h-full py-12">
+                <div className="text-center">
+                  <Package className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">
+                    {drawerMode === 'create' ? 'Buat Mutasi Stok Baru' : 'Edit Mutasi Stok'}
+                  </h3>
+                  <p className="text-gray-500 mb-6 max-w-sm">
+                    {drawerMode === 'create'
+                      ? 'Fitur untuk membuat mutasi stok baru akan segera tersedia.'
+                      : 'Fitur untuk mengedit mutasi stok akan segera tersedia.'}
+                  </p>
+                  <Button
+                    variant="outline"
+                    onClick={() => setDrawerOpen(false)}
+                    className="px-6 py-2 h-10 border-gray-300 hover:bg-gray-50"
+                  >
+                    Tutup
+                  </Button>
                 </div>
-              ) : (
-                <MutasiStokForm
-                  value={editing}
-                  editingMutasiStok={selected}
-                  onSave={onSave}
-                  onCancel={() => {
-                    setDrawerOpen(false)
-                    setSelected(null)
-                    setEditing(null)
-                  }}
-                  isLoading={saving}
-                  isCreate={drawerMode === 'create'}
-                />
-              )
+              </div>
             )}
           </div>
         </MutasiStokDrawerContent>

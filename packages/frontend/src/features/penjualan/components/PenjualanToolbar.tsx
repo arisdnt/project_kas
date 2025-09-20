@@ -1,18 +1,13 @@
-import { useState } from 'react'
 import { Button } from '@/core/components/ui/button'
 import { Input } from '@/core/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/core/components/ui/select'
-import { Badge } from '@/core/components/ui/badge'
-import { Card, CardContent } from '@/core/components/ui/card'
 import { usePenjualanTableState } from '../hooks/usePenjualanTableState'
-import { Search, Filter, X, Calendar, Download, FileText } from 'lucide-react'
+import { Search, X, Calendar, Download } from 'lucide-react'
 import { LiveUpdateBadge } from './LiveUpdateBadge'
 
-interface Props {
-  onCreate: () => void
-}
+interface Props {}
 
-export function PenjualanToolbar({ onCreate }: Props) {
+export function PenjualanToolbar({}: Props) {
   const {
     filters,
     setFilters,
@@ -23,8 +18,6 @@ export function PenjualanToolbar({ onCreate }: Props) {
     sortedItems,
     lastUpdatedAt
   } = usePenjualanTableState()
-
-  const [showAdvanced, setShowAdvanced] = useState(false)
 
   const activeFilterCount = Object.values(filters).filter(Boolean).length
 
@@ -83,140 +76,110 @@ export function PenjualanToolbar({ onCreate }: Props) {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-            <Input
-              placeholder="Cari transaksi..."
-              value={filters.search}
-              onChange={(e) => handleSearchChange(e.target.value)}
-              className="pl-10 w-80"
-            />
-          </div>
+      {/* Main filter row */}
+      <div className="flex items-center gap-3">
+        {/* Search */}
+        <div className="relative w-[25%]">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+          <Input
+            placeholder="Cari transaksi..."
+            value={filters.search}
+            onChange={(e) => handleSearchChange(e.target.value)}
+            className="pl-10 w-full"
+          />
+        </div>
 
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setShowAdvanced(!showAdvanced)}
-            className="relative"
-          >
-            <Filter className="mr-2 h-4 w-4" />
-            Filter
-            {activeFilterCount > 0 && (
-              <Badge variant="secondary" className="ml-2 px-1 py-0 text-xs">
-                {activeFilterCount}
-              </Badge>
-            )}
-          </Button>
+        {/* Status Filter */}
+        <div className="w-[12%]">
+          <Select value={filters.status || 'all'} onValueChange={handleStatusChange}>
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="Status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Semua Status</SelectItem>
+              {statusOptions.map(option => (
+                <SelectItem key={option.value} value={option.value}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
 
+        {/* Payment Method Filter */}
+        <div className="w-[12%]">
+          <Select value={filters.metodeBayar || 'all'} onValueChange={handleMetodeBayarChange}>
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="Pembayaran" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Semua Metode</SelectItem>
+              {metodeBayarOptions.map(option => (
+                <SelectItem key={option.value} value={option.value}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* Cashier Filter */}
+        <div className="w-[12%]">
+          <Select value={filters.kasir || 'all'} onValueChange={handleKasirChange}>
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="Kasir" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Semua Kasir</SelectItem>
+              {kasirOptions.map(option => (
+                <SelectItem key={option.value} value={option.value}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* Date Range Filters */}
+        <div className="relative w-[12%]">
+          <Calendar className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+          <Input
+            type="date"
+            value={filters.tanggalMulai}
+            onChange={(e) => handleTanggalMulaiChange(e.target.value)}
+            className="pl-10 w-full"
+            placeholder="Dari"
+          />
+        </div>
+
+        <div className="relative w-[12%]">
+          <Calendar className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+          <Input
+            type="date"
+            value={filters.tanggalAkhir}
+            onChange={(e) => handleTanggalAkhirChange(e.target.value)}
+            className="pl-10 w-full"
+            placeholder="Sampai"
+          />
+        </div>
+
+        {/* Action Buttons */}
+        <div className="flex items-center gap-2 w-[15%] justify-end">
           {activeFilterCount > 0 && (
             <Button variant="ghost" size="sm" onClick={resetFilters}>
               <X className="mr-2 h-4 w-4" />
-              Reset
+              Reset ({activeFilterCount})
             </Button>
           )}
 
           <LiveUpdateBadge lastUpdatedAt={lastUpdatedAt} />
-        </div>
 
-        <div className="flex items-center gap-2">
           <Button variant="outline" size="sm" onClick={exportToCSV}>
             <Download className="mr-2 h-4 w-4" />
             Export CSV
           </Button>
-
-          <Button onClick={onCreate}>
-            <FileText className="mr-2 h-4 w-4" />
-            Transaksi Baru
-          </Button>
         </div>
       </div>
-
-      {showAdvanced && (
-        <Card>
-          <CardContent className="p-4">
-            <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
-              <div>
-                <label className="text-sm font-medium mb-1 block">Status</label>
-                <Select value={filters.status || 'all'} onValueChange={handleStatusChange}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Semua Status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Semua Status</SelectItem>
-                    {statusOptions.map(option => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div>
-                <label className="text-sm font-medium mb-1 block">Metode Bayar</label>
-                <Select value={filters.metodeBayar || 'all'} onValueChange={handleMetodeBayarChange}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Semua Metode" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Semua Metode</SelectItem>
-                    {metodeBayarOptions.map(option => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div>
-                <label className="text-sm font-medium mb-1 block">Kasir</label>
-                <Select value={filters.kasir || 'all'} onValueChange={handleKasirChange}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Semua Kasir" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Semua Kasir</SelectItem>
-                    {kasirOptions.map(option => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div>
-                <label className="text-sm font-medium mb-1 block">Tanggal Mulai</label>
-                <div className="relative">
-                  <Calendar className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-                  <Input
-                    type="date"
-                    value={filters.tanggalMulai}
-                    onChange={(e) => handleTanggalMulaiChange(e.target.value)}
-                    className="pl-10"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="text-sm font-medium mb-1 block">Tanggal Akhir</label>
-                <div className="relative">
-                  <Calendar className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-                  <Input
-                    type="date"
-                    value={filters.tanggalAkhir}
-                    onChange={(e) => handleTanggalAkhirChange(e.target.value)}
-                    className="pl-10"
-                  />
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
 
       <div className="flex items-center justify-between text-sm text-gray-600">
         <span>
