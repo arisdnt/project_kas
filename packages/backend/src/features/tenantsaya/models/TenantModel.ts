@@ -51,3 +51,16 @@ export type TenantPaket = 'basic' | 'premium' | 'enterprise';
 export interface TenantQueryParams {
   userId: string;
 }
+
+/**
+ * Interface untuk response navbar tenant
+ */
+export interface TenantNavbarResponse {
+  success: true;
+  message: string;
+  data: {
+    id: string;
+    nama: string;
+    status: TenantStatus;
+  };
+}

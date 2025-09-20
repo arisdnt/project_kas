@@ -13,6 +13,8 @@ router.use(attachAccessScope);
 
 router.get('/', TokoController.getTokoSaya);
 
+router.get('/navbar', TokoController.getTokoNavbar);
+
 router.get('/stats', TokoController.getTokoStats);
 
 router.get('/health', TokoController.healthCheck);

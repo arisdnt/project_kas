@@ -131,4 +131,40 @@ export class TenantService {
       error
     };
   }
+
+  /**
+   * Mendapatkan data tenant khusus untuk navbar
+   * @param scope - Access scope user
+   * @returns Promise<{id: string, nama: string, status: string} | null>
+   */
+  static async getTenantForNavbar(scope: AccessScope): Promise<{id: string, nama: string, status: string} | null> {
+    try {
+      const sql = `
+        SELECT 
+          id,
+          nama,
+          status
+        FROM tenants 
+        WHERE id = ?
+        AND status IN ('aktif', 'nonaktif', 'suspended')
+      `;
+
+      const [rows] = await pool.execute<RowDataPacket[]>(sql, [scope.tenantId]);
+
+      if (rows.length === 0) {
+        return null;
+      }
+
+      const row = rows[0];
+      return {
+        id: row.id,
+        nama: row.nama,
+        status: row.status
+      };
+
+    } catch (error) {
+      console.error('Error dalam getTenantForNavbar:', error);
+      throw new Error('Gagal mengambil data tenant untuk navbar');
+    }
+  }
 }

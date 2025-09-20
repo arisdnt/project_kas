@@ -213,4 +213,83 @@ export class TokoService {
       throw new Error('Gagal mengambil statistik toko');
     }
   }
+
+  /**
+   * Mendapatkan data toko khusus untuk navbar
+   * @param storeId - ID toko
+   * @param tenantId - ID tenant
+   * @returns Promise<{id: string, nama: string, kode: string, status: string} | null>
+   */
+  static async getTokoForNavbar(storeId: string, tenantId: string): Promise<{id: string, nama: string, kode: string, status: string} | null> {
+    try {
+      const sql = `
+        SELECT 
+          id,
+          nama,
+          kode,
+          status
+        FROM toko 
+        WHERE id = ? AND tenant_id = ?
+        AND status IN ('aktif', 'nonaktif', 'maintenance')
+      `;
+
+      const [rows] = await db.execute<RowDataPacket[]>(sql, [storeId, tenantId]);
+
+      if (rows.length === 0) {
+        return null;
+      }
+
+      const row = rows[0];
+      return {
+        id: row.id,
+        nama: row.nama,
+        kode: row.kode,
+        status: row.status
+      };
+
+    } catch (error) {
+      console.error('Error dalam getTokoForNavbar:', error);
+      throw new Error('Gagal mengambil data toko untuk navbar');
+    }
+  }
+
+  /**
+   * Mendapatkan toko pertama dari tenant (untuk admin/god user)
+   * @param tenantId - ID tenant
+   * @returns Promise<{id: string, nama: string, kode: string, status: string} | null>
+   */
+  static async getFirstTokoFromTenant(tenantId: string): Promise<{id: string, nama: string, kode: string, status: string} | null> {
+    try {
+      const sql = `
+        SELECT 
+          id,
+          nama,
+          kode,
+          status
+        FROM toko 
+        WHERE tenant_id = ?
+        AND status = 'aktif'
+        ORDER BY nama ASC
+        LIMIT 1
+      `;
+
+      const [rows] = await db.execute<RowDataPacket[]>(sql, [tenantId]);
+
+      if (rows.length === 0) {
+        return null;
+      }
+
+      const row = rows[0];
+      return {
+        id: row.id,
+        nama: row.nama,
+        kode: row.kode,
+        status: row.status
+      };
+
+    } catch (error) {
+      console.error('Error dalam getFirstTokoFromTenant:', error);
+      return null;
+    }
+  }
 }

@@ -14,6 +14,8 @@ router.use(attachAccessScope);
 
 router.get('/', TenantController.getTenantSaya);
 
+router.get('/navbar', TenantController.getTenantNavbar);
+
 router.get('/stats', TenantController.getTenantStats);
 
 router.get('/health', TenantController.healthCheck);

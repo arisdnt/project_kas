@@ -138,4 +138,62 @@ export class TenantController {
       });
     }
   }
+
+  /**
+   * Endpoint khusus untuk mendapatkan data tenant untuk navbar
+   * GET /api/tenantsaya/navbar
+   */
+  static async getTenantNavbar(req: Request, res: Response) {
+    try {
+      const user = req.user;
+      const accessScope = req.accessScope;
+
+      // Validasi autentikasi
+      if (!user) {
+        return res.status(401).json({
+          success: false,
+          message: 'User tidak terautentikasi'
+        });
+      }
+
+      // Validasi access scope
+      if (!accessScope || !accessScope.tenantId) {
+        return res.status(400).json({
+          success: false,
+          message: 'Tenant ID tidak ditemukan dalam access scope'
+        });
+      }
+
+      // Ambil data tenant untuk navbar
+      const tenantData = await TenantService.getTenantForNavbar(accessScope);
+
+      if (!tenantData) {
+        return res.status(404).json({
+          success: false,
+          message: 'Data tenant tidak ditemukan'
+        });
+      }
+
+      // Return response sukses
+      return res.status(200).json({
+        success: true,
+        message: 'Data tenant untuk navbar berhasil diambil',
+        data: tenantData
+      });
+
+    } catch (error: any) {
+      logger.error('Error dalam getTenantNavbar:', {
+        error: error.message,
+        stack: error.stack,
+        userId: req.user?.id,
+        tenantId: req.accessScope?.tenantId
+      });
+
+      return res.status(500).json({
+        success: false,
+        message: 'Terjadi kesalahan saat mengambil data tenant untuk navbar',
+        error: error.message
+      });
+    }
+  }
 }

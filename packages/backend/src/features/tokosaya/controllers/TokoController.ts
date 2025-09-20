@@ -242,4 +242,67 @@ export class TokoController {
       ));
     }
   }
+
+  /**
+   * Endpoint khusus untuk mendapatkan data toko untuk navbar
+   * GET /api/tokosaya/navbar
+   */
+  static async getTokoNavbar(req: AuthenticatedRequest, res: Response): Promise<void> {
+    try {
+      // Validasi autentikasi
+      if (!req.user) {
+        res.status(401).json(createErrorResponse(
+          'User tidak terautentikasi'
+        ));
+        return;
+      }
+
+      // Validasi access scope
+      if (!req.accessScope) {
+        res.status(403).json(createErrorResponse(
+          'Access scope tidak tersedia'
+        ));
+        return;
+      }
+
+      const tenantId = req.accessScope.tenantId;
+      const storeId = req.accessScope.storeId;
+      const userId = req.user.id;
+
+      // Validasi akses
+      const hasAccess = await TokoService.validateUserAccess(userId, tenantId);
+      if (!hasAccess) {
+        res.status(403).json(createErrorResponse(
+          'Akses ditolak'
+        ));
+        return;
+      }
+
+      // Ambil data toko untuk navbar
+      let tokoData = null;
+      
+      if (storeId) {
+        // Jika user memiliki store spesifik
+        tokoData = await TokoService.getTokoForNavbar(storeId, tenantId);
+      } else if (req.accessScope.isGod || (req.accessScope.level && req.accessScope.level <= 2)) {
+        // Untuk god user atau admin level tinggi, ambil toko pertama
+        tokoData = await TokoService.getFirstTokoFromTenant(tenantId);
+      }
+
+      // Return response sukses (bisa null untuk user tanpa toko spesifik)
+      res.status(200).json({
+        success: true,
+        message: 'Data toko untuk navbar berhasil diambil',
+        data: tokoData
+      });
+
+    } catch (error) {
+      console.error('Error dalam TokoController.getTokoNavbar:', error);
+      
+      res.status(500).json(createErrorResponse(
+        'Terjadi kesalahan saat mengambil data toko untuk navbar',
+        error instanceof Error ? error.message : 'Internal server error'
+      ));
+    }
+  }
 }

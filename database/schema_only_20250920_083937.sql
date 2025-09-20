@@ -46,6 +46,74 @@ CREATE TABLE `audit_log` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
+-- Table structure for table `berita`
+--
+
+DROP TABLE IF EXISTS `berita`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `berita` (
+  `id` char(36) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT (uuid()),
+  `tenant_id` char(36) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `toko_id` char(36) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT 'NULL = berlaku untuk semua toko di tenant',
+  `user_id` char(36) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT 'User yang membuat berita (level 1-3 only)',
+  `judul` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `konten` text CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `tipe_berita` enum('informasi','pengumuman','peringatan','urgent') CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT 'informasi',
+  `target_tampil` enum('toko_tertentu','semua_toko_tenant','semua_tenant') CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT 'toko_tertentu',
+  `target_toko_ids` json DEFAULT NULL COMMENT 'Array of toko IDs jika target_tampil = toko_tertentu',
+  `target_tenant_ids` json DEFAULT NULL COMMENT 'Array of tenant IDs jika target_tampil = semua_tenant',
+  `jadwal_mulai` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `jadwal_selesai` timestamp NULL DEFAULT NULL,
+  `interval_tampil_menit` int DEFAULT '60' COMMENT 'Setiap berapa menit berita ditampilkan (default 60 menit)',
+  `maksimal_tampil` int DEFAULT NULL COMMENT 'Maksimal berapa kali ditampilkan per user',
+  `prioritas` enum('rendah','normal','tinggi','urgent') CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT 'normal',
+  `status` enum('draft','aktif','nonaktif','kedaluwarsa') CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT 'draft',
+  `gambar_url` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `lampiran_url` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `dibuat_pada` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `diperbarui_pada` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_berita_tenant` (`tenant_id`),
+  KEY `idx_berita_toko` (`toko_id`),
+  KEY `idx_berita_user` (`user_id`),
+  KEY `idx_berita_target` (`target_tampil`),
+  KEY `idx_berita_status` (`status`),
+  KEY `idx_berita_jadwal` (`jadwal_mulai`,`jadwal_selesai`),
+  KEY `idx_berita_prioritas` (`prioritas`),
+  KEY `idx_berita_created` (`dibuat_pada`),
+  KEY `idx_berita_active_schedule` (`status`,`jadwal_mulai`,`jadwal_selesai`),
+  CONSTRAINT `fk_berita_tenant` FOREIGN KEY (`tenant_id`) REFERENCES `tenants` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT `fk_berita_toko` FOREIGN KEY (`toko_id`) REFERENCES `toko` (`id`) ON DELETE SET NULL ON UPDATE CASCADE,
+  CONSTRAINT `fk_berita_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Tabel untuk news tracker dengan pengaturan scheduling dan targeting';
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `berita_views`
+--
+
+DROP TABLE IF EXISTS `berita_views`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `berita_views` (
+  `id` char(36) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT (uuid()),
+  `berita_id` char(36) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `user_id` char(36) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `jumlah_view` int DEFAULT '1',
+  `terakhir_dilihat` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `dibuat_pada` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `unique_berita_user` (`berita_id`,`user_id`),
+  KEY `idx_berita_views_berita` (`berita_id`),
+  KEY `idx_berita_views_user` (`user_id`),
+  KEY `idx_berita_views_last_seen` (`terakhir_dilihat`),
+  CONSTRAINT `fk_berita_views_berita` FOREIGN KEY (`berita_id`) REFERENCES `berita` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT `fk_berita_views_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Tracking views dan frequency limit untuk setiap user';
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
 -- Table structure for table `brand`
 --
 
@@ -70,6 +138,45 @@ CREATE TABLE `brand` (
   CONSTRAINT `fk_brand_tenant` FOREIGN KEY (`tenant_id`) REFERENCES `tenants` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
   CONSTRAINT `fk_brand_toko` FOREIGN KEY (`toko_id`) REFERENCES `toko` (`id`) ON DELETE RESTRICT ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `catatan`
+--
+
+DROP TABLE IF EXISTS `catatan`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `catatan` (
+  `id` char(36) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT (uuid()),
+  `tenant_id` char(36) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `toko_id` char(36) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `user_id` char(36) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `judul` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `konten` text CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `visibilitas` enum('pribadi','toko','tenant','publik') CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT 'pribadi' COMMENT 'pribadi=hanya user, toko=seluruh toko, tenant=seluruh tenant, publik=semua tenant',
+  `kategori` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `tags` json DEFAULT NULL COMMENT 'Array of tags for categorization',
+  `prioritas` enum('rendah','normal','tinggi') CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT 'normal',
+  `status` enum('draft','aktif','arsip','dihapus') CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT 'aktif',
+  `reminder_pada` timestamp NULL DEFAULT NULL,
+  `lampiran_url` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `dibuat_pada` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `diperbarui_pada` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_catatan_tenant` (`tenant_id`),
+  KEY `idx_catatan_toko` (`toko_id`),
+  KEY `idx_catatan_user` (`user_id`),
+  KEY `idx_catatan_visibilitas` (`visibilitas`),
+  KEY `idx_catatan_status` (`status`),
+  KEY `idx_catatan_kategori` (`kategori`),
+  KEY `idx_catatan_reminder` (`reminder_pada`),
+  KEY `idx_catatan_created` (`dibuat_pada`),
+  KEY `idx_catatan_tenant_visibility` (`tenant_id`,`visibilitas`,`status`),
+  CONSTRAINT `fk_catatan_tenant` FOREIGN KEY (`tenant_id`) REFERENCES `tenants` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT `fk_catatan_toko` FOREIGN KEY (`toko_id`) REFERENCES `toko` (`id`) ON DELETE SET NULL ON UPDATE CASCADE,
+  CONSTRAINT `fk_catatan_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Tabel untuk catatan/memo dengan berbagai level visibilitas';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -486,8 +593,6 @@ CREATE TABLE `konfigurasi_sistem` (
   `toko_id` char(36) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `dibuat_pada` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   `diperbarui_pada` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  `pajak` decimal(5,2) DEFAULT '0.00',
-  `is_pajak_aktif` tinyint(1) DEFAULT '0',
   PRIMARY KEY (`id`),
   KEY `idx_config_tenant` (`tenant_id`),
   KEY `idx_config_toko` (`toko_id`),
@@ -668,6 +773,46 @@ CREATE TABLE `peran` (
   KEY `idx_peran_status` (`status`),
   CONSTRAINT `fk_peran_tenant` FOREIGN KEY (`tenant_id`) REFERENCES `tenants` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `perpesanan`
+--
+
+DROP TABLE IF EXISTS `perpesanan`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `perpesanan` (
+  `id` char(36) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT (uuid()),
+  `tenant_id` char(36) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `toko_id` char(36) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `pengirim_id` char(36) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `penerima_id` char(36) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `subjek` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `pesan` text CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `status` enum('dikirim','dibaca','dibalas','dihapus') CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT 'dikirim',
+  `prioritas` enum('rendah','normal','tinggi','urgent') CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT 'normal',
+  `tipe_pesan` enum('personal','grup','sistem') CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT 'personal',
+  `parent_id` char(36) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT 'Untuk reply message',
+  `lampiran_url` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `dibaca_pada` timestamp NULL DEFAULT NULL,
+  `dibuat_pada` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `diperbarui_pada` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_perpesanan_tenant` (`tenant_id`),
+  KEY `idx_perpesanan_toko` (`toko_id`),
+  KEY `idx_perpesanan_pengirim` (`pengirim_id`),
+  KEY `idx_perpesanan_penerima` (`penerima_id`),
+  KEY `idx_perpesanan_status` (`status`),
+  KEY `idx_perpesanan_parent` (`parent_id`),
+  KEY `idx_perpesanan_created` (`dibuat_pada`),
+  KEY `idx_perpesanan_tenant_user` (`tenant_id`,`pengirim_id`,`penerima_id`),
+  CONSTRAINT `fk_perpesanan_parent` FOREIGN KEY (`parent_id`) REFERENCES `perpesanan` (`id`) ON DELETE SET NULL ON UPDATE CASCADE,
+  CONSTRAINT `fk_perpesanan_penerima` FOREIGN KEY (`penerima_id`) REFERENCES `users` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT `fk_perpesanan_pengirim` FOREIGN KEY (`pengirim_id`) REFERENCES `users` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT `fk_perpesanan_tenant` FOREIGN KEY (`tenant_id`) REFERENCES `tenants` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT `fk_perpesanan_toko` FOREIGN KEY (`toko_id`) REFERENCES `toko` (`id`) ON DELETE SET NULL ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Tabel untuk sistem perpesanan antar user dengan scope tenant/toko';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -1276,4 +1421,4 @@ DELIMITER ;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2025-09-20  7:17:49
+-- Dump completed on 2025-09-20  8:39:37
