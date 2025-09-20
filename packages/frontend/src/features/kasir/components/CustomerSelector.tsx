@@ -27,10 +27,10 @@ export function CustomerSelector() {
 
   const results = useMemo(() => items, [items])
 
-  const select = (idx: number) => {
+  const select = async (idx: number) => {
     const r = results[idx]
     if (!r) return
-    setPelanggan({ id: r.id, nama: r.nama || r.email || r.telepon || 'Umum' })
+    await setPelanggan({ id: r.id, nama: r.nama || r.email || r.telepon || 'Umum' })
     setOpen(false)
     setQ('')
   }
@@ -38,7 +38,7 @@ export function CustomerSelector() {
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
       e.preventDefault()
-      if (selectedIndex >= 0) select(selectedIndex)
+      if (selectedIndex >= 0) void select(selectedIndex)
     } else if (e.key === 'ArrowDown') {
       e.preventDefault(); setSelectedIndex((p) => Math.min(p + 1, results.length - 1))
     } else if (e.key === 'ArrowUp') {

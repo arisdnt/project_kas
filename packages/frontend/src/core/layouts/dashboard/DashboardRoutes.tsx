@@ -1,7 +1,7 @@
 import { Routes, Route } from 'react-router-dom';
 import { PlaceholderPage } from '@/core/components/PlaceholderPage';
 import { DashboardPage } from '@/features/dashboard/pages/DashboardPage';
-import { KasirPage } from '@/features/kasir/pages/KasirPage';
+import { KasirPageNew } from '@/features/kasir/pages/KasirPageNew';
 import { ProdukPage } from '@/features/produk/pages/ProdukPage';
 import { KategoriPage } from '@/features/kategori/pages/KategoriPage';
 import { BrandPage } from '@/features/brand/pages/BrandPage';
@@ -38,7 +38,7 @@ export function DashboardRoutes() {
   return (
     <Routes>
       <Route path="/" element={<DashboardPage />} />
-      <Route path="/kasir" element={<KasirPage />} />
+      <Route path="/kasir" element={<KasirPageNew />} />
       <Route path="/produk" element={<ProdukPage />} />
       <Route path="/kategori" element={<KategoriPage />} />
       <Route path="/brand" element={<BrandPage />} />
