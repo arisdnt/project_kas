@@ -98,7 +98,7 @@ export function PelangganTableHeader({ sortState, onToggleSort, headerElevated }
             <PelangganSortIcon column="updated" sortState={sortState} />
           </button>
         </TableHead>
-        <TableHead className={cn(PELANGGAN_COLUMN_CLASS.aksi, 'py-[6px] font-medium text-slate-500 text-right')}>
+        <TableHead className={cn(PELANGGAN_COLUMN_CLASS.aksi, 'py-[6px] font-medium text-slate-500')}>
           Aksi
         </TableHead>
       </TableRow>

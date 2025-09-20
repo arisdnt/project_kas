@@ -76,7 +76,7 @@ export function SupplierTableHeader({ sortState, onToggleSort, headerElevated }:
             <SupplierSortIcon column="updated" sortState={sortState} />
           </button>
         </TableHead>
-        <TableHead className={cn(SUPPLIER_COLUMN_CLASS.aksi, 'py-[6px] font-medium text-slate-500 text-right')}>
+        <TableHead className={cn(SUPPLIER_COLUMN_CLASS.aksi, 'py-[6px] font-medium text-slate-500')}>
           Aksi
         </TableHead>
       </TableRow>

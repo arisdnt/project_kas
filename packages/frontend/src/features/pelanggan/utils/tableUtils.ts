@@ -8,15 +8,15 @@ export type PelangganSortState = {
 }
 
 export const PELANGGAN_COLUMN_CLASS = {
-  kode: 'w-[12%] min-w-[110px]',
-  nama: 'w-[22%] min-w-[220px] pr-3',
-  email: 'w-[18%] min-w-[200px]',
-  telepon: 'w-[14%] min-w-[150px]',
-  tipe: 'w-[12%] min-w-[120px]',
-  poin: 'w-[12%] min-w-[140px]',
-  status: 'w-[10%] min-w-[110px]',
-  updated: 'w-[12%] min-w-[120px]',
-  aksi: 'w-[10%] min-w-[110px] pr-0',
+  kode: 'w-[9%] min-w-[90px]',
+  nama: 'w-[17%] min-w-[180px] pr-3',
+  email: 'w-[15%] min-w-[160px]',
+  telepon: 'w-[11%] min-w-[120px]',
+  tipe: 'w-[9%] min-w-[100px]',
+  poin: 'w-[11%] min-w-[120px]',
+  status: 'w-[8%] min-w-[80px]',
+  updated: 'w-[13%] min-w-[120px]',
+  aksi: 'w-[7%] min-w-[90px] pr-0',
 } as const
 
 export const PELANGGAN_ROW_HEIGHT_PX = 48

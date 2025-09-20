@@ -8,13 +8,13 @@ export type SupplierSortState = {
 }
 
 export const SUPPLIER_COLUMN_CLASS = {
-  supplier: 'w-[26%] min-w-[220px] pr-3',
-  contact: 'w-[18%] min-w-[180px]',
-  email: 'w-[18%] min-w-[200px]',
-  phone: 'w-[14%] min-w-[140px]',
-  status: 'w-[12%] min-w-[110px]',
-  updated: 'w-[12%] min-w-[120px]',
-  aksi: 'w-[10%] min-w-[100px] pr-0',
+  supplier: 'w-[20%] min-w-[180px] pr-3',
+  contact: 'w-[16%] min-w-[140px]',
+  email: 'w-[18%] min-w-[160px]',
+  phone: 'w-[14%] min-w-[120px]',
+  status: 'w-[10%] min-w-[90px]',
+  updated: 'w-[14%] min-w-[120px]',
+  aksi: 'w-[8%] min-w-[90px] pr-0',
 } as const
 
 export const SUPPLIER_ROW_HEIGHT_PX = 48

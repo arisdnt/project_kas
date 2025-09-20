@@ -98,7 +98,7 @@ export const SupplierTableRow = forwardRef<HTMLTableRowElement, SupplierTableRow
       <TableCell className={cn(SUPPLIER_COLUMN_CLASS.updated, 'py-[6px] align-middle')}>
         {formatSupplierDate(updatedAt)}
       </TableCell>
-      <TableCell className={cn(SUPPLIER_COLUMN_CLASS.aksi, 'py-[6px] align-middle text-right')}>
+      <TableCell className={cn(SUPPLIER_COLUMN_CLASS.aksi, 'py-[6px] align-middle')}>
         <ActionButton
           onView={onView}
           onEdit={onEdit}

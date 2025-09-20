@@ -106,7 +106,7 @@ export const PelangganTableRow = forwardRef<HTMLTableRowElement, PelangganTableR
       <TableCell className={cn(PELANGGAN_COLUMN_CLASS.updated, 'py-[6px] align-middle')}>
         {formatPelangganDate(updatedAt)}
       </TableCell>
-      <TableCell className={cn(PELANGGAN_COLUMN_CLASS.aksi, 'py-[6px] align-middle text-right')}>
+      <TableCell className={cn(PELANGGAN_COLUMN_CLASS.aksi, 'py-[6px] align-middle')}>
         <ActionButton
           onView={onView}
           onEdit={onEdit}
