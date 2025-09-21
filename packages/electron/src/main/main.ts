@@ -197,9 +197,18 @@ class ElectronApp {
   }
 
   /**
-   * Setup IPC handlers untuk komunikasi dengan renderer
+   * Setup IPC handlers untuk komunikasi dengan renderer process
    */
   private setupIpcHandlers(): void {
+    // Hapus semua handler yang ada sebelum mendaftarkan yang baru
+    ipcMain.removeAllListeners('dialog:showOpenDialog');
+    ipcMain.removeAllListeners('dialog:showSaveDialog');
+    ipcMain.removeAllListeners('dialog:showMessageBox');
+    ipcMain.removeAllListeners('window:minimize');
+    ipcMain.removeAllListeners('window:maximize');
+    ipcMain.removeAllListeners('window:close');
+    ipcMain.removeAllListeners('window:isMaximized');
+
     // Handler untuk kontrol window
     ipcMain.handle('window:minimize', async (): Promise<void> => {
       if (this.mainWindow) {
@@ -254,18 +263,20 @@ class ElectronApp {
       return await dialog.showMessageBox(options);
     });
 
-    ipcMain.handle('dialog:showOpenDialog', async (_: IpcMainInvokeEvent, options: OpenDialogOptions) => {
-      if (this.mainWindow) {
-        return await dialog.showOpenDialog(this.mainWindow, options);
-      }
-      return await dialog.showOpenDialog(options);
+    ipcMain.handle('dialog:showOpenDialog', async (event: IpcMainInvokeEvent, options?: OpenDialogOptions) => {
+      const result = await dialog.showOpenDialog(this.mainWindow!, {
+        properties: options?.properties || ['openFile'],
+        filters: options?.filters || [{ name: 'All Files', extensions: ['*'] }]
+      });
+      return result.canceled ? [] : result.filePaths;
     });
 
-    ipcMain.handle('dialog:showSaveDialog', async (_: IpcMainInvokeEvent, options: SaveDialogOptions) => {
-      if (this.mainWindow) {
-        return await dialog.showSaveDialog(this.mainWindow, options);
-      }
-      return await dialog.showSaveDialog(options);
+    ipcMain.handle('dialog:showSaveDialog', async (event: IpcMainInvokeEvent, options?: SaveDialogOptions) => {
+      const filters = options?.filters;
+      const result = await dialog.showSaveDialog(this.mainWindow!, {
+        filters: filters || [{ name: 'All Files', extensions: ['*'] }]
+      });
+      return result.canceled ? null : (result.filePath || null);
     });
 
     // Handler untuk file system
@@ -290,27 +301,6 @@ class ElectronApp {
         filters: filters || [{ name: 'All Files', extensions: ['*'] }]
       });
       return result.canceled ? null : (result.filePath || null);
-    });
-
-    // Handler untuk window controls
-    ipcMain.handle('window:minimize', async (): Promise<void> => {
-      this.mainWindow?.minimize();
-    });
-
-    ipcMain.handle('window:maximize', async (): Promise<void> => {
-      if (this.mainWindow?.isMaximized()) {
-        this.mainWindow.unmaximize();
-      } else {
-        this.mainWindow?.maximize();
-      }
-    });
-
-    ipcMain.handle('window:close', async (): Promise<void> => {
-      this.mainWindow?.close();
-    });
-
-    ipcMain.handle('window:isMaximized', async (): Promise<boolean> => {
-      return this.mainWindow?.isMaximized() || false;
     });
   }
 

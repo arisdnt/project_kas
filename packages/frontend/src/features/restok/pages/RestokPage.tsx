@@ -144,27 +144,51 @@ export function RestokPage() {
     }
 
     try {
-      // TODO: Implement actual API call to save transaction
-      // This is a placeholder for the actual implementation
-      console.log('Saving transaction...', {
-        items,
-        total: subtotal,
-        timestamp: new Date().toISOString(),
-        user: user?.id,
-        tenant: user?.tenant?.id,
-        toko: user?.toko?.id,
-      });
+      // Import PembelianService dynamically to avoid circular dependencies
+      const { PembelianService } = await import('@/features/pembelian/services/pembelianService');
 
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Convert RestokItem to RestockRequest format
+      const restockItems = items.map(item => ({
+        produkId: item.id, // Already string after our fix
+        qty: item.qty,
+        hargaBeli: item.hargaBeli
+      }));
 
-      alert('Transaksi berhasil disimpan!');
-      clear(); // Clear cart after successful save
-    } catch (error) {
-      console.error('Error saving transaction:', error);
-      alert('Gagal menyimpan transaksi. Silakan coba lagi.');
+      const restockRequest = {
+        items: restockItems,
+        catatan: `Restok manual dari halaman kasir - ${new Date().toLocaleString('id-ID')}`
+      };
+
+      console.log('Saving restock transaction...', restockRequest);
+
+      // Call actual API
+      const result = await PembelianService.executeRestock(restockRequest);
+
+      if (result.success) {
+        console.log('Restok berhasil:', result.data);
+
+        // Show success message with details
+        const totalItems = result.data.items.reduce((sum, item) => sum + item.qtyAdded, 0);
+        alert(`Restok berhasil disimpan!\n\nTotal ${totalItems} item telah ditambahkan ke inventaris.\nTenant: ${user?.tenant?.nama}\nToko: ${user?.toko?.nama}`);
+
+        clear(); // Clear cart after successful save
+      } else {
+        throw new Error('API response indicates failure');
+      }
+    } catch (error: any) {
+      console.error('Error saving restock transaction:', error);
+
+      // Better error handling
+      let errorMessage = 'Gagal menyimpan transaksi restok.';
+      if (error?.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      } else if (error?.message) {
+        errorMessage = error.message;
+      }
+
+      alert(`${errorMessage}\n\nSilakan periksa koneksi dan coba lagi.`);
     }
-  }, [items, subtotal, user, clear]);
+  }, [items, user, clear]);
 
 
   if (!isAllowed) {

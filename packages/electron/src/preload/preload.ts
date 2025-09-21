@@ -197,15 +197,6 @@ const electronUtils = {
    * @deprecated Use custom toast notifications instead
    */
   showSuccessMessage: async (title: string, message: string) => {
-    // Post message to renderer to use custom notification
-    if (typeof window !== 'undefined' && window.postMessage) {
-      window.postMessage({
-        type: 'CUSTOM_NOTIFICATION',
-        payload: { variant: 'success', title, message }
-      }, '*');
-      return { response: 0 };
-    }
-
     return await electronAPI.dialog.showMessageBox({
       type: 'info',
       title,
@@ -219,15 +210,6 @@ const electronUtils = {
    * @deprecated Use custom toast notifications instead
    */
   showErrorMessage: async (title: string, message: string) => {
-    // Post message to renderer to use custom notification
-    if (typeof window !== 'undefined' && window.postMessage) {
-      window.postMessage({
-        type: 'CUSTOM_NOTIFICATION',
-        payload: { variant: 'destructive', title, message }
-      }, '*');
-      return { response: 0 };
-    }
-
     return await electronAPI.dialog.showMessageBox({
       type: 'error',
       title,
@@ -237,28 +219,9 @@ const electronUtils = {
   },
 
   /**
-   * Menampilkan konfirmasi dialog (deprecated - use custom dialogs)
-   * @deprecated Use custom confirmation dialogs instead
+   * Menampilkan dialog konfirmasi
    */
   showConfirmDialog: async (title: string, message: string) => {
-    // Post message to renderer to use custom dialog
-    if (typeof window !== 'undefined' && window.postMessage) {
-      return new Promise((resolve) => {
-        const handler = (event: MessageEvent) => {
-          if (event.data.type === 'CUSTOM_DIALOG_RESPONSE') {
-            window.removeEventListener('message', handler);
-            resolve(event.data.payload.confirmed);
-          }
-        };
-
-        window.addEventListener('message', handler);
-        window.postMessage({
-          type: 'CUSTOM_DIALOG',
-          payload: { type: 'confirm', title, message }
-        }, '*');
-      });
-    }
-
     const result = await electronAPI.dialog.showMessageBox({
       type: 'question',
       title,

@@ -7,9 +7,11 @@
     "packages/*"
   ],
   "scripts": {
-    "dev": "concurrently \"npm run dev --workspace=backend\" \"npm run dev --workspace=frontend\"",
-    "build": "npm run build --workspace=backend && npm run build --workspace=frontend",
-    "install:all": "npm install && npm install --workspace=backend && npm install --workspace=frontend",
+    "dev": "cd packages/electron && npm run dev",
+    "dev:web": "concurrently \"npm run dev --workspace=backend\" \"npm run dev --workspace=frontend\"",
+    "dev:electron": "cd packages/electron && npm run dev",
+    "build": "npm run build --workspace=backend && npm run build --workspace=frontend && npm run build --workspace=electron",
+    "install:all": "npm install && npm install --workspace=backend && npm install --workspace=frontend && npm install --workspace=electron",
     "clean": "rm -rf node_modules packages/*/node_modules packages/*/dist"
   },
   "devDependencies": {

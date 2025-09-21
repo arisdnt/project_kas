@@ -6,6 +6,7 @@
  */
 
 const { spawn } = require('child_process');
+const { execSync } = require('child_process');
 const path = require('path');
 const fs = require('fs');
 const http = require('http');
@@ -19,7 +20,8 @@ const colors = {
   yellow: '\x1b[33m',
   blue: '\x1b[34m',
   magenta: '\x1b[35m',
-  cyan: '\x1b[36m'
+  cyan: '\x1b[36m',
+  white: '\x1b[37m'
 };
 
 /**
@@ -28,6 +30,57 @@ const colors = {
 function log(message, color = 'reset', prefix = 'DEV') {
   const timestamp = new Date().toLocaleTimeString();
   console.log(`${colors[color]}[${timestamp}] [${prefix}] ${message}${colors.reset}`);
+}
+
+/**
+ * Fungsi untuk mendapatkan PID proses yang menggunakan port tertentu
+ */
+function getProcessUsingPort(port) {
+  try {
+    const result = execSync(`netstat -ano | findstr :${port}`, { encoding: 'utf8' });
+    const lines = result.split('\n').filter(line => line.trim());
+    
+    for (const line of lines) {
+      const parts = line.trim().split(/\s+/);
+      if (parts.length >= 5 && parts[1].includes(`:${port}`) && parts[3] === 'LISTENING') {
+        return parts[4]; // PID
+      }
+    }
+    return null;
+  } catch (error) {
+    return null;
+  }
+}
+
+/**
+ * Fungsi untuk menghentikan proses berdasarkan PID
+ */
+function killProcess(pid) {
+  try {
+    execSync(`taskkill /PID ${pid} /F`, { stdio: 'ignore' });
+    return true;
+  } catch (error) {
+    return false;
+  }
+}
+
+/**
+ * Fungsi untuk auto kill port jika sedang digunakan
+ */
+function autoKillPort(port) {
+  const pid = getProcessUsingPort(port);
+  if (pid) {
+    log(`Port ${port} sedang digunakan oleh PID ${pid}. Menghentikan proses...`, 'yellow');
+    if (killProcess(pid)) {
+      log(`Berhasil menghentikan proses PID ${pid} pada port ${port} ✅`, 'green');
+      // Tunggu sebentar untuk memastikan port benar-benar bebas
+      return new Promise(resolve => setTimeout(resolve, 1000));
+    } else {
+      log(`Gagal menghentikan proses PID ${pid} pada port ${port} ❌`, 'red');
+      return Promise.resolve();
+    }
+  }
+  return Promise.resolve();
 }
 
 /**
@@ -166,33 +219,40 @@ async function main() {
     process.exit(1);
   }
   
-  // 2. Cek port yang akan digunakan
-  const backendPort = 3002;
-  const frontendPort = 3000;
+  // 2. Auto kill port jika sedang digunakan
+  const backendPort = 3000; // Backend berjalan di port 3000
+  const frontendPort = 3002; // Frontend Vite berjalan di port 3002
   
+  log('Memeriksa dan membersihkan port yang digunakan...', 'cyan');
+  await autoKillPort(backendPort);
+  await autoKillPort(frontendPort);
+  
+  // 3. Verifikasi port sudah bebas
   if (await checkPort(backendPort)) {
-    log(`Port ${backendPort} sudah digunakan. Hentikan service yang menggunakan port tersebut.`, 'red');
+    log(`Port ${backendPort} masih digunakan setelah auto kill. Coba restart script.`, 'red');
     process.exit(1);
   }
   
   if (await checkPort(frontendPort)) {
-    log(`Port ${frontendPort} sudah digunakan. Hentikan service yang menggunakan port tersebut.`, 'red');
+    log(`Port ${frontendPort} masih digunakan setelah auto kill. Coba restart script.`, 'red');
     process.exit(1);
   }
   
+  log('Semua port sudah bebas ✅', 'green');
+  
   const processes = [];
   
-  // 3. Jalankan Backend
+  // 4. Jalankan Backend
   const backendPath = path.join(__dirname, '..', '..', 'backend');
-  const backendProcess = runProcess('npm', ['run', 'dev'], { cwd: backendPath }, 'BACKEND', 'blue');
+  const backendProcess = runProcess('npm', ['run', 'dev'], { cwd: backendPath }, 'BACKEND', 'white');
   processes.push(backendProcess);
   
-  // 4. Jalankan Frontend
+  // 5. Jalankan Frontend
   const frontendPath = path.join(__dirname, '..', '..', 'frontend');
   const frontendProcess = runProcess('npm', ['run', 'dev'], { cwd: frontendPath }, 'FRONTEND', 'green');
   processes.push(frontendProcess);
   
-  // 5. Tunggu backend dan frontend siap
+  // 6. Tunggu backend dan frontend siap
   try {
     log('Menunggu backend siap...', 'yellow');
     await waitForService(`http://localhost:${backendPort}/health`);
@@ -207,7 +267,7 @@ async function main() {
     process.exit(1);
   }
   
-  // 6. Build Electron scripts
+  // 7. Build Electron scripts
   log('Building Electron scripts...', 'cyan');
   const electronPath = path.join(__dirname, '..');
   const buildProcess = runProcess('npm', ['run', 'build'], { cwd: electronPath }, 'BUILD', 'cyan');
@@ -216,7 +276,7 @@ async function main() {
     buildProcess.on('close', resolve);
   });
   
-  // 7. Jalankan Electron
+  // 8. Jalankan Electron
   const electronProcess = runProcess('npm', ['run', 'dev:electron'], { cwd: electronPath }, 'ELECTRON', 'magenta');
   processes.push(electronProcess);
   

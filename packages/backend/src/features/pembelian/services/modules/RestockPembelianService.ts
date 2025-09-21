@@ -2,6 +2,7 @@ import { RowDataPacket, ResultSetHeader } from 'mysql2/promise';
 import { pool } from '@/core/database/connection';
 import { AccessScope } from '@/core/middleware/accessScope';
 import { RestockItem } from '../../models/RestockPembelianModel';
+import { RestockValidationService } from './RestockValidationService';
 
 export interface RestockOptions {
   supplierId?: string;
@@ -19,6 +20,12 @@ export interface RestockResult {
   storeId: string;
   tenantId: string;
   items: RestockResultItem[];
+  summary: {
+    totalItems: number;
+    totalQuantity: number;
+    totalValue: number;
+    warnings?: string[];
+  };
 }
 
 export class RestockPembelianService {
@@ -34,6 +41,12 @@ export class RestockPembelianService {
   ): Promise<RestockResult> {
     if (!scope.storeId) {
       throw new Error('Store ID is required for restok barang');
+    }
+
+    // Comprehensive validation
+    const validation = await RestockValidationService.validateRestockItems(items, scope);
+    if (!validation.isValid) {
+      throw new Error(`Validation failed: ${validation.errors.join('; ')}`);
     }
 
     const connection = await pool.getConnection();
@@ -88,17 +101,43 @@ export class RestockPembelianService {
         });
       }
 
-      // TODO: Integrasi pencatatan supplier/catatan ke tabel dokumen pembelian bila diperlukan
-      // Placeholder agar linter tidak menandai variabel options tidak terpakai.
-      void options;
-      void userId;
+      // Create audit log for restock operation
+      if (options.note) {
+        await connection.execute<ResultSetHeader>(
+          `INSERT INTO audit_log (
+            tenant_id, user_id, tabel, record_id, aksi,
+            data_baru, ip_address, user_agent, dibuat_pada
+          ) VALUES (?, ?, 'inventaris', 'restock_batch', 'CREATE', ?, '127.0.0.1', 'POS-System', NOW())`,
+          [
+            scope.tenantId,
+            userId,
+            JSON.stringify({
+              operation: 'bulk_restock',
+              items_count: items.length,
+              total_quantity: items.reduce((sum, item) => sum + item.qty, 0),
+              note: options.note,
+              supplier_id: options.supplierId || null,
+              timestamp: new Date().toISOString()
+            })
+          ]
+        );
+      }
 
       await connection.commit();
+
+      // Generate summary
+      const summary = RestockValidationService.generateRestockSummary(validation.validatedItems);
 
       return {
         storeId: scope.storeId,
         tenantId: scope.tenantId,
         items: results,
+        summary: {
+          totalItems: summary.totalItems,
+          totalQuantity: summary.totalQuantity,
+          totalValue: summary.totalValue,
+          warnings: validation.warnings.length > 0 ? validation.warnings : undefined
+        }
       };
     } catch (error) {
       await connection.rollback();
