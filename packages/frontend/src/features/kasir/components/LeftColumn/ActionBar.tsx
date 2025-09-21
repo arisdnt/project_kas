@@ -1,6 +1,6 @@
 import { memo } from 'react'
 import { Button } from '@/core/components/ui/button'
-import { CreditCard, Save, Printer, Loader2, FileText } from 'lucide-react'
+import { CreditCard, Save, Printer, Loader2, FileText, Home } from 'lucide-react'
 
 interface ActionBarProps {
   onPayment: () => void
@@ -48,12 +48,26 @@ export const ActionBar = memo(({
         <div className="flex items-center gap-2">
           <Button
             variant="outline"
+            onClick={() => window.location.href = '/dashboard'}
+            disabled={isProcessing}
+            className="h-12 px-4 border-blue-300 text-blue-700 hover:bg-blue-50 disabled:opacity-50"
+            title="Kembali ke Dashboard"
+            tabIndex={0}
+          >
+            <Home className="h-4 w-4 mr-2" />
+            Home
+          </Button>
+
+          <Button
+            variant="outline"
             onClick={onShowDrafts}
             disabled={isProcessing}
             className="h-12 px-4 border-purple-300 text-purple-700 hover:bg-purple-50 disabled:opacity-50"
+            data-show-drafts-button
+            title="Show Drafts [F8]"
           >
             <FileText className="h-4 w-4 mr-2" />
-            Draft
+            Draft [F8]
           </Button>
 
           <Button
@@ -61,9 +75,11 @@ export const ActionBar = memo(({
             onClick={onSaveDraft}
             disabled={!hasItems || isProcessing}
             className="h-12 px-4 border-green-300 text-green-700 hover:bg-green-50 disabled:opacity-50"
+            data-save-draft-button
+            title="Save Draft [F9]"
           >
             <Save className="h-4 w-4 mr-2" />
-            Simpan Dulu
+            Simpan [F7]
           </Button>
 
           <Button
@@ -71,9 +87,11 @@ export const ActionBar = memo(({
             onClick={onPrint}
             disabled={!hasItems || isProcessing}
             className="h-12 px-4 border-gray-300 hover:bg-gray-50 disabled:opacity-50"
+            data-print-button
+            title="Print Receipt [F10]"
           >
             <Printer className="h-4 w-4 mr-2" />
-            Cetak
+            Cetak [F10]
           </Button>
 
           <Button
@@ -81,6 +99,7 @@ export const ActionBar = memo(({
             disabled={!hasItems || isProcessing}
             className="h-12 px-6 bg-blue-600 hover:bg-blue-700 text-white font-medium disabled:opacity-50"
             data-payment-button
+            title="Process Payment [F12]"
           >
             {isProcessing ? (
               <>
@@ -90,7 +109,7 @@ export const ActionBar = memo(({
             ) : (
               <>
                 <CreditCard className="h-4 w-4 mr-2" />
-                BAYAR
+                BAYAR [F9/F12]
               </>
             )}
           </Button>

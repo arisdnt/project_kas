@@ -26,6 +26,8 @@ interface LeftColumnProps {
   onSaveDraft: () => void
   onPrint: () => void
   onShowDrafts: () => void
+  onOpenCalculator?: () => void
+  onRefresh?: () => void
 }
 
 export const LeftColumn = memo(({
@@ -40,7 +42,9 @@ export const LeftColumn = memo(({
   onPayment,
   onSaveDraft,
   onPrint,
-  onShowDrafts
+  onShowDrafts,
+  onOpenCalculator,
+  onRefresh
 }: LeftColumnProps) => {
   return (
     <div className="w-full min-w-[720px] h-full flex flex-col">
@@ -52,6 +56,8 @@ export const LeftColumn = memo(({
           onHold={onHold}
           onClear={onClear}
           isOnline={isOnline}
+          onOpenCalculator={onOpenCalculator}
+          onRefresh={onRefresh}
         />
       </div>
 

@@ -4,9 +4,13 @@ import { RightColumn } from './RightColumn/RightColumn'
 import { CustomerSearchModal } from './LeftColumn/CustomerSearchModal'
 import { DraftModal } from './LeftColumn/DraftModal'
 import { PaymentModal } from './LeftColumn/PaymentModal'
+import { KeyboardShortcutsHelp } from './KeyboardShortcutsHelp'
+import { KasirShortcuts } from './KasirShortcuts'
+import { KasirNavbar } from './KasirNavbar'
 import { useKasirStore } from '@/features/kasir/store/kasirStore'
 import { useAuthStore } from '@/core/store/authStore'
 import { kasirService } from '@/features/kasir/services/kasirService'
+import { useProdukStore } from '@/features/produk/store/produkStore'
 
 interface CartItem {
   id: string
@@ -30,22 +34,22 @@ export const KasirLayout = memo(() => {
     items,
     pelanggan,
     taxRate,
-    bayar,
-    metode,
     discountType,
     discountValue,
     clear,
-    setBayar,
-    setMetode
+    refreshSession,
+    loadSummary
   } = useKasirStore()
+
+  // Produk store
+  const { loadFirst } = useProdukStore()
 
   // Calculate totals
   const subtotal = items.reduce((sum, item) => sum + (item.harga * item.qty), 0)
   const discountTotal = discountValue
   const taxTotal = subtotal * (taxRate / 100)
   const grandTotal = subtotal - discountTotal + taxTotal
-  const paid = bayar
-  const change = Math.max(0, paid - grandTotal)
+  // 'bayar' is used via state in payment processing logic
 
   // Auth store
   const { user } = useAuthStore()
@@ -163,6 +167,19 @@ export const KasirLayout = memo(() => {
     setShowDraftModal(true)
   }, [])
 
+  const handleOpenCalculator = useCallback(() => {
+    const event = new CustomEvent('app:openCalculator')
+    window.dispatchEvent(event)
+  }, [])
+
+  const handleRefresh = useCallback(async () => {
+    await Promise.all([
+      loadFirst(),
+      refreshSession(),
+      loadSummary()
+    ])
+  }, [loadFirst, refreshSession, loadSummary])
+
 
   // Transform items to match CartItem interface
   const cartItems: CartItem[] = items.map(item => ({
@@ -176,42 +193,51 @@ export const KasirLayout = memo(() => {
   }))
 
   return (
-    <div className="w-full h-full flex bg-gray-50">
-      {/* Left Column (~68%) */}
-      <div className="flex-1 min-w-[720px] bg-white">
-        <LeftColumn
-          items={cartItems}
-          grandTotal={grandTotal}
-          isOnline={isOnline}
-          isProcessing={isProcessing}
-          onBarcodeSubmit={handleBarcodeSubmit}
-          onAddCustomer={handleAddCustomer}
-          onHold={handleHold}
-          onClear={handleClear}
-          onPayment={handlePayment}
-          onSaveDraft={handleSaveDraft}
-          onPrint={handlePrint}
-          onShowDrafts={handleShowDrafts}
-        />
-      </div>
+    <div className="w-full h-full flex flex-col bg-gray-50">
+      {/* Custom Kasir Navbar */}
+      <KasirNavbar />
 
-      {/* Right Column (~32%) */}
-      <div className="w-[360px] min-w-[340px] max-w-[360px] bg-gray-50 p-3">
-        <RightColumn
-          items={cartItems}
-          storeName={storeName}
-          storeAddress={storeAddress}
-          storePhone={storePhone}
-          storeNPWP={storeNPWP}
-          invoiceNumber={invoiceNumber}
-          dateTime={dateTime}
-          cashierName={cashierName}
-          customerName={customerName}
-          subtotal={subtotal}
-          discount={discountTotal}
-          tax={taxTotal}
-          grandTotal={grandTotal}
-        />
+      <div className="w-full h-full flex bg-gray-50">
+        {/* Scoped keyboard shortcuts active only on Kasir page */}
+        <KasirShortcuts />
+        {/* Left Column (~68%) */}
+        <div className="flex-1 min-w-[720px] bg-white">
+          <LeftColumn
+            items={cartItems}
+            grandTotal={grandTotal}
+            isOnline={isOnline}
+            isProcessing={isProcessing}
+            onBarcodeSubmit={handleBarcodeSubmit}
+            onAddCustomer={handleAddCustomer}
+            onHold={handleHold}
+            onClear={handleClear}
+            onPayment={handlePayment}
+            onSaveDraft={handleSaveDraft}
+            onPrint={handlePrint}
+            onShowDrafts={handleShowDrafts}
+            onOpenCalculator={handleOpenCalculator}
+            onRefresh={handleRefresh}
+          />
+        </div>
+
+        {/* Right Column (~32%) */}
+        <div className="w-[360px] min-w-[340px] max-w-[360px] bg-gray-50 p-3">
+          <RightColumn
+            items={cartItems}
+            storeName={storeName}
+            storeAddress={storeAddress}
+            storePhone={storePhone}
+            storeNPWP={storeNPWP}
+            invoiceNumber={invoiceNumber}
+            dateTime={dateTime}
+            cashierName={cashierName}
+            customerName={customerName}
+            subtotal={subtotal}
+            discount={discountTotal}
+            tax={taxTotal}
+            grandTotal={grandTotal}
+          />
+        </div>
       </div>
 
       {/* Customer Search Modal */}
@@ -235,6 +261,9 @@ export const KasirLayout = memo(() => {
         onPrint={handlePrint}
         isProcessing={isProcessing}
       />
+
+      {/* Keyboard Shortcuts Help */}
+      <KeyboardShortcutsHelp />
     </div>
   )
 })

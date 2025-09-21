@@ -31,6 +31,7 @@ export function ProductSearchDropdown({
   const [isLoading, setIsLoading] = useState(false)
   const [selectedIndex, setSelectedIndex] = useState(-1)
   const dropdownRef = useRef<HTMLDivElement>(null)
+  const itemRefs = useRef<(HTMLButtonElement | null)[]>([])
   const { searchProducts, addByBarcode } = useKasirStore()
 
   // Search products when query changes
@@ -57,19 +58,65 @@ export function ProductSearchDropdown({
     return () => clearTimeout(searchTimeout)
   }, [query, searchProducts])
 
+  // Update item refs array when products change
+  useEffect(() => {
+    itemRefs.current = itemRefs.current.slice(0, products.length)
+  }, [products.length])
+
+  // Scroll selected item into view when selectedIndex changes
+  useEffect(() => {
+    if (selectedIndex >= 0 && selectedIndex < itemRefs.current.length) {
+      const selectedElement = itemRefs.current[selectedIndex]
+      if (selectedElement && dropdownRef.current) {
+        selectedElement.scrollIntoView({
+          behavior: 'smooth',
+          block: 'nearest',
+          inline: 'nearest'
+        })
+      }
+    }
+  }, [selectedIndex])
+
   // Handle keyboard navigation
   useEffect(() => {
+    const focusFirstCartRowAfterClose = () => {
+      // Close dropdown first to detach listeners and avoid overlay
+      onClose()
+      // Blur the active element (likely the search input) to prevent it from re-claiming focus
+      const active = document.activeElement as HTMLElement | null
+      active?.blur?.()
+      // Defer focusing to next macrotask to ensure DOM updates complete
+      setTimeout(() => {
+        const list = document.querySelector('[data-cart-list]') as HTMLElement | null
+        if (list) list.scrollTop = 0
+        const firstRow = document.querySelector('[data-cart-list] [data-cart-row]') as HTMLElement | null
+        if (firstRow) {
+          firstRow.focus()
+        }
+      }, 0)
+    }
+
     const handleKeyDown = (e: KeyboardEvent) => {
       if (!isVisible) return
 
       switch (e.key) {
         case 'ArrowDown':
           e.preventDefault()
-          setSelectedIndex(prev => Math.min(prev + 1, products.length - 1))
+          if (products.length > 0) {
+            setSelectedIndex(prev => Math.min(prev + 1, products.length - 1))
+          } else {
+            // No results: close dropdown and move focus to cart list
+            focusFirstCartRowAfterClose()
+          }
           break
         case 'ArrowUp':
           e.preventDefault()
-          setSelectedIndex(prev => Math.max(prev - 1, -1))
+          if (products.length > 0) {
+            setSelectedIndex(prev => Math.max(prev - 1, -1))
+          } else {
+            // No results: close dropdown and move focus to cart list
+            focusFirstCartRowAfterClose()
+          }
           break
         case 'Enter':
           e.preventDefault()
@@ -89,8 +136,8 @@ export function ProductSearchDropdown({
       }
     }
 
-    document.addEventListener('keydown', handleKeyDown)
-    return () => document.removeEventListener('keydown', handleKeyDown)
+    document.addEventListener('keydown', handleKeyDown, { capture: true })
+    return () => document.removeEventListener('keydown', handleKeyDown, { capture: true } as any)
   }, [isVisible, selectedIndex, products, onClose])
 
   const handleProductSelect = async (product: ProdukKasir) => {
@@ -137,8 +184,9 @@ export function ProductSearchDropdown({
             {products.map((product, index) => (
               <button
                 key={product.id}
+                ref={(el) => (itemRefs.current[index] = el)}
                 onClick={() => handleProductSelect(product)}
-                className={`w-full px-4 py-3 text-left hover:bg-gray-50 transition-colors border-l-2 ${
+                className={`w-full px-4 py-3 text-left hover:bg-gray-50 transition-colors border-l-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-inset ${
                   index === selectedIndex
                     ? 'bg-blue-50 border-blue-500'
                     : 'border-transparent'

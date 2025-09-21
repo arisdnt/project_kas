@@ -62,37 +62,7 @@ export function KasirPageNew() {
     }
   }, [isAuthenticated, isAllowedLevel, initSession, loadSummary, loadFirst])
 
-  // Global keyboard shortcuts
-  useEffect(() => {
-    if (!isAllowedLevel) return
-
-    const handleGlobalKeyDown = (e: KeyboardEvent) => {
-      // Don't handle if typing in input
-      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
-        return
-      }
-
-      switch (e.key) {
-        case 'F1':
-          e.preventDefault()
-          const searchInput = document.querySelector('input[placeholder*="barcode"]') as HTMLInputElement
-          searchInput?.focus()
-          break
-        case 'F2':
-          e.preventDefault()
-          loadFirst().catch(() => {})
-          break
-        case 'F12':
-          e.preventDefault()
-          const paymentButton = document.querySelector('[data-payment-button]') as HTMLButtonElement
-          paymentButton?.focus()
-          break
-      }
-    }
-
-    document.addEventListener('keydown', handleGlobalKeyDown)
-    return () => document.removeEventListener('keydown', handleGlobalKeyDown)
-  }, [isAllowedLevel, loadFirst])
+  // Keyboard shortcuts are handled by KasirShortcuts inside KasirLayout, scoped to this page
 
   // Permission denied view
   if (!isAllowedLevel) {
@@ -178,7 +148,7 @@ export function KasirPageNew() {
 
   // Main kasir interface
   return (
-    <div className="w-full h-[calc(100vh-4rem-3rem)] overflow-hidden">
+    <div className="w-full h-screen overflow-hidden">
       <KasirLayout />
     </div>
   )

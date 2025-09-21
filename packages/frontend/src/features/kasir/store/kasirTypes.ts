@@ -47,16 +47,17 @@ export type KasirState = {
     rata_rata_transaksi: number
   } | null
   needsStore: boolean
+  lastSyncTime?: string
 }
 
 export type KasirActions = {
   clear: () => void
   addProduct: (p: any) => Promise<void>
   addByBarcode: (kode: string) => Promise<void>
-  inc: (id: number) => Promise<void>
-  dec: (id: number) => Promise<void>
-  setQty: (id: number, qty: number) => Promise<void>
-  remove: (id: number) => Promise<void>
+  inc: (id: number | string) => Promise<void>
+  dec: (id: number | string) => Promise<void>
+  setQty: (id: number | string, qty: number) => Promise<void>
+  remove: (id: number | string) => Promise<void>
   setBayar: (v: number) => void
   setMetode: (m: KasirState['metode']) => void
   setPelanggan: (p: KasirState['pelanggan']) => Promise<void>

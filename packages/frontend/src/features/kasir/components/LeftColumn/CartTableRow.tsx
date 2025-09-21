@@ -1,4 +1,4 @@
-import { memo, useState } from 'react'
+import { memo, useState, useRef, useEffect } from 'react'
 import { Button } from '@/core/components/ui/button'
 import { Input } from '@/core/components/ui/input'
 import { Minus, Plus, Trash2 } from 'lucide-react'
@@ -22,16 +22,59 @@ interface CartTableRowProps {
 export const CartTableRow = memo(({ item, index }: CartTableRowProps) => {
   const [isEditing, setIsEditing] = useState(false)
   const [editQty, setEditQty] = useState(item.qty.toString())
-  const { setQty, remove } = useKasirStore()
+  const [isFocused, setIsFocused] = useState(false)
+  const rowRef = useRef<HTMLDivElement>(null)
+  const { inc, dec, setQty, remove } = useKasirStore()
 
   const handleQtyChange = (newQty: number) => {
-    const itemId = parseInt(item.id)
     if (newQty <= 0) {
-      remove(itemId)
+      remove(item.id)
     } else {
-      setQty(itemId, newQty)
+      setQty(item.id, newQty)
     }
   }
+
+  const handleIncrement = () => {
+    inc(item.id)
+  }
+
+  const handleDecrement = () => {
+    dec(item.id)
+  }
+
+  // Keyboard navigation for cart rows
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (!isFocused) return
+
+      switch (e.key) {
+        case '+':
+        case '=':
+          e.preventDefault()
+          handleIncrement()
+          break
+        case '-':
+          e.preventDefault()
+          handleDecrement()
+          break
+        case 'Delete':
+        case 'Backspace':
+          e.preventDefault()
+          remove(item.id)
+          break
+        case 'Enter':
+          e.preventDefault()
+          setIsEditing(true)
+          setEditQty(item.qty.toString())
+          break
+      }
+    }
+
+    if (isFocused) {
+      document.addEventListener('keydown', handleKeyDown)
+      return () => document.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [isFocused, item.id, item.qty])
 
   const handleQtyEdit = () => {
     const qty = parseInt(editQty)
@@ -50,7 +93,17 @@ export const CartTableRow = memo(({ item, index }: CartTableRowProps) => {
   }
 
   return (
-    <div className="grid grid-cols-[48px_140px_1fr_96px_120px_100px_140px_48px] gap-2 px-3 py-3 border-b border-gray-100 hover:bg-gray-50 transition-colors duration-150">
+    <div
+      ref={rowRef}
+      className={`grid grid-cols-[48px_140px_1fr_96px_120px_100px_140px_48px] gap-2 px-3 py-3 border-b border-gray-100 hover:bg-gray-50 transition-colors duration-150 cursor-pointer ${
+        isFocused ? 'bg-blue-50 border-blue-200' : ''
+      }`}
+      tabIndex={0}
+      onFocus={() => setIsFocused(true)}
+      onBlur={() => setIsFocused(false)}
+      data-cart-row
+      title="[+/-] Qty | [Enter] Edit | [Del] Remove"
+    >
       {/* No */}
       <div className="text-center text-xs text-gray-500 flex items-center justify-center">
         {index + 1}
@@ -73,8 +126,9 @@ export const CartTableRow = memo(({ item, index }: CartTableRowProps) => {
         <Button
           variant="outline"
           size="sm"
-          onClick={() => handleQtyChange(item.qty - 1)}
+          onClick={handleDecrement}
           className="h-7 w-7 p-0 border-gray-300"
+          title="Decrease Quantity [-]"
         >
           <Minus className="h-3 w-3" />
         </Button>
@@ -109,8 +163,9 @@ export const CartTableRow = memo(({ item, index }: CartTableRowProps) => {
         <Button
           variant="outline"
           size="sm"
-          onClick={() => handleQtyChange(item.qty + 1)}
+          onClick={handleIncrement}
           className="h-7 w-7 p-0 border-gray-300"
+          title="Increase Quantity [+]"
         >
           <Plus className="h-3 w-3" />
         </Button>
@@ -138,8 +193,9 @@ export const CartTableRow = memo(({ item, index }: CartTableRowProps) => {
         <Button
           variant="ghost"
           size="sm"
-          onClick={() => remove(parseInt(item.id))}
+          onClick={() => remove(item.id)}
           className="h-7 w-7 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
+          title="Remove Item [Del]"
         >
           <Trash2 className="h-3 w-3" />
         </Button>

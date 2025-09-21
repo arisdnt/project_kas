@@ -20,7 +20,7 @@ export function CustomerSearchModal({ open, onOpenChange }: CustomerSearchModalP
   const [selectedIndex, setSelectedIndex] = useState(-1)
   const searchInputRef = useRef<HTMLInputElement>(null)
 
-  const { items, search } = usePelangganStore()
+  const { items, setSearch, loadFirst } = usePelangganStore()
   const { setPelanggan, pelanggan } = useKasirStore()
 
   // Auto focus when modal opens
@@ -40,7 +40,8 @@ export function CustomerSearchModal({ open, onOpenChange }: CustomerSearchModalP
     const searchTimeout = setTimeout(async () => {
       setIsLoading(true)
       try {
-        await search(searchQuery)
+        setSearch(searchQuery)
+        await loadFirst()
         // Filter results from store
         const filtered = items.filter(customer =>
           customer.nama.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -59,7 +60,7 @@ export function CustomerSearchModal({ open, onOpenChange }: CustomerSearchModalP
     }, 300)
 
     return () => clearTimeout(searchTimeout)
-  }, [searchQuery, search, items])
+  }, [searchQuery, setSearch, loadFirst, items])
 
   // Keyboard navigation
   useEffect(() => {
@@ -94,10 +95,8 @@ export function CustomerSearchModal({ open, onOpenChange }: CustomerSearchModalP
 
   const handleSelectCustomer = async (customer: UIPelanggan) => {
     try {
-      await setPelanggan({
-        id: customer.id,
-        nama: customer.nama
-      })
+      // Store full customer object but the store will only keep minimal data
+      await setPelanggan(customer)
 
       // Close modal and reset
       setSearchQuery('')
@@ -247,9 +246,9 @@ export function CustomerSearchModal({ open, onOpenChange }: CustomerSearchModalP
 
                       <div className="text-right flex-shrink-0 ml-3">
                         <div className="text-xs text-gray-500">ID: {customer.id.slice(-8)}</div>
-                        {customer.poin_saldo && customer.poin_saldo > 0 && (
+                        {customer.saldo_poin && customer.saldo_poin > 0 && (
                           <div className="text-xs text-green-600 mt-1">
-                            Poin: {customer.poin_saldo.toLocaleString()}
+                            Poin: {customer.saldo_poin.toLocaleString()}
                           </div>
                         )}
                       </div>
