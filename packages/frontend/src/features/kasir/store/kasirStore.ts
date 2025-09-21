@@ -123,7 +123,7 @@ export const useKasirStore = create<KasirState & KasirActions>()(
       }
     },
 
-    inc: async (id: number | string) => {
+    inc: async (id: number) => {
       try {
         const item = get().items.find(x => x.id === id)
         if (item) {
@@ -135,7 +135,7 @@ export const useKasirStore = create<KasirState & KasirActions>()(
         set({ items: get().items.map((x) => (x.id === id ? { ...x, qty: x.qty + 1 } : x)) })
       }
     },
-    dec: async (id: number | string) => {
+    dec: async (id: number) => {
       try {
         const item = get().items.find(x => x.id === id)
         if (item) {
@@ -155,7 +155,7 @@ export const useKasirStore = create<KasirState & KasirActions>()(
         })
       }
     },
-    setQty: async (id: number | string, qty: number) => {
+    setQty: async (id: number, qty: number) => {
       try {
         const validQty = Math.max(1, Math.floor(qty) || 1)
         const item = get().items.find(x => x.id === id)
@@ -168,7 +168,7 @@ export const useKasirStore = create<KasirState & KasirActions>()(
         set({ items: get().items.map((x) => (x.id === id ? { ...x, qty: Math.max(1, Math.floor(qty) || 1) } : x)) })
       }
     },
-    remove: async (id: number | string) => {
+    remove: async (id: number) => {
       try {
         const item = get().items.find(x => x.id === id)
         const produkId = item ? (item as any)._rawId || item.id : id
@@ -247,11 +247,7 @@ export const useKasirStore = create<KasirState & KasirActions>()(
           return
         }
         const result = await kasirService.getOrCreateSession()
-        set({
-          kasirSession: result.session,
-          needsStore: false,
-          lastSyncTime: new Date().toISOString()
-        })
+        set({ kasirSession: result.session, needsStore: false })
         get().syncSessionToLocal()
       } catch (error) {
         console.error('Failed to refresh kasir session:', error)

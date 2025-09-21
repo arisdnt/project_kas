@@ -38,7 +38,7 @@ export const CartTable = memo(({ items }: CartTableProps) => {
       <div className="flex-shrink-0">
         <CartTableHeader />
       </div>
-      <div className="flex-1 overflow-y-auto min-h-0" data-cart-list>
+      <div className="flex-1 overflow-y-auto min-h-0">
         {items.map((item, index) => (
           <CartTableRow key={item.id} item={item} index={index} />
         ))}

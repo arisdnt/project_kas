@@ -5,17 +5,17 @@ const mysql = require('mysql2/promise');
 // MinIO Client Configuration - Updated credentials
 const minioClient = new Client({
     endPoint: 'localhost',
-    port: 9000,
+    port: 9001,
     useSSL: false,
     accessKey: 'minioadmin',
-    secretKey: 'minioadminsecretkeychange'
+    secretKey: 'minioadmin'
 });
 
 // Database Configuration
 const dbConfig = {
     host: 'localhost',
-    user: 'arkan',
-    password: 'Arkan123!@#',
+    user: 'arka',
+    password: 'arka123',
     database: 'kasir',
     charset: 'utf8mb4'
 };
@@ -86,7 +86,7 @@ async function uploadFileWithMetadata({
         // Generate access URL
         const urlExpiry = isPublic ? null : 24 * 60 * 60; // 24 hours for private files
         const accessUrl = isPublic 
-            ? `http://localhost:9000/${bucketName}/${objectName}`
+            ? `http://localhost:9001/${bucketName}/${objectName}`
             : await minioClient.presignedGetObject(bucketName, objectName, urlExpiry);
         
         // Save metadata to database

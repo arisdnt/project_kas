@@ -17,7 +17,7 @@ export type StorageConfig = z.infer<typeof StorageConfigSchema>
 const defaultConfig: StorageConfig = {
   enabled: process.env.MINIO_ENABLED === 'true',
   endpoint: process.env.MINIO_ENDPOINT || 'localhost',
-  port: parseInt(process.env.MINIO_PORT || '9000', 10),
+  port: parseInt(process.env.MINIO_PORT || '9001', 10),
   useSsl: process.env.MINIO_USE_SSL === 'true',
   accessKey: process.env.MINIO_ACCESS_KEY || '',
   secretKey: process.env.MINIO_SECRET_KEY || '',

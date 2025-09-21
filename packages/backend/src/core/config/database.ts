@@ -28,8 +28,8 @@ export type DatabaseConfig = z.infer<typeof DatabaseConfigSchema>;
 const defaultConfig: DatabaseConfig = {
   host: process.env.DB_HOST || 'localhost',
   port: parseInt(process.env.DB_PORT || '3306', 10),
-  user: process.env.DB_USER || 'arkan',
-  password: process.env.DB_PASSWORD || 'Arkan123!@#',
+  user: process.env.DB_USER || 'arka',
+  password: process.env.DB_PASSWORD || 'arka123',
   database: process.env.DB_NAME || 'kasir',
   charset: 'utf8mb4',
   timezone: '+00:00',

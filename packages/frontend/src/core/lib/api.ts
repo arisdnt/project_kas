@@ -1,18 +1,23 @@
 import { config } from '@/core/config';
 import { useAuthStore } from '@/core/store/authStore';
+import { getElectronHeaders } from '@/utils/electronAPI';
 
 /**
  * Simple API client for making HTTP requests
  * Follows the same pattern as other services in the codebase
+ * Dengan dukungan Electron headers untuk mode desktop
  */
 class ApiClient {
   private readonly baseUrl = `${config.api.url}:${config.api.port}/api`;
 
   private getAuthHeaders() {
     const token = useAuthStore.getState().token;
+    const electronHeaders = getElectronHeaders();
+    
     return {
       'Content-Type': 'application/json',
-      ...(token && { 'Authorization': `Bearer ${token}` })
+      ...(token && { 'Authorization': `Bearer ${token}` }),
+      ...electronHeaders
     };
   }
 

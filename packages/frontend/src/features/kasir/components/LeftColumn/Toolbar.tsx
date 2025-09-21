@@ -2,8 +2,8 @@ import { useState, useRef } from 'react'
 import { Input } from '@/core/components/ui/input'
 import { Button } from '@/core/components/ui/button'
 import { Badge } from '@/core/components/ui/badge'
-import { CustomerSearchInput } from './CustomerSearchInput'
-import { Scan, RotateCcw, Trash2, Wifi, WifiOff, Calculator, Maximize, RefreshCw } from 'lucide-react'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/core/components/ui/select'
+import { Scan, Search, RotateCcw, Trash2, Wifi, WifiOff } from 'lucide-react'
 import { useKasirStore } from '@/features/kasir/store/kasirStore'
 import { ProductSearchDropdown } from './ProductSearchDropdown'
 
@@ -13,8 +13,6 @@ interface ToolbarProps {
   onHold: () => void
   onClear: () => void
   isOnline: boolean
-  onOpenCalculator?: () => void
-  onRefresh?: () => void
 }
 
 export function Toolbar({
@@ -22,13 +20,10 @@ export function Toolbar({
   onAddCustomer,
   onHold,
   onClear,
-  isOnline,
-  onOpenCalculator,
-  onRefresh
+  isOnline
 }: ToolbarProps) {
   const [barcode, setBarcode] = useState('')
   const [showSearchDropdown, setShowSearchDropdown] = useState(false)
-  const [isRefreshing, setIsRefreshing] = useState(false)
   const searchInputRef = useRef<HTMLInputElement>(null)
   const { pelanggan, setPelanggan, addProduct } = useKasirStore()
 
@@ -68,17 +63,6 @@ export function Toolbar({
     }
   }
 
-  const handleRefresh = async () => {
-    if (onRefresh) {
-      setIsRefreshing(true)
-      onRefresh()
-      // Reset animation after a short delay
-      setTimeout(() => {
-        setIsRefreshing(false)
-      }, 1000)
-    }
-  }
-
   return (
     <div className="h-14 px-4 bg-white border-b border-gray-200 flex items-center gap-3 flex-shrink-0">
       {/* Barcode/Search Input */}
@@ -91,11 +75,10 @@ export function Toolbar({
             onChange={(e) => handleInputChange(e.target.value)}
             onFocus={handleInputFocus}
             onBlur={handleInputBlur}
-            placeholder="Scan barcode atau ketik nama produk... [Alt+S]"
+            placeholder="Scan barcode atau ketik nama produk..."
             className="pl-10 h-10 text-sm border-gray-300 focus:border-blue-500 focus:ring-blue-500"
             autoFocus
             autoComplete="off"
-            data-product-search
           />
           <ProductSearchDropdown
             query={barcode}
@@ -106,12 +89,41 @@ export function Toolbar({
         </div>
       </form>
 
-      {/* Customer Search */}
-      <CustomerSearchInput
-        selectedCustomer={pelanggan ? { id: String(pelanggan.id), nama: pelanggan.nama ?? '' } : null}
-        onCustomerSelect={setPelanggan}
-        onSearchModalOpen={onAddCustomer}
-      />
+      {/* Customer Selector */}
+      <div className="min-w-[180px]">
+        <Select
+          value={pelanggan?.id || 'umum'}
+          onValueChange={async (value) => {
+            if (value === 'umum') {
+              await setPelanggan(null)
+            } else {
+              // Handle customer selection - this would need customer list integration
+              console.log('Select customer:', value)
+            }
+          }}
+        >
+          <SelectTrigger className="h-10 text-sm">
+            <SelectValue>
+              {pelanggan?.nama || "Pelanggan Umum"}
+            </SelectValue>
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="umum">Pelanggan Umum</SelectItem>
+            {/* TODO: Add recent customers or search functionality */}
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* Search Customer Button */}
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={onAddCustomer}
+        className="h-10 px-3 border-blue-300 text-blue-700 hover:bg-blue-50"
+        title="Cari & Pilih Pelanggan"
+      >
+        <Search className="h-4 w-4" />
+      </Button>
 
       {/* Action Buttons */}
       <div className="flex items-center gap-2">
@@ -120,11 +132,9 @@ export function Toolbar({
           size="sm"
           onClick={onHold}
           className="h-10 px-3 border-yellow-300 text-yellow-700 hover:bg-yellow-50"
-          data-hold-button
-          title="Hold Transaction"
         >
           <RotateCcw className="h-4 w-4 mr-1" />
-          Hold [F6]
+          Hold
         </Button>
 
         <Button
@@ -132,51 +142,9 @@ export function Toolbar({
           size="sm"
           onClick={onClear}
           className="h-10 px-3 border-red-300 text-red-700 hover:bg-red-50"
-          data-clear-button
-          title="Clear Cart [Alt+Q]"
         >
           <Trash2 className="h-4 w-4 mr-1" />
-          Bersihkan [F3]
-        </Button>
-
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={onOpenCalculator}
-          disabled={!onOpenCalculator}
-          className="h-10 px-3 border-blue-300 text-blue-700 hover:bg-blue-50 disabled:opacity-50"
-          data-calculator-button
-          title="Kalkulator [Alt+C]"
-        >
-          <Calculator className="h-4 w-4" />
-          [F4]
-        </Button>
-
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => {
-            if (document.fullscreenElement) {
-              document.exitFullscreen()
-            } else {
-              document.documentElement.requestFullscreen()
-            }
-          }}
-          className="h-10 px-3 border-green-300 text-green-700 hover:bg-green-50"
-          title="Mode Layar Penuh"
-        >
-          <Maximize className="h-4 w-4" />
-        </Button>
-
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={handleRefresh}
-          disabled={isRefreshing || !onRefresh}
-          className="h-10 px-3 border-purple-300 text-purple-700 hover:bg-purple-50 disabled:opacity-50"
-          title="Refresh Data"
-        >
-          <RefreshCw className={`h-4 w-4 transition-transform ${isRefreshing ? 'animate-spin' : ''}`} />
+          Bersihkan
         </Button>
 
         {/* Connection Status */}

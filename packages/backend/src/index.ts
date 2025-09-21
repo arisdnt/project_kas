@@ -21,6 +21,11 @@ import {
 import { testConnection, closeConnection } from '@/core/database/connection';
 import { logger } from '@/core/utils/logger';
 import { attachAccessScope } from '@/core/middleware/accessScope';
+import { 
+  electronDetectionMiddleware, 
+  electronResponseMiddleware, 
+  electronLoggingMiddleware 
+} from '@/core/middleware/electronDetection';
 
 // Buat Express app
 const app = express();
@@ -37,6 +42,11 @@ const io = new Server(server, {
 
 // Middleware keamanan
 app.use(helmet());
+
+// Electron detection dan response middleware
+app.use(electronDetectionMiddleware);
+app.use(electronResponseMiddleware);
+app.use(electronLoggingMiddleware);
 
 // CORS configuration
 app.use(cors({
@@ -193,6 +203,18 @@ app.get('/api', (req, res) => {
 // Note: This expects the frontend to be built into packages/frontend/dist
 const frontendDistPath = path.resolve(__dirname, '../../frontend/dist');
 app.use(express.static(frontendDistPath));
+
+// Electron-specific route untuk mendapatkan informasi aplikasi
+app.get('/api/electron/info', (req: any, res) => {
+  res.json({
+    isElectron: req.isElectron || false,
+    version: req.electronVersion || null,
+    platform: req.platform || process.platform,
+    nodeVersion: process.version,
+    appVersion: process.env.npm_package_version || '1.0.0',
+    timestamp: new Date().toISOString()
+  });
+});
 
 // Serve index.html for SPA routes (non-API)
 app.get(['/dashboard', '/dashboard/*', '/'], (req, res) => {

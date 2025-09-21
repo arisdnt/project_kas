@@ -1,4 +1,5 @@
 import * as React from "react"
+import { showElectronMessage } from "@/utils/electronAPI"
 
 import type {
   ToastActionElement,
@@ -146,6 +147,19 @@ function toast({ ...props }: Toast) {
       toast: { ...props, id },
     })
   const dismiss = () => dispatch({ type: "DISMISS_TOAST", toastId: id })
+
+  // Kirim notifikasi Electron jika tersedia
+  if (props.title && props.description) {
+    const variant = props.variant || 'default'
+    const type = variant === 'destructive' ? 'error' : 'success'
+    showElectronMessage(
+      String(props.title), 
+      String(props.description), 
+      type
+    ).catch(() => {
+      // Ignore error jika Electron tidak tersedia
+    })
+  }
 
   dispatch({
     type: "ADD_TOAST",
