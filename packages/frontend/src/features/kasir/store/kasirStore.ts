@@ -118,7 +118,7 @@ export const useKasirStore = create<KasirState & KasirActions>()(
       }
     },
 
-    inc: async (id: number) => {
+    inc: async (id: number | string) => {
       try {
         const item = get().items.find(x => x.id.toString() === id.toString())
         if (item) {
@@ -130,7 +130,7 @@ export const useKasirStore = create<KasirState & KasirActions>()(
         set({ items: get().items.map((x) => (x.id.toString() === id.toString() ? { ...x, qty: x.qty + 1 } : x)) })
       }
     },
-    dec: async (id: number) => {
+    dec: async (id: number | string) => {
       try {
         const item = get().items.find(x => x.id.toString() === id.toString())
         if (item) {
@@ -150,7 +150,7 @@ export const useKasirStore = create<KasirState & KasirActions>()(
         })
       }
     },
-    setQty: async (id: number, qty: number) => {
+    setQty: async (id: number | string, qty: number) => {
       try {
         const validQty = Math.max(1, Math.floor(qty) || 1)
         const item = get().items.find(x => x.id.toString() === id.toString())
@@ -163,7 +163,7 @@ export const useKasirStore = create<KasirState & KasirActions>()(
         set({ items: get().items.map((x) => (x.id.toString() === id.toString() ? { ...x, qty: Math.max(1, Math.floor(qty) || 1) } : x)) })
       }
     },
-    remove: async (id: number) => {
+    remove: async (id: number | string) => {
       try {
         const item = get().items.find(x => x.id.toString() === id.toString())
         const produkId = item ? (item as any)._rawId || item.id : id
