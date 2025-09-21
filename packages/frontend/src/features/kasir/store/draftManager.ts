@@ -2,6 +2,7 @@ import { DraftCart, CartItemLocal, KasirState } from './kasirTypes'
 
 export class DraftManager {
   private static STORAGE_KEY = 'kasir_drafts'
+  private static MAX_DRAFTS = 6
 
   static async saveDraft(
     items: CartItemLocal[],
@@ -34,7 +35,18 @@ export class DraftManager {
     }
 
     const existingDrafts = this.getDraftsFromStorage()
+
+    // Add new draft
     existingDrafts.push(draft)
+
+    // Sort by creation date (newest first)
+    existingDrafts.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+
+    // Enforce limit - remove oldest drafts if exceeding limit
+    while (existingDrafts.length > this.MAX_DRAFTS) {
+      existingDrafts.pop() // Remove the oldest (last) draft
+    }
+
     this.saveDraftsToStorage(existingDrafts)
 
     return draft.id

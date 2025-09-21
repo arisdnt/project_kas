@@ -1,7 +1,8 @@
-import { app, BrowserWindow, ipcMain, dialog, shell, Menu } from 'electron';
-import { join } from 'path';
+import { app, BrowserWindow, ipcMain, dialog, Menu, shell } from 'electron';
 import { spawn, ChildProcess } from 'child_process';
-import { existsSync } from 'fs';
+import * as path from 'path';
+import * as fs from 'fs';
+import { IpcMainInvokeEvent, MenuItemConstructorOptions, OpenDialogOptions, SaveDialogOptions, MessageBoxOptions } from 'electron';
 
 /**
  * Kelas utama untuk mengelola aplikasi Electron
@@ -54,7 +55,7 @@ class ElectronApp {
 
   /**
    * Membuat window utama aplikasi
-   * Konfigurasi window properties dan load content
+   * Konfigurasi window dan security settings
    */
   private createMainWindow(): void {
     this.mainWindow = new BrowserWindow({
@@ -62,80 +63,120 @@ class ElectronApp {
       height: 800,
       minWidth: 800,
       minHeight: 600,
+      show: false,
+      icon: this.getAppIcon(),
       webPreferences: {
         nodeIntegration: false,
         contextIsolation: true,
-        enableRemoteModule: false,
-        preload: join(__dirname, '../preload/preload.js'),
-        webSecurity: true
+        preload: path.join(__dirname, '../preload/preload.js'),
+        webSecurity: true,
+        devTools: false // Menonaktifkan developer tools sepenuhnya
       },
-      icon: this.getAppIcon(),
-      show: false,
-      titleBarStyle: 'default',
-      autoHideMenuBar: false
+      // Konfigurasi frameless window - PENTING: frame harus false
+      frame: false,
+      // Untuk macOS, gunakan titleBarStyle
+      ...(process.platform === 'darwin' && {
+        titleBarStyle: 'hiddenInset'
+      }),
+      // Untuk Windows, gunakan konfigurasi khusus
+      ...(process.platform === 'win32' && {
+        titleBarStyle: 'hidden',
+        titleBarOverlay: false
+      }),
+      // Window properties
+      resizable: true,
+      minimizable: true,
+      maximizable: true,
+      closable: true,
+      // Visual properties
+      transparent: false,
+      hasShadow: true,
+      skipTaskbar: false,
+      alwaysOnTop: false
+    });
+
+    // Menonaktifkan context menu (klik kanan)
+    this.mainWindow.webContents.on('context-menu', (e) => {
+      e.preventDefault();
+    });
+
+    // Menonaktifkan keyboard shortcuts untuk developer tools
+    this.mainWindow.webContents.on('before-input-event', (event, input) => {
+      // Blokir F12
+      if (input.key === 'F12') {
+        event.preventDefault();
+      }
+      // Blokir Ctrl+Shift+I (Windows/Linux)
+      if (input.control && input.shift && input.key === 'I') {
+        event.preventDefault();
+      }
+      // Blokir Ctrl+Shift+J (Console)
+      if (input.control && input.shift && input.key === 'J') {
+        event.preventDefault();
+      }
+      // Blokir Ctrl+U (View Source)
+      if (input.control && input.key === 'U') {
+        event.preventDefault();
+      }
+      // Blokir Ctrl+Shift+C (Inspect Element)
+      if (input.control && input.shift && input.key === 'C') {
+        event.preventDefault();
+      }
     });
 
     // Load aplikasi setelah window siap
     this.mainWindow.once('ready-to-show', () => {
       this.mainWindow?.show();
-      if (this.isDev) {
-        this.mainWindow?.webContents.openDevTools();
-      }
+      // Tidak membuka dev tools bahkan di development mode
     });
 
-    // Load URL berdasarkan mode development atau production
     this.loadApplication();
-
-    // Handle window closed
-    this.mainWindow.on('closed', () => {
-      this.mainWindow = null;
-    });
-
-    // Handle external links
-    this.mainWindow.webContents.setWindowOpenHandler(({ url }) => {
-      shell.openExternal(url);
-      return { action: 'deny' };
-    });
   }
 
   /**
-   * Load aplikasi berdasarkan mode development atau production
+   * Load aplikasi frontend
+   * Development: dari dev server, Production: dari file statis
    */
   private loadApplication(): void {
+    // Mengubah user agent untuk menyembunyikan identitas Electron
+    const customUserAgent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 KasirPOS/1.0.0';
+    
     if (this.isDev) {
       // Development mode: load dari dev server
       this.mainWindow?.loadURL(`http://localhost:${this.frontendPort}`);
     } else {
       // Production mode: load dari file statis
-      const frontendPath = join(__dirname, '../../frontend/index.html');
-      if (existsSync(frontendPath)) {
+      const frontendPath = path.join(__dirname, '../../frontend/index.html');
+      if (fs.existsSync(frontendPath)) {
         this.mainWindow?.loadFile(frontendPath);
       } else {
-        this.showErrorDialog('Frontend tidak ditemukan', 
-          'File frontend tidak ditemukan. Pastikan aplikasi sudah di-build dengan benar.');
+        this.showErrorDialog('Error', 'Frontend build tidak ditemukan');
       }
     }
+    
+    // Set user agent untuk semua request
+    this.mainWindow?.webContents.setUserAgent(customUserAgent);
   }
 
   /**
-   * Memulai backend server
-   * Spawn process backend dalam mode development atau production
+   * Menjalankan backend server
+   * Development: npm run dev, Production: node index.js
    */
   private startBackendServer(): void {
     if (this.isDev) {
       // Development mode: jalankan backend dengan npm run dev
       this.backendProcess = spawn('npm', ['run', 'dev'], {
-        cwd: join(__dirname, '../../../backend'),
+        cwd: path.join(__dirname, '../../../backend'),
         stdio: 'pipe',
         shell: true
       });
     } else {
       // Production mode: jalankan backend dari build
-      const backendPath = join(__dirname, '../../backend/index.js');
-      if (existsSync(backendPath)) {
+      const backendPath = path.join(__dirname, '../../backend/index.js');
+      if (fs.existsSync(backendPath)) {
         this.backendProcess = spawn('node', [backendPath], {
           stdio: 'pipe',
-          env: { ...process.env, NODE_ENV: 'production' }
+          shell: true
         });
       }
     }
@@ -156,93 +197,157 @@ class ElectronApp {
   }
 
   /**
-   * Setup IPC handlers untuk komunikasi dengan renderer process
+   * Setup IPC handlers untuk komunikasi dengan renderer
    */
   private setupIpcHandlers(): void {
+    // Handler untuk kontrol window
+    ipcMain.handle('window:minimize', async (): Promise<void> => {
+      if (this.mainWindow) {
+        this.mainWindow.minimize();
+      }
+    });
+
+    ipcMain.handle('window:maximize', async (): Promise<void> => {
+      if (this.mainWindow) {
+        if (this.mainWindow.isMaximized()) {
+          this.mainWindow.unmaximize();
+        } else {
+          this.mainWindow.maximize();
+        }
+      }
+    });
+
+    ipcMain.handle('window:close', async (): Promise<void> => {
+      if (this.mainWindow) {
+        this.mainWindow.close();
+      }
+    });
+
+    ipcMain.handle('window:isMaximized', async (): Promise<boolean> => {
+      return this.mainWindow ? this.mainWindow.isMaximized() : false;
+    });
+
     // Handler untuk mendapatkan informasi aplikasi
-    ipcMain.handle('app:getVersion', () => {
+    ipcMain.handle('app:getVersion', async (): Promise<string> => {
       return app.getVersion();
     });
 
-    // Handler untuk mendapatkan path aplikasi
-    ipcMain.handle('app:getPath', (_, name: string) => {
+    ipcMain.handle('app:getPath', async (_: IpcMainInvokeEvent, name: string): Promise<string> => {
       return app.getPath(name as any);
     });
 
-    // Handler untuk menampilkan dialog
-    ipcMain.handle('dialog:showMessageBox', async (_, options) => {
+    ipcMain.handle('app:restart', async (): Promise<void> => {
+      app.relaunch();
+      app.exit();
+    });
+
+    ipcMain.handle('app:quit', async (): Promise<void> => {
+      this.cleanup();
+      app.quit();
+    });
+
+    // Handler untuk dialog
+    ipcMain.handle('dialog:showMessageBox', async (_: IpcMainInvokeEvent, options: MessageBoxOptions) => {
       if (this.mainWindow) {
         return await dialog.showMessageBox(this.mainWindow, options);
       }
       return await dialog.showMessageBox(options);
     });
 
-    // Handler untuk membuka file dialog
-    ipcMain.handle('dialog:showOpenDialog', async (_, options) => {
+    ipcMain.handle('dialog:showOpenDialog', async (_: IpcMainInvokeEvent, options: OpenDialogOptions) => {
       if (this.mainWindow) {
         return await dialog.showOpenDialog(this.mainWindow, options);
       }
       return await dialog.showOpenDialog(options);
     });
 
-    // Handler untuk menyimpan file dialog
-    ipcMain.handle('dialog:showSaveDialog', async (_, options) => {
+    ipcMain.handle('dialog:showSaveDialog', async (_: IpcMainInvokeEvent, options: SaveDialogOptions) => {
       if (this.mainWindow) {
         return await dialog.showSaveDialog(this.mainWindow, options);
       }
       return await dialog.showSaveDialog(options);
     });
 
-    // Handler untuk restart aplikasi
-    ipcMain.handle('app:restart', () => {
-      app.relaunch();
-      app.exit();
+    // Handler untuk file system
+    ipcMain.handle('fs:selectFile', async (_: IpcMainInvokeEvent, filters?: any[]): Promise<string | null> => {
+      const result = await dialog.showOpenDialog(this.mainWindow!, {
+        properties: ['openFile'],
+        filters: filters || [{ name: 'All Files', extensions: ['*'] }]
+      });
+      return result.canceled ? null : result.filePaths[0];
     });
 
-    // Handler untuk keluar aplikasi
-    ipcMain.handle('app:quit', () => {
-      this.cleanup();
-      app.quit();
+    ipcMain.handle('fs:selectDirectory', async (): Promise<string | null> => {
+      const result = await dialog.showOpenDialog(this.mainWindow!, {
+        properties: ['openDirectory']
+      });
+      return result.canceled ? null : result.filePaths[0];
+    });
+
+    ipcMain.handle('fs:saveFile', async (_: IpcMainInvokeEvent, defaultPath?: string, filters?: any[]): Promise<string | null> => {
+      const result = await dialog.showSaveDialog(this.mainWindow!, {
+        defaultPath,
+        filters: filters || [{ name: 'All Files', extensions: ['*'] }]
+      });
+      return result.canceled ? null : (result.filePath || null);
+    });
+
+    // Handler untuk window controls
+    ipcMain.handle('window:minimize', async (): Promise<void> => {
+      this.mainWindow?.minimize();
+    });
+
+    ipcMain.handle('window:maximize', async (): Promise<void> => {
+      if (this.mainWindow?.isMaximized()) {
+        this.mainWindow.unmaximize();
+      } else {
+        this.mainWindow?.maximize();
+      }
+    });
+
+    ipcMain.handle('window:close', async (): Promise<void> => {
+      this.mainWindow?.close();
+    });
+
+    ipcMain.handle('window:isMaximized', async (): Promise<boolean> => {
+      return this.mainWindow?.isMaximized() || false;
     });
   }
 
   /**
-   * Setup menu aplikasi
+   * Setup menu aplikasi - Menonaktifkan semua menu yang bisa membuka developer tools
    */
   private setupAppMenu(): void {
-    const template: Electron.MenuItemConstructorOptions[] = [
+    const template: MenuItemConstructorOptions[] = [
       {
         label: 'File',
         submenu: [
-          {
-            label: 'Keluar',
-            accelerator: 'CmdOrCtrl+Q',
-            click: () => {
-              this.cleanup();
-              app.quit();
-            }
-          }
+          { role: 'quit', label: 'Keluar' }
+        ]
+      },
+      {
+        label: 'Edit',
+        submenu: [
+          { role: 'undo', label: 'Undo' },
+          { role: 'redo', label: 'Redo' },
+          { type: 'separator' },
+          { role: 'cut', label: 'Cut' },
+          { role: 'copy', label: 'Copy' },
+          { role: 'paste', label: 'Paste' }
         ]
       },
       {
         label: 'View',
         submenu: [
-          { role: 'reload', label: 'Muat Ulang' },
-          { role: 'forceReload', label: 'Paksa Muat Ulang' },
-          { role: 'toggleDevTools', label: 'Toggle Developer Tools' },
+          { role: 'reload', label: 'Reload' },
+          { role: 'forceReload', label: 'Force Reload' },
+          // Menghapus toggleDevTools dari menu
           { type: 'separator' },
           { role: 'resetZoom', label: 'Reset Zoom' },
           { role: 'zoomIn', label: 'Zoom In' },
           { role: 'zoomOut', label: 'Zoom Out' },
           { type: 'separator' },
           { role: 'togglefullscreen', label: 'Toggle Fullscreen' }
-        ]
-      },
-      {
-        label: 'Window',
-        submenu: [
-          { role: 'minimize', label: 'Minimize' },
-          { role: 'close', label: 'Tutup' }
         ]
       }
     ];
@@ -255,8 +360,8 @@ class ElectronApp {
    * Mendapatkan path icon aplikasi
    */
   private getAppIcon(): string {
-    const iconPath = join(__dirname, '../../build/icon.png');
-    return existsSync(iconPath) ? iconPath : '';
+    const iconPath = path.join(__dirname, '../../build/icon.svg');
+    return fs.existsSync(iconPath) ? iconPath : '';
   }
 
   /**
@@ -267,7 +372,7 @@ class ElectronApp {
   }
 
   /**
-   * Cleanup resources sebelum aplikasi ditutup
+   * Cleanup resources saat aplikasi ditutup
    */
   private cleanup(): void {
     if (this.backendProcess) {
@@ -277,5 +382,5 @@ class ElectronApp {
   }
 }
 
-// Inisialisasi aplikasi Electron
+// Inisialisasi aplikasi
 new ElectronApp();

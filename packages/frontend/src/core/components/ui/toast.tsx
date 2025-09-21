@@ -1,9 +1,8 @@
 import * as React from "react"
 import * as ToastPrimitives from "@radix-ui/react-toast"
 import { cva, type VariantProps } from "class-variance-authority"
-import { X } from "lucide-react"
-
-import { cn } from "../../lib/utils"
+import { X, CheckCircle, AlertCircle, Info, AlertTriangle } from "lucide-react"
+import { cn } from "@/core/lib/utils"
 
 const ToastProvider = ToastPrimitives.Provider
 
@@ -27,9 +26,15 @@ const toastVariants = cva(
   {
     variants: {
       variant: {
-        default: "border border-green-200 bg-green-50 text-green-900 dark:border-green-600 dark:bg-green-900/10 dark:text-green-400",
+        default: "border bg-background text-foreground",
         destructive:
-          "group border-red-500 bg-red-50 text-red-900 dark:border-red-400 dark:bg-red-900/10 dark:text-red-400",
+          "destructive border-destructive bg-destructive text-destructive-foreground",
+        success:
+          "border-green-200 bg-green-50 text-green-800 dark:border-green-800 dark:bg-green-950 dark:text-green-200",
+        warning:
+          "border-yellow-200 bg-yellow-50 text-yellow-800 dark:border-yellow-800 dark:bg-yellow-950 dark:text-yellow-200",
+        info:
+          "border-blue-200 bg-blue-50 text-blue-800 dark:border-blue-800 dark:bg-blue-950 dark:text-blue-200",
       },
     },
     defaultVariants: {
@@ -37,6 +42,14 @@ const toastVariants = cva(
     },
   }
 )
+
+const iconMap = {
+  success: CheckCircle,
+  destructive: AlertCircle,
+  warning: AlertTriangle,
+  info: Info,
+  default: Info,
+}
 
 const Toast = React.forwardRef<
   React.ElementRef<typeof ToastPrimitives.Root>,
@@ -114,6 +127,39 @@ type ToastProps = React.ComponentPropsWithoutRef<typeof Toast>
 
 type ToastActionElement = React.ReactElement<typeof ToastAction>
 
+interface ToastWithIconProps extends ToastProps {
+  variant?: "default" | "destructive" | "success" | "warning" | "info"
+  title?: string
+  description?: string
+  action?: ToastActionElement
+  icon?: boolean
+}
+
+const ToastWithIcon = React.forwardRef<
+  React.ElementRef<typeof Toast>,
+  ToastWithIconProps
+>(({ variant = "default", title, description, action, icon = true, className, children, ...props }, ref) => {
+  const IconComponent = iconMap[variant || "default"]
+
+  return (
+    <Toast ref={ref} variant={variant} className={cn("flex items-start space-x-3", className)} {...props}>
+      {icon && (
+        <div className="flex-shrink-0 mt-0.5">
+          <IconComponent className="h-5 w-5" />
+        </div>
+      )}
+      <div className="flex-1 min-w-0">
+        {title && <ToastTitle>{title}</ToastTitle>}
+        {description && <ToastDescription>{description}</ToastDescription>}
+        {children}
+      </div>
+      {action}
+      <ToastClose />
+    </Toast>
+  )
+})
+ToastWithIcon.displayName = "ToastWithIcon"
+
 export {
   type ToastProps,
   type ToastActionElement,
@@ -124,4 +170,5 @@ export {
   ToastDescription,
   ToastClose,
   ToastAction,
+  ToastWithIcon,
 }

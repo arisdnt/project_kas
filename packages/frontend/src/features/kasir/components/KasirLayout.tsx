@@ -1,12 +1,13 @@
 import { memo, useState, useCallback } from 'react'
 import { LeftColumn } from './LeftColumn/LeftColumn'
 import { RightColumn } from './RightColumn/RightColumn'
-import { CustomerSearchModal } from './LeftColumn/CustomerSearchModal'
 import { DraftModal } from './LeftColumn/DraftModal'
 import { PaymentModal } from './LeftColumn/PaymentModal'
+import { KeyboardShortcutsHelp } from './KeyboardShortcutsHelp'
 import { useKasirStore } from '@/features/kasir/store/kasirStore'
 import { useAuthStore } from '@/core/store/authStore'
 import { kasirService } from '@/features/kasir/services/kasirService'
+import { systemDialog } from '@/core/hooks/useSystemDialog'
 
 interface CartItem {
   id: string
@@ -21,9 +22,9 @@ interface CartItem {
 export const KasirLayout = memo(() => {
   const [isProcessing, setIsProcessing] = useState(false)
   const [isOnline] = useState(true) // TODO: Implement real connection status
-  const [showCustomerSearchModal, setShowCustomerSearchModal] = useState(false)
   const [showDraftModal, setShowDraftModal] = useState(false)
   const [showPaymentModal, setShowPaymentModal] = useState(false)
+  const [showHelpModal, setShowHelpModal] = useState(false)
 
   // Kasir store
   const {
@@ -70,9 +71,6 @@ export const KasirLayout = memo(() => {
     }
   }, [])
 
-  const handleAddCustomer = useCallback(() => {
-    setShowCustomerSearchModal(true)
-  }, [])
 
   const handleHold = useCallback(() => {
     // TODO: Implement hold transaction
@@ -80,8 +78,15 @@ export const KasirLayout = memo(() => {
   }, [])
 
   const handleClear = useCallback(async () => {
-    if (items.length > 0 && confirm('Hapus semua item dari keranjang?')) {
-      await clear()
+    if (items.length > 0) {
+      const confirmed = await systemDialog.showConfirm(
+        'Konfirmasi Bersihkan Keranjang',
+        `Anda yakin ingin menghapus semua ${items.length} item dari keranjang? Tindakan ini tidak dapat dibatalkan.`
+      )
+
+      if (confirmed) {
+        await clear()
+      }
     }
   }, [items.length, clear])
 
@@ -148,11 +153,14 @@ export const KasirLayout = memo(() => {
       const draftId = await saveDraft()
       alert('Draft berhasil disimpan!')
       console.log('Draft saved with ID:', draftId)
+
+      // Clear cart after successfully saving draft
+      await clear()
     } catch (error: any) {
       alert(error.message || 'Gagal menyimpan draft')
       console.error('Error saving draft:', error)
     }
-  }, [])
+  }, [clear])
 
   const handlePrint = useCallback(() => {
     // TODO: Implement print receipt
@@ -161,6 +169,10 @@ export const KasirLayout = memo(() => {
 
   const handleShowDrafts = useCallback(() => {
     setShowDraftModal(true)
+  }, [])
+
+  const handleShowHelp = useCallback(() => {
+    setShowHelpModal(true)
   }, [])
 
 
@@ -185,13 +197,13 @@ export const KasirLayout = memo(() => {
           isOnline={isOnline}
           isProcessing={isProcessing}
           onBarcodeSubmit={handleBarcodeSubmit}
-          onAddCustomer={handleAddCustomer}
           onHold={handleHold}
           onClear={handleClear}
           onPayment={handlePayment}
           onSaveDraft={handleSaveDraft}
           onPrint={handlePrint}
           onShowDrafts={handleShowDrafts}
+          onShowHelp={handleShowHelp}
         />
       </div>
 
@@ -214,12 +226,6 @@ export const KasirLayout = memo(() => {
         />
       </div>
 
-      {/* Customer Search Modal */}
-      <CustomerSearchModal
-        open={showCustomerSearchModal}
-        onOpenChange={setShowCustomerSearchModal}
-      />
-
       {/* Draft Modal */}
       <DraftModal
         open={showDraftModal}
@@ -234,6 +240,12 @@ export const KasirLayout = memo(() => {
         onPayment={handleProcessPayment}
         onPrint={handlePrint}
         isProcessing={isProcessing}
+      />
+
+      {/* Keyboard Shortcuts Help Modal */}
+      <KeyboardShortcutsHelp
+        open={showHelpModal}
+        onOpenChange={setShowHelpModal}
       />
     </div>
   )

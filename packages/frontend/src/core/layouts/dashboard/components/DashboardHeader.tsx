@@ -4,6 +4,7 @@ import { NavTablet } from '@/core/layouts/dashboard/components/NavTablet';
 import { ActionIcons } from '@/core/layouts/dashboard/components/ActionIcons';
 import { ProfileDropdown } from '@/core/layouts/dashboard/components/ProfileDropdown';
 import { MobileMenuButton } from '@/core/layouts/dashboard/components/MobileMenuButton';
+import { WindowsControls } from '@/core/components/ui/WindowsControls';
 
 type UserLike = {
   fullName?: string;
@@ -38,17 +39,24 @@ export function DashboardHeader({
   return (
     <div className="w-full px-2 sm:px-4 lg:px-6">
       <div className="flex items-center justify-between h-16">
-        <div className="flex items-center space-x-6">
-          <Brand />
-          <NavDesktop pathname={pathname} />
+        <div className="flex items-center space-x-6 drag-region flex-1 min-w-0">
+          <div className="no-drag">
+            <Brand />
+          </div>
+          <div className="no-drag">
+            <NavDesktop pathname={pathname} />
+          </div>
         </div>
-        <div className="flex items-center justify-end space-x-2 sm:space-x-3 flex-shrink-0">
-          <ActionIcons isFullscreen={isFullscreen} onToggleFullscreen={onToggleFullscreen} onOpenCalculator={onOpenCalculator} onRefresh={onRefresh} />
+        <div className="flex items-center justify-end space-x-2 sm:space-x-3 flex-shrink-0 no-drag">
+          <ActionIcons onOpenCalculator={onOpenCalculator} onRefresh={onRefresh} />
           <ProfileDropdown user={user} onLogout={onLogout} />
           <MobileMenuButton open={isMobileMenuOpen} onToggle={onToggleMobileMenu} />
+          <WindowsControls className="hidden sm:flex" isFullscreen={isFullscreen} onToggleFullscreen={onToggleFullscreen} />
         </div>
       </div>
-      <NavTablet pathname={pathname} />
+      <div className="no-drag">
+        <NavTablet pathname={pathname} />
+      </div>
     </div>
   );
 }

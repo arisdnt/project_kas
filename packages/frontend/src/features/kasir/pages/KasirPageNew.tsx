@@ -67,32 +67,120 @@ export function KasirPageNew() {
     if (!isAllowedLevel) return
 
     const handleGlobalKeyDown = (e: KeyboardEvent) => {
-      // Don't handle if typing in input
-      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
+      // Only handle F-keys (F1-F12) for global shortcuts
+      // Allow F-keys to work even when typing in input fields
+      if (!e.key.startsWith('F')) {
+        // When no search/autocomplete or modal is open, ArrowUp/ArrowDown should focus cart table for selection
+        if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+          const isModalOpen = document.querySelector('[role="dialog"]') !== null
+          const isProductDropdownOpen = document.querySelector('[data-product-search-dropdown]') !== null
+          const isCustomerComboOpen = (() => {
+            const input = document.querySelector('[data-customer-search]') as HTMLInputElement | null
+            // consider it open if input has aria-expanded true
+            return input?.getAttribute('aria-expanded') === 'true'
+          })()
+          if (!isModalOpen && !isProductDropdownOpen && !isCustomerComboOpen) {
+            // Prevent page scroll
+            e.preventDefault()
+            // Focus first cart row to enable keyboard navigation across rows
+            const firstRow = document.querySelector('[data-cart-row]') as HTMLElement | null
+            firstRow?.focus()
+          }
+        }
         return
+      }
+
+      // Check if any modal is open - if so, don't handle global shortcuts
+      // Let modal-specific handlers take precedence
+      const isModalOpen = document.querySelector('[role="dialog"]') !== null
+      if (isModalOpen) {
+        return
+      }
+
+      // Prevent default browser behavior for F-keys
+      e.preventDefault()
+
+      // Helper function to blur current active element for action shortcuts
+      const blurCurrentInput = () => {
+        if (document.activeElement instanceof HTMLInputElement ||
+            document.activeElement instanceof HTMLTextAreaElement) {
+          document.activeElement.blur()
+        }
       }
 
       switch (e.key) {
         case 'F1':
-          e.preventDefault()
+          // Focus ke form scan barcode/pencarian produk
           const searchInput = document.querySelector('input[placeholder*="barcode"]') as HTMLInputElement
           searchInput?.focus()
           break
         case 'F2':
-          e.preventDefault()
+          // Focus ke form pencarian pelanggan
+          const customerInput = document.querySelector('[data-customer-search]') as HTMLInputElement
+          if (customerInput) {
+            customerInput.click()
+            setTimeout(() => customerInput.focus(), 100)
+          }
+          break
+        case 'F3':
+          // Bersihkan/Clear semua cart
+          blurCurrentInput()
+          const clearButton = document.querySelector('[data-clear-button]') as HTMLButtonElement
+          clearButton?.click()
+          break
+        case 'F4':
+          // Hold transaksi
+          blurCurrentInput()
+          const holdButton = document.querySelector('[data-hold-button]') as HTMLButtonElement
+          holdButton?.click()
+          break
+        case 'F5':
+          // Refresh produk/reload data
+          blurCurrentInput()
           loadFirst().catch(() => {})
           break
-        case 'F12':
-          e.preventDefault()
+        case 'F6':
+          // Simpan sebagai draft
+          blurCurrentInput()
+          const saveDraftButton = document.querySelector('[data-save-draft-button]') as HTMLButtonElement
+          saveDraftButton?.click()
+          break
+        case 'F7':
+          // Lihat daftar draft
+          blurCurrentInput()
+          const draftsButton = document.querySelector('[data-drafts-button]') as HTMLButtonElement
+          draftsButton?.click()
+          break
+        case 'F8':
+          // Cetak struk
+          blurCurrentInput()
+          const printButton = document.querySelector('[data-print-button]') as HTMLButtonElement
+          printButton?.click()
+          break
+        case 'F9':
+          // Proses pembayaran - blur dulu biar fokus ke modal pembayaran
+          blurCurrentInput()
           const paymentButton = document.querySelector('[data-payment-button]') as HTMLButtonElement
-          paymentButton?.focus()
+          paymentButton?.click()
+          break
+        case 'F10':
+          // Help/bantuan shortcut
+          blurCurrentInput()
+          const helpButton = document.querySelector('[data-help-button]') as HTMLButtonElement
+          helpButton?.click()
+          break
+        case 'F12':
+          // Logout/keluar (navigate to dashboard)
+          blurCurrentInput()
+          navigate('/dashboard')
           break
       }
     }
 
-    document.addEventListener('keydown', handleGlobalKeyDown)
-    return () => document.removeEventListener('keydown', handleGlobalKeyDown)
-  }, [isAllowedLevel, loadFirst])
+    // Use capture phase to ensure F-keys are handled before any other handlers
+    document.addEventListener('keydown', handleGlobalKeyDown, { capture: true })
+    return () => document.removeEventListener('keydown', handleGlobalKeyDown, { capture: true })
+  }, [isAllowedLevel, loadFirst, navigate])
 
   // Permission denied view
   if (!isAllowedLevel) {

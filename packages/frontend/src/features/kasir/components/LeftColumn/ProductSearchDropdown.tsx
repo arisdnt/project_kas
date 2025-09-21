@@ -62,6 +62,11 @@ export function ProductSearchDropdown({
     const handleKeyDown = (e: KeyboardEvent) => {
       if (!isVisible) return
 
+      // Allow F-keys to propagate to global handler
+      if (e.key.startsWith('F')) {
+        return
+      }
+
       switch (e.key) {
         case 'ArrowDown':
           e.preventDefault()
@@ -122,7 +127,7 @@ export function ProductSearchDropdown({
   if (!isVisible) return null
 
   return (
-    <div className="absolute top-full left-0 right-0 z-50 mt-1">
+    <div className="absolute top-full left-0 right-0 z-50 mt-1" data-product-search-dropdown>
       <div
         ref={dropdownRef}
         className="bg-white border border-gray-200 rounded-lg shadow-lg max-h-80 overflow-y-auto"

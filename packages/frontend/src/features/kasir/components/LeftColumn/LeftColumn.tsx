@@ -19,13 +19,13 @@ interface LeftColumnProps {
   isOnline: boolean
   isProcessing?: boolean
   onBarcodeSubmit: (barcode: string) => void
-  onAddCustomer: () => void
   onHold: () => void
   onClear: () => void
   onPayment: () => void
   onSaveDraft: () => void
   onPrint: () => void
   onShowDrafts: () => void
+  onShowHelp: () => void
 }
 
 export const LeftColumn = memo(({
@@ -34,13 +34,13 @@ export const LeftColumn = memo(({
   isOnline,
   isProcessing = false,
   onBarcodeSubmit,
-  onAddCustomer,
   onHold,
   onClear,
   onPayment,
   onSaveDraft,
   onPrint,
-  onShowDrafts
+  onShowDrafts,
+  onShowHelp
 }: LeftColumnProps) => {
   return (
     <div className="w-full min-w-[720px] h-full flex flex-col">
@@ -48,9 +48,8 @@ export const LeftColumn = memo(({
       <div className="flex-shrink-0">
         <Toolbar
           onBarcodeSubmit={onBarcodeSubmit}
-          onAddCustomer={onAddCustomer}
           onHold={onHold}
-          onClear={onClear}
+          onShowHelp={onShowHelp}
           isOnline={isOnline}
         />
       </div>
@@ -67,6 +66,7 @@ export const LeftColumn = memo(({
           onSaveDraft={onSaveDraft}
           onPrint={onPrint}
           onShowDrafts={onShowDrafts}
+          onClear={onClear}
           hasItems={items.length > 0}
           isProcessing={isProcessing}
           grandTotal={grandTotal}

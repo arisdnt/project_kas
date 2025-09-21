@@ -1,0 +1,77 @@
+# Konfigurasi Electron Builder untuk Kasir POS
+appId: com.kasir.pos
+productName: Kasir POS
+copyright: Copyright © 2024 Tim Pengembang Kasir POS
+
+# Direktori
+directories:
+  output: dist-electron
+  buildResources: build
+
+# File yang disertakan
+files:
+  - dist/**/*
+  - node_modules/**/*
+  - "!node_modules/*/{CHANGELOG.md,README.md,readme.md,test,__tests__,tests,powered-test,example,examples}"
+  - "!node_modules/.cache"
+  - "!**/*.{iml,o,hprof,orig,pyc,pyo,rbc,swp,csproj,sln,xproj}"
+  - "!.editorconfig"
+  - "!**/._*"
+  - "!**/{.DS_Store,.git,.hg,.svn,CVS,RCS,SCCS,.gitignore,.gitattributes}"
+  - "!**/{__pycache__,thumbs.db,.flowconfig,.idea,.vs,.nyc_output}"
+  - "!**/{appveyor.yml,.travis.yml,circle.yml}"
+  - "!**/{npm-debug.log,yarn.lock,.yarn-integrity,.yarn-metadata.json}"
+
+# Resource tambahan
+extraResources:
+  - from: "../backend/dist"
+    to: "backend"
+  - from: "../frontend/dist" 
+    to: "frontend"
+
+# Konfigurasi Windows
+win:
+  target:
+    - target: nsis
+      arch: [x64]
+  icon: build/icon.svg
+  requestedExecutionLevel: asInvoker
+  artifactName: "${productName}-${version}-${arch}.${ext}"
+
+# Konfigurasi NSIS Installer
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  allowElevation: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: "${productName}"
+  include: "build/installer.nsh"
+  artifactName: "${productName}-Setup-${version}.${ext}"
+  deleteAppDataOnUninstall: false
+
+# Konfigurasi macOS (opsional)
+mac:
+  target:
+    - target: dmg
+      arch: [x64, arm64]
+  icon: build/icon.svg
+  category: public.app-category.business
+  artifactName: "${productName}-${version}-${arch}.${ext}"
+
+# Konfigurasi Linux (opsional)
+linux:
+  target:
+    - target: AppImage
+      arch: [x64]
+  icon: build/icon.svg
+  category: Office
+  artifactName: "${productName}-${version}-${arch}.${ext}"
+
+# Publish configuration (untuk auto-updater)
+publish:
+  provider: generic
+  url: "https://releases.kasir-pos.com/"
+
+# Compression
+compression: maximum

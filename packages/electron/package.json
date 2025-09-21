@@ -8,21 +8,22 @@
   "private": true,
   "homepage": "./",
   "scripts": {
-    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\" \"wait-on http://localhost:3000 http://localhost:3002 && npm run dev:electron\"",
+    "dev": "node scripts/dev.js",
     "dev:backend": "cd ../backend && npm run dev",
     "dev:frontend": "cd ../frontend && npm run dev",
     "dev:electron": "cross-env NODE_ENV=development electron .",
     "build": "npm run build:main && npm run build:preload",
     "build:main": "tsc -p tsconfig.main.json",
     "build:preload": "tsc -p tsconfig.preload.json",
-    "build:all": "npm run build:backend && npm run build:frontend && npm run build",
+    "build:all": "node scripts/build.js",
     "build:backend": "cd ../backend && npm run build",
     "build:frontend": "cd ../frontend && npm run build",
-    "pack": "npm run build:all && electron-builder --dir",
-    "dist": "npm run build:all && electron-builder",
+    "pack": "node scripts/build.js pack",
+    "dist": "node scripts/build.js dist",
     "dist:win": "npm run build:all && electron-builder --win",
     "clean": "rimraf dist dist-electron",
-    "postinstall": "electron-builder install-app-deps"
+    "postinstall": "electron-builder install-app-deps",
+    "test": "echo \"Error: no test specified\" && exit 1"
   },
   "devDependencies": {
     "@types/node": "^20.10.0",
@@ -30,7 +31,7 @@
     "@typescript-eslint/parser": "^6.14.0",
     "concurrently": "^8.2.2",
     "cross-env": "^7.0.3",
-    "electron": "^28.0.0",
+    "electron": "28.0.0",
     "electron-builder": "^24.9.1",
     "eslint": "^8.55.0",
     "rimraf": "^5.0.5",
@@ -71,7 +72,7 @@
           "arch": ["x64"]
         }
       ],
-      "icon": "build/icon.ico"
+      "icon": "build/icon.svg"
     },
     "nsis": {
       "oneClick": false,

@@ -32,6 +32,14 @@ interface ElectronAPI {
     selectDirectory: () => Promise<string | null>;
     saveFile: (defaultPath?: string, filters?: Electron.FileFilter[]) => Promise<string | null>;
   };
+
+  // Window controls APIs
+  window: {
+    minimize: () => Promise<void>;
+    maximize: () => Promise<void>;
+    close: () => Promise<void>;
+    isMaximized: () => Promise<boolean>;
+  };
 }
 
 /**
@@ -129,6 +137,29 @@ const electronAPI: ElectronAPI = {
       
       return result.canceled ? null : result.filePath;
     }
+  },
+
+  // Window controls APIs
+  window: {
+    /**
+     * Minimize window
+     */
+    minimize: () => ipcRenderer.invoke('window:minimize'),
+
+    /**
+     * Maximize/restore window
+     */
+    maximize: () => ipcRenderer.invoke('window:maximize'),
+
+    /**
+     * Close window
+     */
+    close: () => ipcRenderer.invoke('window:close'),
+
+    /**
+     * Check if window is maximized
+     */
+    isMaximized: () => ipcRenderer.invoke('window:isMaximized')
   }
 };
 
@@ -162,9 +193,19 @@ const electronUtils = {
   isLinux: () => process.platform === 'linux',
 
   /**
-   * Menampilkan notifikasi sukses
+   * Menampilkan notifikasi sukses (deprecated - use custom notifications)
+   * @deprecated Use custom toast notifications instead
    */
   showSuccessMessage: async (title: string, message: string) => {
+    // Post message to renderer to use custom notification
+    if (typeof window !== 'undefined' && window.postMessage) {
+      window.postMessage({
+        type: 'CUSTOM_NOTIFICATION',
+        payload: { variant: 'success', title, message }
+      }, '*');
+      return { response: 0 };
+    }
+
     return await electronAPI.dialog.showMessageBox({
       type: 'info',
       title,
@@ -174,9 +215,19 @@ const electronUtils = {
   },
 
   /**
-   * Menampilkan notifikasi error
+   * Menampilkan notifikasi error (deprecated - use custom notifications)
+   * @deprecated Use custom toast notifications instead
    */
   showErrorMessage: async (title: string, message: string) => {
+    // Post message to renderer to use custom notification
+    if (typeof window !== 'undefined' && window.postMessage) {
+      window.postMessage({
+        type: 'CUSTOM_NOTIFICATION',
+        payload: { variant: 'destructive', title, message }
+      }, '*');
+      return { response: 0 };
+    }
+
     return await electronAPI.dialog.showMessageBox({
       type: 'error',
       title,
@@ -186,9 +237,28 @@ const electronUtils = {
   },
 
   /**
-   * Menampilkan konfirmasi dialog
+   * Menampilkan konfirmasi dialog (deprecated - use custom dialogs)
+   * @deprecated Use custom confirmation dialogs instead
    */
   showConfirmDialog: async (title: string, message: string) => {
+    // Post message to renderer to use custom dialog
+    if (typeof window !== 'undefined' && window.postMessage) {
+      return new Promise((resolve) => {
+        const handler = (event: MessageEvent) => {
+          if (event.data.type === 'CUSTOM_DIALOG_RESPONSE') {
+            window.removeEventListener('message', handler);
+            resolve(event.data.payload.confirmed);
+          }
+        };
+
+        window.addEventListener('message', handler);
+        window.postMessage({
+          type: 'CUSTOM_DIALOG',
+          payload: { type: 'confirm', title, message }
+        }, '*');
+      });
+    }
+
     const result = await electronAPI.dialog.showMessageBox({
       type: 'question',
       title,
@@ -197,7 +267,7 @@ const electronUtils = {
       defaultId: 0,
       cancelId: 1
     });
-    
+
     return result.response === 0;
   }
 };

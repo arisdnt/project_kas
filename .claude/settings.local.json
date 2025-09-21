@@ -32,7 +32,8 @@
       "Bash(kill:*)",
       "Bash(node:*)",
       "Bash(mv:*)",
-      "Bash(cp:*)"
+      "Bash(cp:*)",
+      "Bash(dir \"C:\\project_kas\\packages\\electron\\src\\preload\"\")"
     ],
     "deny": [],
     "ask": []

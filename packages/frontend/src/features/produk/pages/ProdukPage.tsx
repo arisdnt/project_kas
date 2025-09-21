@@ -39,13 +39,10 @@ export function ProdukPage() {
   }, [loadMasterData])
 
   const openCreate = () => {
-    setEditing({
-      nama: '', kode: '', kategori: '', kategoriId: '', brand: '', brandId: '',
-      hargaBeli: 0, hargaJual: 0, stok: 0, satuan: 'pcs', deskripsi: '', status: 'aktif',
-    })
     setSelected(null)
     setDrawerMode('create')
     setDrawerOpen(true)
+    // Don't reset editing state - let ProdukForm handle persistence
   }
 
   const onView = (p: UIProduk) => {
@@ -87,7 +84,10 @@ export function ProdukPage() {
       }
       setDrawerOpen(false)
       setSelected(null)
-      setEditing(null)
+      // Only clear editing state for edit mode, preserve for create mode
+      if (selected) {
+        setEditing(null)
+      }
     } catch (e: any) {
       toast({ title: 'Gagal menyimpan', description: e?.message || 'Terjadi kesalahan' })
       throw e
@@ -103,7 +103,21 @@ export function ProdukPage() {
       </div>
 
       <ProdukDrawer open={drawerOpen} onOpenChange={setDrawerOpen}>
-        <ProdukDrawerContent className="!w-[40vw] !max-w-none">
+        <ProdukDrawerContent
+          className="!w-[40vw] !max-w-none"
+          onPointerDownOutside={(e) => {
+            // Prevent closing drawer but allow interactions with main page
+            e.preventDefault()
+          }}
+          onInteractOutside={(e) => {
+            // Prevent closing drawer but allow interactions with main page
+            e.preventDefault()
+          }}
+          onEscapeKeyDown={(e) => {
+            // Allow ESC to close drawer
+            setDrawerOpen(false)
+          }}
+        >
           <ProdukDrawerHeader className="border-b border-gray-200 pb-4 px-6 pt-6">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
@@ -312,7 +326,10 @@ export function ProdukPage() {
                   onCancel={() => {
                     setDrawerOpen(false)
                     setSelected(null)
-                    setEditing(null)
+                    // Don't reset editing state when canceling - preserve form data
+                    if (drawerMode === 'edit') {
+                      setEditing(null)
+                    }
                   }}
                   isLoading={saving}
                   brands={brands.map(b => ({ id: b.id, nama: b.nama }))}

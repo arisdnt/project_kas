@@ -71,6 +71,31 @@ export const usePelangganStore = create<PelangganState & PelangganActions>()(
     setTypeFilter: (type) => set({ typeFilter: type }),
     setStatusFilter: (status) => set({ statusFilter: status }),
 
+    search: async (query: string) => {
+      if (!query.trim()) {
+        set({ items: [] })
+        return
+      }
+
+      set({ loading: true, error: undefined })
+      try {
+        const params = new URLSearchParams({
+          search: query.trim(),
+          limit: '20',
+          page: '1'
+        })
+
+        const res = await fetch(`${API_BASE}?${params}`, { headers: authHeaders() })
+        const js = await res.json()
+        if (!res.ok || !js.success) throw new Error(js.message || 'Gagal mencari pelanggan')
+
+        const { pelanggan } = mapResponseData(js)
+        set({ items: pelanggan, loading: false })
+      } catch (e: any) {
+        set({ loading: false, error: e?.message || 'Terjadi kesalahan', items: [] })
+      }
+    },
+
     loadFirst: async () => {
       set({ loading: true, error: undefined, page: 1 })
       try {

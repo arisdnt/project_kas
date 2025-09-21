@@ -1,4 +1,5 @@
-import { Dialog, DialogContent } from '@/core/components/ui/dialog'
+import { Dialog, DialogContentNative } from '@/core/components/ui/dialog'
+import { useEffect } from 'react'
 import { Button } from '@/core/components/ui/button'
 import { config } from '@/core/config'
 import { Printer } from 'lucide-react'
@@ -68,6 +69,18 @@ const formatDateTime = (iso: string) => {
 }
 
 export function PaymentInvoiceModal({ open, onOpenChange, data }: PaymentInvoiceModalProps) {
+  // Close on Escape to be consistent with other modals
+  useEffect(() => {
+    if (!open) return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.preventDefault()
+        onOpenChange(false)
+      }
+    }
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  }, [open, onOpenChange])
   const handleClose = (openValue: boolean) => {
     onOpenChange(openValue)
   }
@@ -84,9 +97,9 @@ export function PaymentInvoiceModal({ open, onOpenChange, data }: PaymentInvoice
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent
+      <DialogContentNative
         aria-label="Invoice pembayaran"
-        className="w-full sm:w-[70vw] sm:min-w-[70vw] max-w-5xl border-0 bg-transparent p-0 shadow-none outline-none sm:rounded-3xl print:static print:w-full print:min-w-full print:max-w-none print:rounded-none print:border-0 print:p-0"
+        className="w-[95vw] max-w-5xl min-w-[800px] min-h-[700px] h-auto border-0 bg-transparent p-0 shadow-none outline-none rounded-none print:static print:w-full print:min-w-full print:max-w-none print:rounded-none print:border-0 print:p-0"
       >
         <div className="flex h-full flex-col bg-white text-slate-900 print:min-h-screen">
           <header className="border-b border-slate-200 px-8 py-6 print:px-12">
@@ -251,7 +264,7 @@ export function PaymentInvoiceModal({ open, onOpenChange, data }: PaymentInvoice
             </div>
           </footer>
         </div>
-      </DialogContent>
+      </DialogContentNative>
     </Dialog>
   )
 }

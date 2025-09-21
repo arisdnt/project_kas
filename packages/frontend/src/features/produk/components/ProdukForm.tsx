@@ -50,43 +50,93 @@ export function ProdukForm({
   categories = []
 }: Props) {
   const { user } = useAuthStore()
-  const [form, setForm] = React.useState<ProdukFormData>({
-    nama: value?.nama || '',
-    kode: value?.kode || '',
-    kategori: value?.kategori || '',
-    kategoriId: value?.kategoriId || '',
-    brand: value?.brand || '',
-    brandId: value?.brandId || '',
-    hargaBeli: value?.hargaBeli || 0,
-    hargaJual: value?.hargaJual || 0,
-    stok: value?.stok || 0,
-    satuan: value?.satuan || 'pcs',
-    deskripsi: value?.deskripsi || '',
-    status: value?.status || 'aktif',
-    gambar_url: value?.gambar_url || ''
-  })
+
+  // Form persistence key
+  const FORM_STORAGE_KEY = 'produk_form_data'
+
+  // Load persisted form data or use value
+  const getInitialFormData = (): ProdukFormData => {
+    // For editing existing product, always use the provided value
+    if (editingProduk && value) {
+      return {
+        nama: value?.nama || '',
+        kode: value?.kode || '',
+        kategori: value?.kategori || '',
+        kategoriId: value?.kategoriId || '',
+        brand: value?.brand || '',
+        brandId: value?.brandId || '',
+        hargaBeli: value?.hargaBeli || 0,
+        hargaJual: value?.hargaJual || 0,
+        stok: value?.stok || 0,
+        satuan: value?.satuan || 'pcs',
+        deskripsi: value?.deskripsi || '',
+        status: value?.status || 'aktif',
+        gambar_url: value?.gambar_url || ''
+      }
+    }
+
+    // For new form, try to load from localStorage first
+    if (!editingProduk) {
+      const stored = localStorage.getItem(FORM_STORAGE_KEY)
+      if (stored) {
+        try {
+          return JSON.parse(stored)
+        } catch {
+          // Fall through to default values
+        }
+      }
+    }
+
+    // Default empty form
+    return {
+      nama: '',
+      kode: '',
+      kategori: '',
+      kategoriId: '',
+      brand: '',
+      brandId: '',
+      hargaBeli: 0,
+      hargaJual: 0,
+      stok: 0,
+      satuan: 'pcs',
+      deskripsi: '',
+      status: 'aktif',
+      gambar_url: ''
+    }
+  }
+
+  const [form, setForm] = React.useState<ProdukFormData>(getInitialFormData())
   const [imageFile, setImageFile] = React.useState<File | null>(null)
   const [imagePreview, setImagePreview] = React.useState<string | null>(null)
   const [uploading, setUploading] = React.useState(false)
   const [removing, setRemoving] = React.useState(false)
 
+  // Persist form data to localStorage when form changes (only for new forms)
   React.useEffect(() => {
-    setForm({
-      nama: value?.nama || '',
-      kode: value?.kode || '',
-      kategori: value?.kategori || '',
-      kategoriId: value?.kategoriId || '',
-      brand: value?.brand || '',
-      brandId: value?.brandId || '',
-      hargaBeli: value?.hargaBeli || 0,
-      hargaJual: value?.hargaJual || 0,
-      stok: value?.stok || 0,
-      satuan: value?.satuan || 'pcs',
-      deskripsi: value?.deskripsi || '',
-      status: value?.status || 'aktif',
-      gambar_url: value?.gambar_url || ''
-    })
-  }, [value])
+    if (!editingProduk && !value) {
+      localStorage.setItem(FORM_STORAGE_KEY, JSON.stringify(form))
+    }
+  }, [form, editingProduk, value])
+
+  React.useEffect(() => {
+    if (value || editingProduk) {
+      setForm({
+        nama: value?.nama || '',
+        kode: value?.kode || '',
+        kategori: value?.kategori || '',
+        kategoriId: value?.kategoriId || '',
+        brand: value?.brand || '',
+        brandId: value?.brandId || '',
+        hargaBeli: value?.hargaBeli || 0,
+        hargaJual: value?.hargaJual || 0,
+        stok: value?.stok || 0,
+        satuan: value?.satuan || 'pcs',
+        deskripsi: value?.deskripsi || '',
+        status: value?.status || 'aktif',
+        gambar_url: value?.gambar_url || ''
+      })
+    }
+  }, [value, editingProduk])
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -128,6 +178,28 @@ export function ProdukForm({
     }
   }
 
+  const clearForm = () => {
+    const emptyForm = {
+      nama: '',
+      kode: '',
+      kategori: '',
+      kategoriId: '',
+      brand: '',
+      brandId: '',
+      hargaBeli: 0,
+      hargaJual: 0,
+      stok: 0,
+      satuan: 'pcs',
+      deskripsi: '',
+      status: 'aktif',
+      gambar_url: ''
+    }
+    setForm(emptyForm)
+    setImageFile(null)
+    setImagePreview(null)
+    localStorage.removeItem(FORM_STORAGE_KEY)
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!onSave) return
@@ -135,23 +207,7 @@ export function ProdukForm({
     try {
       await onSave(form, imageFile || undefined)
       if (!editingProduk) {
-        setForm({
-          nama: '',
-          kode: '',
-          kategori: '',
-          kategoriId: '',
-          brand: '',
-          brandId: '',
-          hargaBeli: 0,
-          hargaJual: 0,
-          stok: 0,
-          satuan: 'pcs',
-          deskripsi: '',
-          status: 'aktif',
-          gambar_url: ''
-        })
-        setImageFile(null)
-        setImagePreview(null)
+        clearForm()
       }
     } catch (error) {
       console.error('Save failed:', error)
@@ -478,31 +534,43 @@ export function ProdukForm({
               <ProdukAccessPlaceholder className="mt-2" />
             )}
 
-            <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={onCancel}
-                className="px-5 py-2 h-10 border-gray-300 hover:bg-gray-50"
-              >
-                Batal
-              </Button>
-              <Button
-                type="submit"
-                disabled={isLoading || !form.nama.trim() || (!editingProduk && user?.level !== 3 && user?.level !== 4)}
-                className="px-5 py-2 h-10 bg-blue-600 hover:bg-blue-700"
-              >
-                {isLoading ? (
-                  <div className="flex items-center gap-2">
-                    <div className="w-4 h-4 border-t-2 border-r-2 border-white rounded-full animate-spin"></div>
-                    Menyimpan...
-                  </div>
-                ) : editingProduk ? (
-                  'Perbarui Produk'
-                ) : (
-                  'Simpan Produk'
-                )}
-              </Button>
+            <div className="flex justify-between items-center pt-4 border-t border-gray-200">
+              {!editingProduk && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={clearForm}
+                  className="px-4 py-2 h-10 border-gray-300 hover:bg-gray-50 text-gray-600"
+                >
+                  Bersihkan Form
+                </Button>
+              )}
+              <div className={`flex gap-3 ${editingProduk ? 'w-full justify-end' : ''}`}>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={onCancel}
+                  className="px-5 py-2 h-10 border-gray-300 hover:bg-gray-50"
+                >
+                  Batal
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={isLoading || !form.nama.trim() || (!editingProduk && user?.level !== 3 && user?.level !== 4)}
+                  className="px-5 py-2 h-10 bg-blue-600 hover:bg-blue-700"
+                >
+                  {isLoading ? (
+                    <div className="flex items-center gap-2">
+                      <div className="w-4 h-4 border-t-2 border-r-2 border-white rounded-full animate-spin"></div>
+                      Menyimpan...
+                    </div>
+                  ) : editingProduk ? (
+                    'Perbarui Produk'
+                  ) : (
+                    'Simpan Produk'
+                  )}
+                </Button>
+              </div>
             </div>
           </form>
         </CardContent>

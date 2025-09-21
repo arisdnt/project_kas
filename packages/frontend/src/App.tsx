@@ -5,14 +5,20 @@ import { DashboardLayout } from './core/layouts/DashboardLayout';
 import { useAuthStore } from './core/store/authStore';
 import { Toaster } from './core/components/ui/toaster';
 import { ErrorBoundary } from './core/components/ErrorBoundary';
+import { useGlobalEscape } from './core/hooks/useGlobalEscape';
+// Import to setup custom notifications and replace native dialogs
+import './core/utils/notifications';
 
 function App() {
   const { isAuthenticated } = useAuthStore();
 
+  // Global ESC key handler to close modals/drawers across the app
+  useGlobalEscape();
+
   return (
     <ErrorBoundary>
       <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-        <div className="min-h-screen bg-gray-50">
+        <div className="app-container h-screen overflow-hidden bg-gray-50">
           <Routes>
             <Route 
               path="/login" 

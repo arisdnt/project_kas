@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { Button } from '@/core/components/ui/button'
 import { Input } from '@/core/components/ui/input'
 import { Badge } from '@/core/components/ui/badge'
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/core/components/ui/dialog'
+import { Dialog, DialogContentNative, DialogDescription, DialogHeader, DialogTitle } from '@/core/components/ui/dialog'
 import { Search, User, Phone, Mail, MapPin, X } from 'lucide-react'
 import { usePelangganStore } from '@/features/pelanggan/store/pelangganStore'
 import { useKasirStore } from '@/features/kasir/store/kasirStore'
@@ -65,6 +65,11 @@ export function CustomerSearchModal({ open, onOpenChange }: CustomerSearchModalP
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (!open) return
+
+      // Allow F-keys to propagate to global handler
+      if (e.key.startsWith('F')) {
+        return
+      }
 
       switch (e.key) {
         case 'ArrowDown':
@@ -138,7 +143,7 @@ export function CustomerSearchModal({ open, onOpenChange }: CustomerSearchModalP
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-2xl max-h-[80vh] flex flex-col">
+      <DialogContentNative className="w-[90vw] max-w-4xl min-w-[600px] min-h-[500px] h-auto flex flex-col rounded-none">
         <DialogHeader className="flex-shrink-0">
           <DialogTitle className="flex items-center gap-2">
             <Search className="h-5 w-5" />
@@ -185,7 +190,7 @@ export function CustomerSearchModal({ open, onOpenChange }: CustomerSearchModalP
           </div>
 
           {/* Search Results */}
-          <div className="flex-1 overflow-y-auto min-h-0">
+          <div className="flex-1 min-h-[300px]">
             {isLoading ? (
               <div className="flex items-center justify-center py-8">
                 <div className="animate-spin h-6 w-6 border-2 border-blue-500 border-t-transparent rounded-full"></div>
@@ -200,7 +205,7 @@ export function CustomerSearchModal({ open, onOpenChange }: CustomerSearchModalP
                 </div>
               </div>
             ) : searchQuery ? (
-              <div className="space-y-2">
+              <div className="space-y-2 h-full">
                 {searchResults.map((customer, index) => (
                   <div
                     key={customer.id}
@@ -290,7 +295,7 @@ export function CustomerSearchModal({ open, onOpenChange }: CustomerSearchModalP
             )}
           </div>
         </div>
-      </DialogContent>
+      </DialogContentNative>
     </Dialog>
   )
 }

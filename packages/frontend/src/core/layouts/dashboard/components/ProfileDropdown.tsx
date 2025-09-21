@@ -1,6 +1,6 @@
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import { Link } from 'react-router-dom';
-import { LogOut, Users } from 'lucide-react';
+import { LogOut, Users, User } from 'lucide-react';
 
 type UserLike = {
   fullName?: string;
@@ -17,21 +17,8 @@ type Props = {
 export function ProfileDropdown({ user, onLogout }: Props) {
   return (
     <DropdownMenu.Root>
-      <DropdownMenu.Trigger className="hidden sm:flex items-center space-x-1 sm:space-x-2 p-1.5 sm:p-2 rounded-lg hover:bg-gray-50 transition-colors">
-        <div className="flex items-center space-x-2 sm:space-x-3">
-          <div className="h-7 w-7 sm:h-8 sm:w-8 bg-gradient-to-r from-blue-500 to-blue-600 rounded-full flex items-center justify-center shadow-sm">
-            <span className="text-xs sm:text-sm font-semibold text-white">
-              {(user?.fullName || user?.username || 'U').charAt(0).toUpperCase()}
-            </span>
-          </div>
-          <div className="text-sm text-left hidden md:block">
-            <p className="font-medium text-gray-900 truncate max-w-[100px] sm:max-w-[120px]">{user?.fullName || user?.username}</p>
-            <p className="text-xs text-gray-500 truncate max-w-[100px] sm:max-w-[120px]">{user?.role || 'User'}</p>
-          </div>
-          <svg className="h-3 w-3 sm:h-4 sm:w-4 text-gray-400" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-            <path fillRule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.24 4.5a.75.75 0 01-1.08 0l-4.24-4.5a.75.75 0 01.02-1.06z" clipRule="evenodd" />
-          </svg>
-        </div>
+      <DropdownMenu.Trigger className="hidden sm:flex p-2 text-blue-500 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors" title={`${user?.fullName || user?.username || 'User'} - ${user?.role || 'User'}`}>
+        <User className="h-5 w-5" />
       </DropdownMenu.Trigger>
       <DropdownMenu.Portal>
         <DropdownMenu.Content align="end" className="min-w-[224px] bg-white rounded-md p-1 shadow-lg border border-gray-200 z-50">

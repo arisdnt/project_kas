@@ -2,30 +2,28 @@ import { useState, useRef } from 'react'
 import { Input } from '@/core/components/ui/input'
 import { Button } from '@/core/components/ui/button'
 import { Badge } from '@/core/components/ui/badge'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/core/components/ui/select'
-import { Scan, Search, RotateCcw, Trash2, Wifi, WifiOff } from 'lucide-react'
+import { Scan, RotateCcw, Wifi, WifiOff, HelpCircle } from 'lucide-react'
 import { useKasirStore } from '@/features/kasir/store/kasirStore'
 import { ProductSearchDropdown } from './ProductSearchDropdown'
+import { CustomerSelector } from '../CustomerSelector'
 
 interface ToolbarProps {
   onBarcodeSubmit: (barcode: string) => void
-  onAddCustomer: () => void
   onHold: () => void
-  onClear: () => void
+  onShowHelp: () => void
   isOnline: boolean
 }
 
 export function Toolbar({
   onBarcodeSubmit,
-  onAddCustomer,
   onHold,
-  onClear,
+  onShowHelp,
   isOnline
 }: ToolbarProps) {
   const [barcode, setBarcode] = useState('')
   const [showSearchDropdown, setShowSearchDropdown] = useState(false)
   const searchInputRef = useRef<HTMLInputElement>(null)
-  const { pelanggan, setPelanggan, addProduct } = useKasirStore()
+  const { addProduct } = useKasirStore()
 
   const handleBarcodeSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -75,7 +73,7 @@ export function Toolbar({
             onChange={(e) => handleInputChange(e.target.value)}
             onFocus={handleInputFocus}
             onBlur={handleInputBlur}
-            placeholder="Scan barcode atau ketik nama produk..."
+            placeholder="Scan barcode atau ketik nama produk... [F1]"
             className="pl-10 h-10 text-sm border-gray-300 focus:border-blue-500 focus:ring-blue-500"
             autoFocus
             autoComplete="off"
@@ -89,41 +87,10 @@ export function Toolbar({
         </div>
       </form>
 
-      {/* Customer Selector */}
-      <div className="min-w-[180px]">
-        <Select
-          value={pelanggan?.id || 'umum'}
-          onValueChange={async (value) => {
-            if (value === 'umum') {
-              await setPelanggan(null)
-            } else {
-              // Handle customer selection - this would need customer list integration
-              console.log('Select customer:', value)
-            }
-          }}
-        >
-          <SelectTrigger className="h-10 text-sm">
-            <SelectValue>
-              {pelanggan?.nama || "Pelanggan Umum"}
-            </SelectValue>
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="umum">Pelanggan Umum</SelectItem>
-            {/* TODO: Add recent customers or search functionality */}
-          </SelectContent>
-        </Select>
+      {/* Customer Selector with Autocomplete */}
+      <div className="min-w-[280px] w-[320px]">
+        <CustomerSelector />
       </div>
-
-      {/* Search Customer Button */}
-      <Button
-        variant="outline"
-        size="sm"
-        onClick={onAddCustomer}
-        className="h-10 px-3 border-blue-300 text-blue-700 hover:bg-blue-50"
-        title="Cari & Pilih Pelanggan"
-      >
-        <Search className="h-4 w-4" />
-      </Button>
 
       {/* Action Buttons */}
       <div className="flex items-center gap-2">
@@ -132,19 +99,22 @@ export function Toolbar({
           size="sm"
           onClick={onHold}
           className="h-10 px-3 border-yellow-300 text-yellow-700 hover:bg-yellow-50"
+          data-hold-button
         >
           <RotateCcw className="h-4 w-4 mr-1" />
-          Hold
+          [F4] Hold
         </Button>
 
         <Button
           variant="outline"
           size="sm"
-          onClick={onClear}
-          className="h-10 px-3 border-red-300 text-red-700 hover:bg-red-50"
+          onClick={onShowHelp}
+          className="h-10 px-3 border-blue-300 text-blue-700 hover:bg-blue-50"
+          data-help-button
+          title="Bantuan Shortcut Keyboard [F10]"
         >
-          <Trash2 className="h-4 w-4 mr-1" />
-          Bersihkan
+          <HelpCircle className="h-4 w-4 mr-1" />
+          [F10]
         </Button>
 
         {/* Connection Status */}

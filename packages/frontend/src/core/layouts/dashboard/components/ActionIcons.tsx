@@ -1,16 +1,14 @@
-import { Calculator, Maximize, RefreshCw } from 'lucide-react';
+import { Calculator, RefreshCw } from 'lucide-react';
 import { useState } from 'react';
 import { PerpesananQuickAction } from '@/features/perpesanan/components/PerpesananQuickAction';
 import { CatatanQuickAction } from '@/features/catatan/components/CatatanQuickAction';
 
 type Props = {
-  isFullscreen: boolean;
-  onToggleFullscreen: () => void;
   onOpenCalculator: () => void;
   onRefresh: () => void;
 };
 
-export function ActionIcons({ isFullscreen, onToggleFullscreen, onOpenCalculator, onRefresh }: Props) {
+export function ActionIcons({ onOpenCalculator, onRefresh }: Props) {
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   const handleRefresh = async () => {
@@ -33,13 +31,6 @@ export function ActionIcons({ isFullscreen, onToggleFullscreen, onOpenCalculator
         <RefreshCw className={`h-5 w-5 transition-transform ${isRefreshing ? 'animate-spin' : ''}`} />
       </button>
 
-      <button
-        onClick={onToggleFullscreen}
-        className="hidden md:flex p-2 text-blue-500 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors"
-        title={isFullscreen ? 'Keluar dari Layar Penuh' : 'Layar Penuh'}
-      >
-        <Maximize className="h-5 w-5" />
-      </button>
 
       <button
         onClick={onOpenCalculator}

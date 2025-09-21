@@ -2,13 +2,8 @@ import { create } from 'zustand'
 import { devtools, persist } from 'zustand/middleware'
 import { useProdukStore, UIProduk } from '@/features/produk/store/produkStore'
 import { config } from '@/core/config'
-import { kasirService, KasirSession, ProdukKasir } from '@/features/kasir/services/kasirService'
-import {
-  KasirState,
-  KasirActions,
-  CartItemLocal,
-  DraftCart
-} from './kasirTypes'
+import { kasirService, ProdukKasir } from '@/features/kasir/services/kasirService'
+import { KasirState, KasirActions, CartItemLocal } from './kasirTypes'
 import {
   generateSessionId,
   generateInvoiceNumber,
@@ -125,19 +120,19 @@ export const useKasirStore = create<KasirState & KasirActions>()(
 
     inc: async (id: number) => {
       try {
-        const item = get().items.find(x => x.id === id)
+        const item = get().items.find(x => x.id.toString() === id.toString())
         if (item) {
           const produkId = (item as any)._rawId || item.id
           await kasirService.updateCartItem(String(produkId), item.qty + 1)
           await get().refreshSession()
         }
       } catch (error) {
-        set({ items: get().items.map((x) => (x.id === id ? { ...x, qty: x.qty + 1 } : x)) })
+        set({ items: get().items.map((x) => (x.id.toString() === id.toString() ? { ...x, qty: x.qty + 1 } : x)) })
       }
     },
     dec: async (id: number) => {
       try {
-        const item = get().items.find(x => x.id === id)
+        const item = get().items.find(x => x.id.toString() === id.toString())
         if (item) {
           const produkId = (item as any)._rawId || item.id
           if (item.qty <= 1) {
@@ -150,7 +145,7 @@ export const useKasirStore = create<KasirState & KasirActions>()(
       } catch (error) {
         set({
           items: get().items
-            .map((x) => (x.id === id ? { ...x, qty: Math.max(1, x.qty - 1) } : x))
+            .map((x) => (x.id.toString() === id.toString() ? { ...x, qty: Math.max(1, x.qty - 1) } : x))
             .filter((x) => x.qty > 0),
         })
       }
@@ -158,24 +153,24 @@ export const useKasirStore = create<KasirState & KasirActions>()(
     setQty: async (id: number, qty: number) => {
       try {
         const validQty = Math.max(1, Math.floor(qty) || 1)
-        const item = get().items.find(x => x.id === id)
+        const item = get().items.find(x => x.id.toString() === id.toString())
         if (item) {
           const produkId = (item as any)._rawId || item.id
           await kasirService.updateCartItem(String(produkId), validQty)
           await get().refreshSession()
         }
       } catch (error) {
-        set({ items: get().items.map((x) => (x.id === id ? { ...x, qty: Math.max(1, Math.floor(qty) || 1) } : x)) })
+        set({ items: get().items.map((x) => (x.id.toString() === id.toString() ? { ...x, qty: Math.max(1, Math.floor(qty) || 1) } : x)) })
       }
     },
     remove: async (id: number) => {
       try {
-        const item = get().items.find(x => x.id === id)
+        const item = get().items.find(x => x.id.toString() === id.toString())
         const produkId = item ? (item as any)._rawId || item.id : id
         await kasirService.removeFromCart(String(produkId))
         await get().refreshSession()
       } catch (error) {
-        set({ items: get().items.filter((x) => x.id !== id) })
+        set({ items: get().items.filter((x) => x.id.toString() !== id.toString()) })
       }
     },
     setBayar: (v: number) => set({ bayar: isFinite(v) ? Math.max(0, v) : 0 }),
@@ -296,7 +291,7 @@ export const useKasirStore = create<KasirState & KasirActions>()(
       if (!session) return
 
       // Convert API cart items to local format
-      const localItems: CartItemLocal[] = session.cart_items.map(item => ({
+  const mapSessionItems = () => (session.cart_items || []).map((item: any) => ({
         // Preserve original produk_id string in a hidden field for payment payload if parseInt fails
         // Some produk_id are UUID so parseInt would yield NaN -> keep numeric fallback for legacy code
         id: isNaN(parseInt(item.produk_id)) ? (item.produk_id as any) : parseInt(item.produk_id),
@@ -305,14 +300,21 @@ export const useKasirStore = create<KasirState & KasirActions>()(
         qty: item.quantity,
         // @ts-ignore add original id reference
         _rawId: item.produk_id
-      }))
+      })) as CartItemLocal[]
+
+      const currentItems = get().items
+      const sessionMapped = mapSessionItems()
+      // Guard: if server returns empty cart (e.g., on customer select), keep local items
+      const nextItems = sessionMapped.length > 0 ? sessionMapped : currentItems
+
+      // Prefer session pelanggan if available; otherwise keep existing selection
+      const nextPelanggan = session.pelanggan
+        ? { id: session.pelanggan.id, nama: session.pelanggan.nama }
+        : get().pelanggan || null
 
       set({
-        items: localItems,
-        pelanggan: session.pelanggan ? {
-          id: session.pelanggan.id,
-          nama: session.pelanggan.nama
-        } : null
+        items: nextItems,
+        pelanggan: nextPelanggan
       })
     },
     setNeedsStore: (v: boolean) => set({ needsStore: v }),

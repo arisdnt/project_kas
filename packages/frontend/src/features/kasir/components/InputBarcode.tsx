@@ -32,7 +32,11 @@ export function InputBarcode({ onScan }: InputBarcodeProps) {
         placeholder="Pindai barcode di sini..."
         className="pl-9"
         onKeyDown={onKeyDown}
-        onBlur={() => ref.current?.focus()}
+        onBlur={() => {
+          // Avoid stealing focus when any dialog is open
+          const hasDialog = document.querySelector('[role="dialog"]') !== null
+          if (!hasDialog) ref.current?.focus()
+        }}
       />
     </div>
   )

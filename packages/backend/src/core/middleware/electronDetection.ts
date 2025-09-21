@@ -131,8 +131,8 @@ export const electronLoggingMiddleware = (
     const startTime = Date.now();
     
     // Override res.end untuk capture response time
-    const originalEnd = res.end;
-    res.end = function(chunk?: any, encoding?: any) {
+    const originalEnd = res.end.bind(res);
+    res.end = function(chunk?: any, encoding?: any, cb?: () => void) {
       const responseTime = Date.now() - startTime;
       
       logger.info({
@@ -145,7 +145,7 @@ export const electronLoggingMiddleware = (
         userAgent: req.get('User-Agent')
       }, 'Electron Request Completed');
       
-      originalEnd.call(this, chunk, encoding);
+      return originalEnd(chunk, encoding, cb);
     };
   }
   

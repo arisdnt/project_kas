@@ -1,8 +1,11 @@
 import { useState, useEffect } from 'react'
 import { Button } from '@/core/components/ui/button'
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/core/components/ui/dialog'
-import { FileText, Trash2, ShoppingCart, User, Calendar, Loader2 } from 'lucide-react'
+import { Dialog, DialogContentNative, DialogDescription, DialogHeader, DialogTitle } from '@/core/components/ui/dialog'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/core/components/ui/table'
+import { Badge } from '@/core/components/ui/badge'
+import { FileText, Trash2, ShoppingCart, User, Calendar, Loader2, Eye, Package } from 'lucide-react'
 import { useKasirStore, DraftCart } from '@/features/kasir/store/kasirStore'
+import { systemDialog } from '@/core/hooks/useSystemDialog'
 
 interface DraftModalProps {
   open: boolean
@@ -34,6 +37,21 @@ export function DraftModal({ open, onOpenChange }: DraftModalProps) {
     })
   }
 
+  const formatRelativeTime = (dateString: string) => {
+    const date = new Date(dateString)
+    const now = new Date()
+    const diffInMinutes = Math.floor((now.getTime() - date.getTime()) / (1000 * 60))
+
+    if (diffInMinutes < 1) return 'Baru saja'
+    if (diffInMinutes < 60) return `${diffInMinutes}m lalu`
+
+    const diffInHours = Math.floor(diffInMinutes / 60)
+    if (diffInHours < 24) return `${diffInHours}j lalu`
+
+    const diffInDays = Math.floor(diffInHours / 24)
+    return `${diffInDays}h lalu`
+  }
+
   const loadDrafts = async () => {
     setIsLoading(true)
     try {
@@ -52,6 +70,51 @@ export function DraftModal({ open, onOpenChange }: DraftModalProps) {
     }
   }, [open])
 
+  // Modal-specific keyboard shortcuts (F-keys + Escape to close)
+  useEffect(() => {
+    if (!open) return
+
+    const handleModalKeyDown = (e: KeyboardEvent) => {
+      // Escape closes modal
+      if (e.key === 'Escape') {
+        e.preventDefault()
+        onOpenChange(false)
+        return
+      }
+
+      // Only handle F-keys for the rest
+      if (!e.key.startsWith('F')) return
+
+      e.preventDefault()
+
+      switch (e.key) {
+        case 'F1':
+        case 'F2':
+        case 'F3':
+        case 'F4':
+        case 'F5':
+        case 'F6':
+          // Load draft by F-key (F1=draft[0], F2=draft[1], etc.)
+          const draftIndex = parseInt(e.key.replace('F', '')) - 1
+          if (drafts.length > draftIndex && !loadingDraftId) {
+            handleLoadDraft(drafts[draftIndex].id)
+          }
+          break
+        case 'F8':
+          // Refresh drafts list
+          loadDrafts()
+          break
+        case 'F12':
+          // Close modal
+          onOpenChange(false)
+          break
+      }
+    }
+
+    document.addEventListener('keydown', handleModalKeyDown)
+    return () => document.removeEventListener('keydown', handleModalKeyDown)
+  }, [open, drafts, loadingDraftId, onOpenChange])
+
   const handleLoadDraft = async (draftId: string) => {
     setLoadingDraftId(draftId)
     try {
@@ -66,12 +129,23 @@ export function DraftModal({ open, onOpenChange }: DraftModalProps) {
   }
 
   const handleDeleteDraft = async (draftId: string) => {
-    if (confirm('Hapus draft ini?')) {
+    const draft = drafts.find(d => d.id === draftId)
+    const draftName = draft?.name || 'Draft'
+
+    const confirmed = await systemDialog.showConfirm(
+      'Konfirmasi Hapus Draft',
+      `Anda yakin ingin menghapus "${draftName}"? Tindakan ini tidak dapat dibatalkan.`
+    )
+
+    if (confirmed) {
       try {
         await deleteDraft(draftId)
         await loadDrafts() // Reload list
       } catch (error: any) {
-        alert(error.message || 'Gagal menghapus draft')
+        await systemDialog.showError(
+          'Gagal Menghapus Draft',
+          error.message || 'Terjadi kesalahan saat menghapus draft. Silakan coba lagi.'
+        )
         console.error('Error deleting draft:', error)
       }
     }
@@ -79,127 +153,188 @@ export function DraftModal({ open, onOpenChange }: DraftModalProps) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-2xl max-h-[80vh] flex flex-col">
-        <DialogHeader className="flex-shrink-0">
-          <DialogTitle className="flex items-center gap-2">
-            <FileText className="h-5 w-5" />
-            Draft Keranjang Belanja
+      <DialogContentNative className="w-[95vw] max-w-6xl min-w-[1000px] min-h-[600px] h-auto flex flex-col">
+        <DialogHeader className="flex-shrink-0 pb-4">
+          <DialogTitle className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-blue-100 rounded-lg">
+                <FileText className="h-5 w-5 text-blue-600" />
+              </div>
+              <div>
+                <h2 className="text-xl font-semibold">Draft Keranjang Belanja</h2>
+                <p className="text-sm text-gray-500 mt-1">
+                  Kelola hingga 6 draft tersimpan. Draft terlama akan otomatis terhapus.
+                </p>
+              </div>
+            </div>
+            <Badge variant="secondary" className="text-xs">
+              {drafts.length}/6 Draft
+            </Badge>
           </DialogTitle>
-          <DialogDescription>
-            Kelola draft keranjang belanja yang tersimpan. Pilih draft untuk memulihkan transaksi.
+          <DialogDescription className="text-xs text-gray-400 border-t pt-2">
+            [F1-F6] Muat draft • [F8] Refresh • [Del] Hapus • [F12/Esc] Tutup
           </DialogDescription>
         </DialogHeader>
 
-        <div className="flex-1 min-h-0">
+        <div className="flex-1 min-h-[400px] overflow-hidden">
           {isLoading ? (
-            <div className="flex items-center justify-center py-12">
-              <div className="flex items-center gap-2 text-gray-600">
-                <Loader2 className="h-5 w-5 animate-spin" />
-                <span>Memuat draft...</span>
+            <div className="flex items-center justify-center h-full">
+              <div className="flex items-center gap-3 text-gray-600">
+                <Loader2 className="h-6 w-6 animate-spin" />
+                <span className="text-lg">Memuat draft...</span>
               </div>
             </div>
           ) : drafts.length === 0 ? (
-            <div className="text-center py-12 text-gray-500">
-              <FileText className="h-12 w-12 mx-auto mb-4 text-gray-400" />
-              <div className="text-lg font-medium mb-2">Belum Ada Draft</div>
-              <div className="text-sm text-gray-400">
-                Draft akan muncul setelah Anda menyimpan keranjang belanja
+            <div className="text-center py-20 text-gray-500">
+              <div className="p-4 bg-gray-50 rounded-full w-20 h-20 mx-auto mb-6 flex items-center justify-center">
+                <FileText className="h-10 w-10 text-gray-400" />
+              </div>
+              <div className="text-xl font-medium mb-3">Belum Ada Draft Tersimpan</div>
+              <div className="text-sm text-gray-400 max-w-md mx-auto">
+                Draft akan muncul di sini setelah Anda menyimpan keranjang belanja dengan menekan F6 atau tombol "Simpan Dulu"
               </div>
             </div>
           ) : (
-            <div className="space-y-3 overflow-y-auto">
-              {drafts.map((draft) => (
-                <div
-                  key={draft.id}
-                  className="border border-gray-200 rounded-lg p-4 hover:shadow-sm transition-shadow bg-white"
-                >
-                  <div className="flex items-start justify-between mb-3">
-                    <div className="flex-1 min-w-0">
-                      <h3 className="font-medium text-gray-900 truncate">
-                        {draft.name}
-                      </h3>
-                      <div className="flex items-center gap-4 mt-1 text-xs text-gray-500">
-                        <div className="flex items-center gap-1">
-                          <Calendar className="h-3 w-3" />
-                          <span>{formatDate(draft.createdAt)}</span>
-                        </div>
-                        {draft.pelanggan && (
-                          <div className="flex items-center gap-1">
-                            <User className="h-3 w-3" />
-                            <span className="truncate">{draft.pelanggan.nama}</span>
-                          </div>
-                        )}
+            <div className="h-full overflow-auto">
+              <Table>
+                <TableHeader className="sticky top-0 bg-white z-10">
+                  <TableRow className="border-b-2">
+                    <TableHead className="w-12 text-center">#</TableHead>
+                    <TableHead className="min-w-[200px]">Nama Draft</TableHead>
+                    <TableHead className="w-[120px] text-center">
+                      <div className="flex items-center justify-center gap-1">
+                        <Package className="h-4 w-4" />
+                        Items
                       </div>
-                    </div>
-
-                    <div className="flex items-center gap-2 flex-shrink-0 ml-3">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleDeleteDraft(draft.id)}
-                        className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-3 gap-4 mb-3 text-sm">
-                    <div>
-                      <div className="text-gray-600">Items</div>
-                      <div className="font-medium flex items-center gap-1">
-                        <ShoppingCart className="h-3 w-3" />
-                        {draft.totalItems} item
+                    </TableHead>
+                    <TableHead className="w-[150px]">
+                      <div className="flex items-center gap-1">
+                        <User className="h-4 w-4" />
+                        Pelanggan
                       </div>
-                    </div>
-                    <div>
-                      <div className="text-gray-600">Metode</div>
-                      <div className="font-medium">{draft.metode}</div>
-                    </div>
-                    <div>
-                      <div className="text-gray-600">Total</div>
-                      <div className="font-medium text-blue-600">
-                        {formatCurrency(draft.totalAmount)}
+                    </TableHead>
+                    <TableHead className="w-[100px]">Metode</TableHead>
+                    <TableHead className="w-[140px] text-right">Total Belanja</TableHead>
+                    <TableHead className="w-[140px]">
+                      <div className="flex items-center gap-1">
+                        <Calendar className="h-4 w-4" />
+                        Waktu Simpan
                       </div>
-                    </div>
-                  </div>
-
-                  <div className="border-t pt-3">
-                    <Button
-                      onClick={() => handleLoadDraft(draft.id)}
-                      disabled={loadingDraftId === draft.id}
-                      className="w-full bg-blue-600 hover:bg-blue-700 text-white"
-                      size="sm"
+                    </TableHead>
+                    <TableHead className="w-[140px] text-center">Aksi</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {drafts.map((draft, index) => (
+                    <TableRow
+                      key={draft.id}
+                      className="hover:bg-gray-50 transition-colors"
+                      tabIndex={0}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault()
+                          handleLoadDraft(draft.id)
+                        } else if (e.key === 'Delete') {
+                          e.preventDefault()
+                          handleDeleteDraft(draft.id)
+                        }
+                      }}
                     >
-                      {loadingDraftId === draft.id ? (
-                        <>
-                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                          Memuat...
-                        </>
-                      ) : (
-                        <>
-                          <ShoppingCart className="h-4 w-4 mr-2" />
-                          Muat ke Keranjang
-                        </>
-                      )}
-                    </Button>
-                  </div>
-                </div>
-              ))}
+                      <TableCell className="text-center font-mono text-sm text-gray-500">
+                        {index < 6 ? `F${index + 1}` : '-'}
+                      </TableCell>
+                      <TableCell className="font-medium">
+                        <div className="flex items-center gap-2">
+                          <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                          <span className="truncate">{draft.name}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <Badge variant="outline" className="text-xs">
+                          {draft.totalItems} item
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        {draft.pelanggan ? (
+                          <div className="flex items-center gap-2">
+                            <div className="w-6 h-6 bg-green-100 rounded-full flex items-center justify-center">
+                              <User className="h-3 w-3 text-green-600" />
+                            </div>
+                            <span className="text-sm truncate">{draft.pelanggan.nama}</span>
+                          </div>
+                        ) : (
+                          <span className="text-gray-400 text-sm">Umum</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <Badge
+                          variant={draft.metode === 'TUNAI' ? 'default' : 'secondary'}
+                          className="text-xs"
+                        >
+                          {draft.metode}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right font-medium text-green-600">
+                        {formatCurrency(draft.totalAmount)}
+                      </TableCell>
+                      <TableCell>
+                        <div className="text-sm">
+                          <div className="font-medium text-gray-700">
+                            {formatRelativeTime(draft.createdAt)}
+                          </div>
+                          <div className="text-xs text-gray-400">
+                            {formatDate(draft.createdAt)}
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center justify-center gap-1">
+                          <Button
+                            size="sm"
+                            onClick={() => handleLoadDraft(draft.id)}
+                            disabled={loadingDraftId === draft.id}
+                            className="h-8 px-3 bg-blue-600 hover:bg-blue-700 text-white text-xs"
+                          >
+                            {loadingDraftId === draft.id ? (
+                              <Loader2 className="h-3 w-3 animate-spin" />
+                            ) : (
+                              <Eye className="h-3 w-3" />
+                            )}
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => handleDeleteDraft(draft.id)}
+                            className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
             </div>
           )}
         </div>
 
-        <div className="flex-shrink-0 pt-4 border-t">
-          <Button
-            variant="outline"
-            onClick={() => onOpenChange(false)}
-            className="w-full"
-          >
-            Tutup
-          </Button>
+        <div className="flex-shrink-0 pt-4 border-t bg-gray-50 -mx-6 -mb-6 px-6 pb-6">
+          <div className="flex items-center justify-between">
+            <div className="text-xs text-gray-500">
+              <span className="font-medium">Tips:</span> Tekan F1-F6 untuk langsung memuat draft, Delete untuk hapus, Enter untuk muat
+            </div>
+            <Button
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+              className="px-6"
+            >
+              <FileText className="h-4 w-4 mr-2" />
+              [F12] Tutup
+            </Button>
+          </div>
         </div>
-      </DialogContent>
+      </DialogContentNative>
     </Dialog>
   )
 }
